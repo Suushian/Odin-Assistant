@@ -825,6 +825,13 @@ def main() -> int:
         for f in fails:
             print("  •", f)
         return 1
+    # اجرای آزمون‌های اسکالپ در همان entrypoint که CI اجرا می‌کند.
+    try:
+        import runpy
+        runpy.run_path(str(ROOT / "tests" / "test_scalping.py"), run_name="__main__")
+    except Exception as e:  # noqa: BLE001
+        print(f"❌ SCALPING TESTS FAILED — {type(e).__name__}: {e}")
+        return 1
     print(f"✅ PLUGIN TESTS OK — {COUNT} بررسی پاس؛ هر adapter خروجیِ فراخوانی "
           f"مستقیم را عیناً بازتولید می‌کند (ثبت/فعال‌سازی/انتخاب منبع/خالص/"
           f"delegate/ژورنال+هشدار/رندر) + قواعد داور: ۱۵ rule-plugin و باتری "
