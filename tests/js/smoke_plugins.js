@@ -188,7 +188,7 @@ async function main() {
       auto_refresh_enabled: true, auto_refresh_min: 15, notify_enabled: true,
       background_enabled: true, animations_enabled: true,
       strategy_tp_enabled: true, strategy_lb_enabled: true,
-      strategy_carry_enabled: true, strategy_min_agree: 1
+      strategy_carry_enabled: true, strategy_scalping_enabled: true, strategy_min_agree: 1
     };
     const mkS = (cfg, issues) => ({
       cfg: cfg, settings: JSON.parse(JSON.stringify(baseSettings)),
@@ -205,6 +205,8 @@ async function main() {
     ok(!html.includes('>خطا<'), 'در حالت سالم هیچ قرصِ «خطا» نیست');
     ok(html.includes('data-yahoo') && html.includes('strategy-carry'),
       'id پلاگین‌ها در فهرست هست');
+    ok(html.includes('اسکالپ M15') && html.includes('data-set="strategy_scalping_enabled"'),
+      'کلید مستقل اسکالپ M15 در تنظیمات رندر می‌شود');
 
     // کلید فیچری خاموش → «غیرفعال»
     const cfgOff = JSON.parse(JSON.stringify(O.CONFIG));
