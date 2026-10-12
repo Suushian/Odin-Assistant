@@ -121,7 +121,14 @@ async function testInlinePins() {
   A(!Array.isArray(s1s.storage['journal.jsonl']),
     'بدون سیگنال → ژورنال رکوردی نگرفت');
 
-  // ۱ت) S4 — min_agree=2 از تنظیمات: EURUSD فقط یک موافق دارد → رد
+  // ۱ت) اسکالپ مستقل از تنظیمات گوشی خاموش می‌شود و binding registry هم خاموش است.
+  const s1sc = await gen.runScenario('svc_settings_scalping_off');
+  A((s1sc.storage['settings'] || {}).strategy_scalping_enabled === false,
+    'تنظیمات: خاموشی اسکالپ در settings ذخیره می‌شود');
+  A(s1sc.scalpingEnabled === false && s1sc.scalpingPluginEnabled === false,
+    'تنظیمات: scalping.enabled در config و پلاگین strategy-scalping هر دو خاموش‌اند');
+
+  // ۱ث) S4 — min_agree=2 از تنظیمات: EURUSD فقط یک موافق دارد → رد
   const s1m = await gen.runScenario('svc_settings_min_agree_2');
   const st11 = s1m.storage['state.last'];
   const eur11 = st11 && st11.judgments.filter((j) => j.symbol === 'EURUSD')[0];
