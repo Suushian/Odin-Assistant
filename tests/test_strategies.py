@@ -39,7 +39,7 @@ from src.data.base import MarketData                         # noqa: E402
 from src.fundamental.news import NewsItem, NewsSnapshot      # noqa: E402
 from src.judge.scoring import JudgeContext                   # noqa: E402
 from src.plugins import build_default_registry               # noqa: E402
-from src.strategies import carry, london_breakout, trend_pullback  # noqa: E402
+from src.strategies import carry, london_breakout, scalping, trend_pullback  # noqa: E402
 
 COUNT = 0
 
@@ -355,9 +355,9 @@ A(cfg["strategies"]["carry"]["rates"]["values"]["XAU"] is None,
 
 reg, info = build_default_registry(cfg)
 ids = [r.id for r in reg.all()]
-for pid in ("strategy-trend-pullback", "strategy-london-breakout", "strategy-carry"):
+for pid in ("strategy-trend-pullback", "strategy-london-breakout", "strategy-carry", "strategy-scalping"):
     A(pid in ids, f"پلاگین «{pid}» باید در registry ثبت شود")
-A(len(reg.all()) == 33, f"registry باید ۳۳ پلاگین داشته باشد، {len(reg.all())} است")
+A(len(reg.all()) == 34, f"registry باید ۳۴ پلاگین داشته باشد، {len(reg.all())} است")
 provs = reg.providers("odin.strategy@1")
 A([p.id for p in provs] == ["strategy-trend-pullback", "strategy-london-breakout",
                             "strategy-carry"],
@@ -367,14 +367,14 @@ A([p.id for p in provs] == ["strategy-trend-pullback", "strategy-london-breakout
 ctx = mk_ctx()
 cases = [("trend_pullback", mk_a(), md_bull),
          ("london_breakout", mk_a(price=1.1060), md_lb),
-         ("carry", mk_pair("AUDJPY", "AUD", "JPY"), None)]
+         ("carry", mk_pair("AUDJPY", "AUD", "JPY"), None),\n         ("scalping", mk_a(), mk_md(mk_h1(last_bull())))]
 mods = {"trend_pullback": trend_pullback, "london_breakout": london_breakout,
-        "carry": carry}
-scfgs = {"trend_pullback": SCFG_TP, "london_breakout": SCFG_LB, "carry": SCFG_CARRY}
+        "carry": carry, "scalping": scalping}
+scfgs = {"trend_pullback": SCFG_TP, "london_breakout": SCFG_LB, "carry": SCFG_CARRY, "scalping": {}}
 for rec, (key, a, md) in zip(provs, cases):
     inst = rec.instance if rec.instance is not None else rec.factory(info["context"])
     got = inst.evaluate(a, md, ctx).to_dict()
-    want = mods[key].evaluate(a, md, cfg["strategies"][key], ctx).to_dict()
+    want = mods[key].evaluate(a, md, cfg["strategies"].get(key, {}), ctx).to_dict()
     A(got == want, f"adapter «{rec.id}» باید بایت‌به‌بایت == ماژول باشد")
     A(got["direction"] in ("BUY", "SELL", "NONE"), "direction معتبر")
 
