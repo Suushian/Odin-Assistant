@@ -187,8 +187,8 @@ function testKeyListFromPythonSource() {
   let g;
   while ((g = re.exec(m[1])) !== null) pairs.push([g[1], g[2]]);
   A(pairs.length === 4, 'چهار جفت (plugin_id, key) انتظار است — یافت: ' + pairs.length);
-  A(stableStringify(O.STRATEGY_KEYS) === stableStringify(pairs.map((p) => p[1]).filter((k) => k !== 'scalping')),
-    'O.STRATEGY_KEYS باید فقط سه استراتژی فعال Android را شامل شود؛ اسکالپ فعلاً غیرفعال است');
+  A(stableStringify(O.STRATEGY_KEYS) === stableStringify(pairs.map((p) => p[1])),
+    'O.STRATEGY_KEYS باید هر چهار استراتژی فعال Android را به ترتیب priority داشته باشد');
   A(!!O.strategies.scalping && O.strategies.scalping.key === 'scalping',
     'آینهٔ اسکالپ باید موجود باشد، حتی وقتی در registry فعال نیست');
   pairs.forEach((p) => {
@@ -238,22 +238,31 @@ function testBadTimestampBar() {
 }
 
 function testRegistryPath(scenarios) {
-  // ثبت سه پلاگین strategy-* + ترتیب priority + adapter==ماژول==طلایی
+  // ثبت چهار پلاگین strategy-* + ترتیب priority + adapter==ماژول==طلایی
   const built = O.buildDefaultRegistry(O.CONFIG, 'android');
   const ids = built.registry.all().map((r) => r.id);
-  ['strategy-trend-pullback', 'strategy-london-breakout', 'strategy-carry'].forEach((pid) => {
+  ['strategy-trend-pullback', 'strategy-london-breakout', 'strategy-carry', 'strategy-scalping'].forEach((pid) => {
     A(ids.indexOf(pid) >= 0, 'پلاگین «' + pid + '» باید در registry JS ثبت شود');
   });
   const provs = built.registry.providers('odin.strategy@1');
-  A(provs.length === 3, 'odin.strategy@1 باید ۳ فراهم‌کننده داشته باشد — ' + provs.length);
+  A(provs.length === 4, 'odin.strategy@1 باید ۴ فراهم‌کننده داشته باشد — ' + provs.length);
   A(stableStringify(provs.map((p) => p.id)) ===
-    stableStringify(['strategy-trend-pullback', 'strategy-london-breakout', 'strategy-carry']),
-    'ترتیب فراهم‌کنندگان = priority اعلامی (۱۰/۲۰/۳۰) — آینهٔ پایتون');
+    stableStringify(['strategy-trend-pullback', 'strategy-london-breakout', 'strategy-carry', 'strategy-scalping']),
+    'ترتیب فراهم‌کنندگان = priority اعلامی (۱۰/۲۰/۳۰/۴۰) — آینهٔ پایتون');
 
   // adapter == ماژول (scfg پیش‌فرضِ config.js == SCFG_* طلایی — هم‌مقدار با config.yaml)
   const names = { trend_pullback: 'tp_buy_golden', london_breakout: 'lb_buy_golden', carry: 'carry_audjpy_buy' };
   provs.forEach((rec) => {
     const key = rec.manifest.config.enabled_key.split('.')[0];
+    if (key === 'scalping') {
+      const inst = (rec.instance !== null && rec.instance !== undefined)
+        ? rec.instance : rec.factory(built.info.context);
+      const viaReg = inst.evaluate({}, null, null);
+      const direct = O.strategies.scalping.evaluate({}, null, O.CONFIG.strategies.scalping, null);
+      A(stableStringify(viaReg) === stableStringify(direct),
+        'adapter اسکالپ باید بایت‌به‌بایت == ماژول باشد');
+      return;
+    }
     const s = scenarios.filter((x) => x.name === names[key])[0];
     A(!!s, 'سناریوی نمایندهٔ ' + key + ' در طلایی نیست');
     const inst = (rec.instance !== null && rec.instance !== undefined)
@@ -273,16 +282,16 @@ function testRegistryPath(scenarios) {
   cfgOff.strategies.carry.enabled = false;
   const built2 = O.buildDefaultRegistry(cfgOff, 'android');
   A(stableStringify(built2.registry.providers('odin.strategy@1').map((p) => p.id)) ===
-    stableStringify(['strategy-trend-pullback', 'strategy-london-breakout']),
-    'strategies.carry.enabled=false باید پلاگین را از فراهم‌کننده‌ها حذف کند');
+    stableStringify(['strategy-trend-pullback', 'strategy-london-breakout', 'strategy-scalping']),
+    'strategies.carry.enabled=false باید فقط carry را از فراهم‌کننده‌ها حذف کند');
 
   // enable/disable — plugins override صریح (برنده بر کلید فیچری)
   const cfgOv = JSON.parse(JSON.stringify(O.CONFIG));
   cfgOv.plugins = { 'strategy-london-breakout': { enabled: false } };
   const built3 = O.buildDefaultRegistry(cfgOv, 'android');
   A(stableStringify(built3.registry.providers('odin.strategy@1').map((p) => p.id)) ===
-    stableStringify(['strategy-trend-pullback', 'strategy-carry']),
-    'plugins override صریح باید برنده شود (فاز ۷)');
+    stableStringify(['strategy-trend-pullback', 'strategy-carry', 'strategy-scalping']),
+    'plugins override صریح باید فقط london_breakout را حذف کند (فاز ۷)');
 
   // لاگ ثبت — فارسی و شامل استراتژی‌ها (آینهٔ میخ D پایتون)
   A(built.info.log.some((l) => l.indexOf('strategy-') >= 0),
@@ -305,6 +314,13 @@ function testConfigMirror() {
     && lb.asia_min_bars === 5 && lb.min_range_atr === 0.5
     && lb.max_range_atr === 3.0 && lb.breakout_margin_atr === 0.15,
     'london_breakout باید آینهٔ config.yaml باشد');
+  const sc = st.scalping;
+  A(sc.enabled === true && sc.h1_fast_ema === 20 && sc.h1_slow_ema === 50
+    && sc.m15_fast_ema === 9 && sc.m15_slow_ema === 21 && sc.atr_period === 14
+    && sc.breakout_lookback === 3 && sc.min_body_atr === 0.15
+    && sc.max_extension_atr === 1.5 && sc.max_m15_age_minutes === 45
+    && sc.max_h1_age_minutes === 90,
+    'scalping باید آینهٔ تنظیمات فعال config.yaml باشد');
   const ca = st.carry;
   A(ca.enabled === true && ca.min_diff === 1.5 && ca.news_min_score === 4,
     'carry باید آینهٔ config.yaml باشد');
