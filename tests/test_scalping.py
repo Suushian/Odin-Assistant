@@ -91,7 +91,28 @@ def main():
     first = scalping.evaluate(a, market("BUY"), CFG, ctx).to_dict()
     second = scalping.evaluate(a, market("BUY"), CFG, ctx).to_dict()
     check(first == second, "strategy evaluation must be deterministic")
-    print("OK: 9 scalping regression checks passed")
+
+    # Dedicated scalp risk: structural M15 stop, ATR bounds, configurable 1.5R target.
+    risk_bars = pd.DataFrame({
+        "Open": [1.2000] * 30, "High": [1.2010] * 30,
+        "Low": [1.1990] * 30, "Close": [1.2000] * 30,
+    }, index=pd.date_range(end=NOW, periods=30, freq="15min"))
+    rcfg = {"scalping_sl_lookback": 5, "scalping_atr_period": 14,
+            "scalping_sl_buffer_atr": 0.2, "scalping_min_sl_atr": 0.6,
+            "scalping_max_sl_atr": 2.5, "scalping_reward_risk": 1.5}
+    buy = scalping.compute_scalping_levels("BUY", 1.2000, risk_bars, rcfg)
+    check(buy is not None and buy[0] < 1.2000 < buy[1], "scalp BUY SL/TP direction")
+    check(abs((buy[1] - 1.2000) / (1.2000 - buy[0]) - 1.5) < 1e-12,
+          "scalp BUY reward/risk must be configurable 1.5R")
+    sell = scalping.compute_scalping_levels("SELL", 1.2000, risk_bars, rcfg)
+    check(sell is not None and sell[1] < 1.2000 < sell[0], "scalp SELL SL/TP direction")
+    check(scalping.compute_scalping_levels("BUY", 1.19995, risk_bars, rcfg) is None,
+          "too-tight structural stop must be rejected, never clamped")
+    check(scalping.compute_scalping_levels("BUY", 1.2000, risk_bars.iloc[:10], rcfg) is None,
+          "insufficient ATR history must be rejected")
+    check(scalping.compute_scalping_levels("BUY", 1.2000, None, rcfg) is None,
+          "missing M15 data must be rejected")
+    print("OK: 15 scalping regression checks passed")
 
 
 if __name__ == "__main__":
