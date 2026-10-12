@@ -117,6 +117,7 @@ jobs:
           node tests/js/smoke_core.js
           node tests/js/smoke_plugins.js
           node tests/js/test_external_url.js
+          node tests/js/test_news_render_xss.js
 
       # فاز ۶ معماری پلاگین: میخ‌های رفتاری موتور JS (svcTick/cycleCore/
       # runPipeline) — قبل از سوییچ به پلاگین‌ها نوشته و سبز شده‌اند؛ بعد از
