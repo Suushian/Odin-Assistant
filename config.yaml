@@ -237,7 +237,7 @@ strategies:
     max_range_atr: 3.0       # سقف عرض محدوده نسبت به ATR (پهن‌تر = حرکت رفته)
     breakout_margin_atr: 0.15  # حداقل نفوذ فراتر از سطح برای «شکست معتبر»
   scalping:
-    enabled: false           # تا تکمیل parity در Android و طراحی SL/TP اختصاصی، خاموش بماند
+    enabled: false           # SL/TP و parity پیاده شده؛ فعال‌سازی همچنان نیازمند تأیید جداگانه است
     h1_fast_ema: 20
     h1_slow_ema: 50
     m15_fast_ema: 9
