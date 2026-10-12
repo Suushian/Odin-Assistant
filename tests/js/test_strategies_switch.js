@@ -406,7 +406,7 @@ function testScalpingMirror() {
   A(Math.abs((riskBuy.tp - 1.2) / (1.2 - riskBuy.sl) - 1.5) < 1e-12, 'هدف اسکالپ باید دقیقاً 1.5R باشد');
   const riskSell = strat.computeLevels('SELL', 1.2, riskBars, rcfg);
   A(!!riskSell && riskSell.sl > 1.2 && riskSell.tp < 1.2, 'حدود اسکالپ SELL باید جهت معتبر داشته باشند');
-  A(strat.computeLevels('BUY', 1.19995, riskBars, rcfg) === null, 'استاپ ساختاری بیش‌ازحد تنگ باید رد شود، نه clamp');
+  A(strat.computeLevels('BUY', 1.1987, riskBars, rcfg) === null, 'استاپ ساختاری بیش‌ازحد تنگ باید رد شود، نه clamp');
   A(strat.computeLevels('BUY', 1.2, riskBars.slice(0, 10), rcfg) === null, 'تاریخچه ATR ناکافی باید رد شود');
   A(strat.computeLevels('BUY', 1.2, null, rcfg) === null, 'داده M15 غایب باید رد شود');
 }
