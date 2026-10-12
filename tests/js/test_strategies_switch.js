@@ -396,6 +396,19 @@ function testScalpingMirror() {
   const stretched = run('BUY', 'BUY', true, { max_extension_atr: 0.01 });
   A(stretched.direction === 'NONE' && stretched.reasons_fa[0].indexOf('کشیده شده') >= 0, 'ورود بیش‌ازحد کشیده‌شده باید رد شود');
   A(JSON.stringify(buy) === JSON.stringify(run('BUY')), 'خروجی اسکالپ باید قطعی باشد');
+
+  const riskBars = [];
+  for (let i = 0; i < 30; i++) riskBars.push({ t: now - (29-i)*900000, o: 1.2, h: 1.201, l: 1.199, c: 1.2 });
+  const rcfg = { scalping_sl_lookback: 5, scalping_atr_period: 14, scalping_sl_buffer_atr: 0.2,
+    scalping_min_sl_atr: 0.6, scalping_max_sl_atr: 2.5, scalping_reward_risk: 1.5 };
+  const riskBuy = strat.computeLevels('BUY', 1.2, riskBars, rcfg);
+  A(!!riskBuy && riskBuy.sl < 1.2 && riskBuy.tp > 1.2, 'حدود اسکالپ BUY باید جهت معتبر داشته باشند');
+  A(Math.abs((riskBuy.tp - 1.2) / (1.2 - riskBuy.sl) - 1.5) < 1e-12, 'هدف اسکالپ باید دقیقاً 1.5R باشد');
+  const riskSell = strat.computeLevels('SELL', 1.2, riskBars, rcfg);
+  A(!!riskSell && riskSell.sl > 1.2 && riskSell.tp < 1.2, 'حدود اسکالپ SELL باید جهت معتبر داشته باشند');
+  A(strat.computeLevels('BUY', 1.19995, riskBars, rcfg) === null, 'استاپ ساختاری بیش‌ازحد تنگ باید رد شود، نه clamp');
+  A(strat.computeLevels('BUY', 1.2, riskBars.slice(0, 10), rcfg) === null, 'تاریخچه ATR ناکافی باید رد شود');
+  A(strat.computeLevels('BUY', 1.2, null, rcfg) === null, 'داده M15 غایب باید رد شود');
 }
 
 testScalpingMirror();
