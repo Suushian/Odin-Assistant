@@ -203,14 +203,15 @@ judge:
 # ══════════════════════════════════════════════════════════════
 #  استراتژی‌های ورود (v0.26) — 🎯 سیگنال بر اساس استراتژی
 # ══════════════════════════════════════════════════════════════
-# سه استراتژیِ مستقل (src/strategies + پلاگین‌های strategy-*) جهتِ ورود را
+# چهار استراتژیِ مستقل (src/strategies + پلاگین‌های strategy-*) جهتِ ورود را
 # «پیشنهاد» می‌دهند و داور فقط وقتی سیگنال می‌سازد که دست‌کم min_agree
 # استراتژیِ فعال با جهتِ سیگنال هم‌جهت باشند. وتوها، جدول امتیاز (۱۱) و
 # آستانهٔ min_score بدون تغییر باقی می‌مانند — استراتژی لایهٔ دروازه است،
 # نه جایگزینِ داور.
 #   • trend_pullback  — روند H4+H1 + پولبک RSI + تأیید ادامهٔ حرکت (کندل H1)
 #   • london_breakout — شکستِ معتبرِ محدودهٔ آسیا در پنجرهٔ صبحِ لندن
-#   • carry           — صرفِ نرخ بهره + هم‌جهتی فاندامنتال (فقط «توافق»؛
+#   • carry           — صرفِ نرخ بهره
+#   • scalping        — مومنتوم M15 با فیلتر جهت H1 (فعلاً غیرفعال؛ نیازمند اتصال/آزمون Android) + هم‌جهتی فاندامنتال (فقط «توافق»؛
 #                       به‌تنهایی سیگنال نمی‌سازد — proposes=false)
 strategies:
   min_agree: 1               # حداقل تعداد استراتژی‌های هم‌جهت برای صدور سیگنال
@@ -229,6 +230,18 @@ strategies:
     min_range_atr: 0.5       # کف عرض محدوده نسبت به ATR (تنگ‌تر = نویز)
     max_range_atr: 3.0       # سقف عرض محدوده نسبت به ATR (پهن‌تر = حرکت رفته)
     breakout_margin_atr: 0.15  # حداقل نفوذ فراتر از سطح برای «شکست معتبر»
+  scalping:
+    enabled: false           # تا تکمیل parity در Android و طراحی SL/TP اختصاصی، خاموش بماند
+    h1_fast_ema: 20
+    h1_slow_ema: 50
+    m15_fast_ema: 9
+    m15_slow_ema: 21
+    atr_period: 14
+    breakout_lookback: 3
+    min_body_atr: 0.15
+    max_extension_atr: 1.5
+    max_m15_age_minutes: 45
+    max_h1_age_minutes: 90
   carry:
     enabled: true
     min_diff: 1.5            # حداقل اختلاف نرخ (واحد درصد) برای سوگیری
@@ -321,7 +334,7 @@ telegram:
 #   · veto-tf-conflict · veto-range · veto-event · veto-vol-spike
 #   · veto-breaking-news · ev-trend · ev-level · ev-fundamental · ev-momentum
 #   · ev-strength · ev-news · ev-tv · ev-session · strategy-trend-pullback
-#   · strategy-london-breakout · strategy-carry · journal · notify-telegram
+#   · strategy-london-breakout · strategy-carry · strategy-scalping · journal · notify-telegram
 #   · alerts-price · report-renderer
 # مثال (فقط شکل را نشان می‌دهد — به‌صورت پیش‌فرض فعال نکنید):
 #   plugins:
