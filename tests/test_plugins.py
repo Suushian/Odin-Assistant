@@ -149,7 +149,7 @@ def test_registration() -> None:
     A(ids == EXPECTED_IDS, f"مجموعهٔ پلاگین‌های ثبت‌شده فرق کرد: {ids ^ EXPECTED_IDS}")
     A(len(info["log"]) >= len(EXPECTED_IDS), "لاگ ثبت باید به‌ازای هر پلاگین خط داشته باشد")
     A(info["disabled"] == [], f"بدون plugins override صریح، فهرست override-disabled باید خالی باشد: {info['disabled']}")
-    A(len(info["order"]) == len(EXPECTED_IDS), "resolve باید همه را بچیند")
+    A(len(info["order"]) == len(EXPECTED_IDS) - 1, "resolve باید همهٔ پلاگین‌های فعال را بچیند و اسکالپ خاموش را کنار بگذارد")
 
     for cid in PROVIDED_NOW:
         A(len(reg.providers(cid)) >= 1, f"قرارداد {cid} بدون فراهم‌کننده است")
