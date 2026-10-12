@@ -74,13 +74,14 @@ def evaluate(a: Any, md: Optional[Any], scfg: Optional[dict] = None,
         prior_fast = float(fast.iloc[-2])
         prior_low = float(mlow.iloc[-2])
         prior_high = float(mhigh.iloc[-2])
+        prior_close = float(mclose.iloc[-2])
         recent_high = float(mhigh.iloc[-lookback-1:-1].max())
         recent_low = float(mlow.iloc[-lookback-1:-1].min())
     except (TypeError, ValueError, KeyError, IndexError, AttributeError):
         return none(KEY, NAME_FA, "دادهٔ کندل‌ها خوانا یا عددی نیست")
 
     values = (h1_fast, h1_slow, h1_last, ema_fast, ema_slow, prior_fast,
-              prior_low, prior_high, close, open_, atr, body, recent_high, recent_low)
+              prior_low, prior_high, prior_close, close, open_, atr, body, recent_high, recent_low)
     if any(not _finite(x) for x in values) or atr <= 0:
         return none(KEY, NAME_FA, "ATR یا مقادیر اندیکاتورها معتبر نیست")
 
@@ -100,7 +101,7 @@ def evaluate(a: Any, md: Optional[Any], scfg: Optional[dict] = None,
         if not (ema_fast > ema_slow and close > ema_fast and close > open_):
             return none(KEY, NAME_FA, "مومنتوم M15 با جهت صعودی H1 هم‌سو نیست")
         breakout = close > recent_high
-        reclaim = prior_low <= prior_fast and close > ema_fast
+        reclaim = prior_low <= prior_fast and prior_close <= prior_fast and close > ema_fast
         if not (breakout or reclaim):
             return none(KEY, NAME_FA, "ورود تأیید نشد — نه شکست سقف کوتاه‌مدت داریم و نه بازپس‌گیری EMA")
         extension = (close - ema_fast) / atr
@@ -110,7 +111,7 @@ def evaluate(a: Any, md: Optional[Any], scfg: Optional[dict] = None,
         if not (ema_fast < ema_slow and close < ema_fast and close < open_):
             return none(KEY, NAME_FA, "مومنتوم M15 با جهت نزولی H1 هم‌سو نیست")
         breakdown = close < recent_low
-        reclaim = prior_high >= prior_fast and close < ema_fast
+        reclaim = prior_high >= prior_fast and prior_close >= prior_fast and close < ema_fast
         if not (breakdown or reclaim):
             return none(KEY, NAME_FA, "ورود تأیید نشد — نه شکست کف کوتاه‌مدت داریم و نه ازدست‌رفتن EMA")
         extension = (ema_fast - close) / atr
