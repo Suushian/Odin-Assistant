@@ -217,8 +217,7 @@ judge:
 #   • trend_pullback  — روند H4+H1 + پولبک RSI + تأیید ادامهٔ حرکت (کندل H1)
 #   • london_breakout — شکستِ معتبرِ محدودهٔ آسیا در پنجرهٔ صبحِ لندن
 #   • carry           — صرفِ نرخ بهره
-#   • scalping        — مومنتوم M15 با فیلتر جهت H1 (فعلاً غیرفعال؛ نیازمند اتصال/آزمون Android) + هم‌جهتی فاندامنتال (فقط «توافق»؛
-#                       به‌تنهایی سیگنال نمی‌سازد — proposes=false)
+#   • scalping        — مومنتوم و شکست/بازپس‌گیری M15 با فیلتر جهت H1؛ SL/TP اختصاصی M15؛ فعال در مسیر واقعی سیگنال
 strategies:
   min_agree: 1               # حداقل تعداد استراتژی‌های هم‌جهت برای صدور سیگنال
   trend_pullback:
@@ -237,7 +236,7 @@ strategies:
     max_range_atr: 3.0       # سقف عرض محدوده نسبت به ATR (پهن‌تر = حرکت رفته)
     breakout_margin_atr: 0.15  # حداقل نفوذ فراتر از سطح برای «شکست معتبر»
   scalping:
-    enabled: false           # SL/TP و parity پیاده شده؛ فعال‌سازی همچنان نیازمند تأیید جداگانه است
+    enabled: true            # فعال‌سازی کنترل‌شده پس از تکمیل parity Python/Android و SL/TP اختصاصی
     h1_fast_ema: 20
     h1_slow_ema: 50
     m15_fast_ema: 9
