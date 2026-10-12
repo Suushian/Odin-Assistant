@@ -717,13 +717,12 @@
         // دفاع در عمق در خود JS نیز لازم است؛ مسیر مرورگرِ توسعه نباید
         // schemeهای غیر وب را به window.open تحویل دهد.
         try {
-          var extUrl = new URL(String(t.dataset.ext).trim());
-          if (!/^https?:$/.test(extUrl.protocol) || !extUrl.hostname
-              || extUrl.username || extUrl.password) return;
+          var safeExtUrl = O.safeExternalUrl(t.dataset.ext);
+          if (!safeExtUrl) return;
           if (typeof ODINNative !== 'undefined' && ODINNative.openExternal) {
-            ODINNative.openExternal(extUrl.href);
+            ODINNative.openExternal(safeExtUrl);
           } else {
-            var extWin = window.open(extUrl.href, '_blank', 'noopener,noreferrer');
+            var extWin = window.open(safeExtUrl, '_blank', 'noopener,noreferrer');
             if (extWin) extWin.opener = null;
           }
         } catch (e) { }
