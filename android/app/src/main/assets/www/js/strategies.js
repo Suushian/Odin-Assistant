@@ -553,12 +553,50 @@
     return verdict(KEY_SCALPING,NAME_SCALPING,dir,strength,true,reasons,NAME_SCALPING+': پیشنهاد '+dir+' — فیلتر H1 + تأیید M15');
   }
 
+  // حد ضرر/هدف اختصاصی اسکالپ: ساختار M15 + ATR، بدون clamp کردن ریسک نامعتبر.
+  function scalpLevels(direction, entry, m15, rcfg) {
+    rcfg = copyDict(rcfg);
+    var lookback = scalpPeriod(rcfg, 'scalping_sl_lookback', 5, 2);
+    var ap = scalpPeriod(rcfg, 'scalping_atr_period', 14, 2);
+    var buf = scalpPositive(rcfg, 'scalping_sl_buffer_atr', 0.2);
+    var minAtr = scalpPositive(rcfg, 'scalping_min_sl_atr', 0.6);
+    var maxAtr = scalpPositive(rcfg, 'scalping_max_sl_atr', 2.5);
+    var rr = scalpPositive(rcfg, 'scalping_reward_risk', 1.5);
+    if ((direction !== 'BUY' && direction !== 'SELL') || !isFinite(entry) || entry <= 0 || minAtr >= maxAtr || !m15) return null;
+    var need = Math.max(ap + 1, lookback);
+    if (m15.length < need) return null;
+    var hi=[], lo=[], cl=[], tr=[], i;
+    for (i=0;i<m15.length;i++) {
+      var h=Number(m15[i].h), l=Number(m15[i].l), c=Number(m15[i].c);
+      if (!isFinite(h)||!isFinite(l)||!isFinite(c)||h<l) return null;
+      hi.push(h);lo.push(l);cl.push(c);
+      var range=h-l;
+      if(i>0) range=Math.max(range,Math.abs(h-cl[i-1]),Math.abs(l-cl[i-1]));
+      tr.push(range);
+    }
+    var atr=0; for(i=tr.length-ap;i<tr.length;i++) atr+=tr[i]; atr/=ap;
+    if (!isFinite(atr)||atr<=0) return null;
+    var sl, risk, extreme;
+    if(direction==='BUY') {
+      extreme=Infinity; for(i=lo.length-lookback;i<lo.length;i++) extreme=Math.min(extreme,lo[i]);
+      sl=extreme-buf*atr; if(!(sl<entry)) return null; risk=entry-sl;
+    } else {
+      extreme=-Infinity; for(i=hi.length-lookback;i<hi.length;i++) extreme=Math.max(extreme,hi[i]);
+      sl=extreme+buf*atr; if(!(sl>entry)) return null; risk=sl-entry;
+    }
+    var ratio=risk/atr;
+    if(!isFinite(ratio)||ratio<minAtr||ratio>maxAtr) return null;
+    var tp=entry+(direction==='BUY'?1:-1)*risk*rr;
+    if(!isFinite(tp)||(direction==='BUY'&&tp<=entry)||(direction==='SELL'&&tp>=entry)) return null;
+    return {sl:sl,tp:tp,risk:risk,capped:false};
+  }
+
   // ── صادرات — کلیدها snake_case همان کلیدهای config/registry پایتون ──
   O.strategies = {
     trendPullback: { key: KEY_TP, nameFa: NAME_TP, evaluate: evalTrendPullback },
     londonBreakout: { key: KEY_LB, nameFa: NAME_LB, evaluate: evalLondonBreakout },
     carry: { key: KEY_CARRY, nameFa: NAME_CARRY, evaluate: evalCarry },
-    scalping: { key: KEY_SCALPING, nameFa: NAME_SCALPING, evaluate: scalpEval }
+    scalping: { key: KEY_SCALPING, nameFa: NAME_SCALPING, evaluate: scalpEval, computeLevels: scalpLevels }
   };
 
   // ترتیب = priority ارزیابی (آینهٔ STRATEGY_RULES در src/plugins/strategies.py)
