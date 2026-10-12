@@ -80,8 +80,24 @@ public class Bridge {
                 String payloadB64 = "";
                 HttpURLConnection c = null;
                 try {
-                    c = (HttpURLConnection) new URL(url).openConnection();
-                    String m = (method == null || method.isEmpty()) ? "GET" : method.toUpperCase();
+                    if (url == null || url.trim().isEmpty()) {
+                        throw new IllegalArgumentException("Invalid URL");
+                    }
+                    URL parsed = new URL(url.trim());
+                    String protocol = parsed.getProtocol();
+                    if (parsed.getHost() == null || parsed.getHost().trim().isEmpty()
+                            || parsed.getUserInfo() != null
+                            || !( "https".equalsIgnoreCase(protocol) || "http".equalsIgnoreCase(protocol))) {
+                        throw new IllegalArgumentException("Only HTTP(S) URLs without user-info are allowed");
+                    }
+                    String m = (method == null || method.trim().isEmpty()) ? "GET" : method.trim().toUpperCase(java.util.Locale.ROOT);
+                    if (!("GET".equals(m) || "POST".equals(m) || "HEAD".equals(m))) {
+                        throw new IllegalArgumentException("Unsupported HTTP method");
+                    }
+                    if (body != null && body.getBytes("UTF-8").length > 1024 * 1024) {
+                        throw new IllegalArgumentException("Request body too large");
+                    }
+                    c = (HttpURLConnection) parsed.openConnection();
                     c.setRequestMethod(m);
                     c.setConnectTimeout(20000);
                     c.setReadTimeout(25000);
