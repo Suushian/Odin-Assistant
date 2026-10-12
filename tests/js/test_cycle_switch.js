@@ -105,7 +105,7 @@ async function testInlinePins() {
   A(hasLog(s1g, 'هیچ سیگنالی صادر نشد'),
     'لاگِ صادقانهٔ «هیچ سیگنالی صادر نشد» در چرخهٔ دروازه‌دار');
 
-  // ۱پ) S4 — مسیرِ *تنظیمات گوشی*: هر سه استراتژی خاموش → config-bridge →
+  // ۱پ) S4 — مسیرِ *تنظیمات گوشی*: استراتژی‌های قابل تنظیم خاموش → config-bridge →
   // registry → دروازهٔ fail-closed (بدون جهشِ مستقیمِ CONFIG — سیم‌کشی واقعی)
   const s1s = await gen.runScenario('svc_settings_strategies_off');
   A(s1s.notify.length === 0, 'تنظیمات: خاموشِ همهٔ استراتژی‌ها → بدون اعلان سیگنال');
@@ -268,8 +268,7 @@ async function testRegistryWhenPresent() {
 
   // idهای پلاگین‌های JS — همان نام‌های پایتون (تقارن بین‌موتوری)
   // (فاز ۶b: ۱۵ قاعدهٔ داور اضافه شد — فهرست ساختاری است، نه طلاییِ رفتاری)
-  // (S2 v0.26: سه پلاگین strategy-* اضافه شد — ۲۶→۲۹؛ ثبتِ بی‌اثر تا سوییچ
-  //  S3؛ آینهٔ src/plugins/strategies.py با همان id/priority/stage/binding)
+  // (S3: چهار پلاگین strategy-* در مسیر فعال داور؛ آینهٔ src/plugins/strategies.py)
   const ids = reg.all().map((r) => r.id);
   const expectedIds = ['data-yahoo', 'data-tradingview', 'analysis-technical',
     'analysis-strength', 'session', 'fundamental-calendar', 'fundamental-news',
@@ -278,9 +277,9 @@ async function testRegistryWhenPresent() {
     'veto-event', 'veto-vol-spike', 'veto-breaking-news',
     'ev-trend', 'ev-level', 'ev-fundamental', 'ev-momentum',
     'ev-strength', 'ev-news', 'ev-tv', 'ev-session',
-    'strategy-trend-pullback', 'strategy-london-breakout', 'strategy-carry'];
+    'strategy-trend-pullback', 'strategy-london-breakout', 'strategy-carry', 'strategy-scalping'];
   A(ids.join(',') === expectedIds.join(','),
-    '۲۹ پلاگین اندروید با idهای متقارن پایتون (۱۱ فاز ۶ + ۱۵ قاعدهٔ داور فاز ۶b + ۳ استراتژی S2): ' + JSON.stringify(ids));
+    '۳۰ پلاگین اندروید با idهای متقارن پایتون (۱۱ زیرساخت/داده + ۱۵ قاعدهٔ داور + ۴ استراتژی): ' + JSON.stringify(ids));
   A(info.disabled.length === 0, 'با config پیش‌فرض هیچ پلاگینی disabled نیست');
 
   // bindingها: خاموشی فیچرها → پلاگین مربوطه غیرفعال (همان کلیدهای موجود)
