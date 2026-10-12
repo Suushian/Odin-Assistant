@@ -51,6 +51,9 @@ function createVm() {
   for (const f of fileList()) {
     vm.runInContext(fs.readFileSync(path.join(WWW, f), 'utf8'), ctx, { filename: f });
   }
+  // طلایی، رفتار تاریخیِ سه استراتژی را پین می‌کند؛ فعال‌سازی اسکالپ
+  // به‌صورت مستقل در tests/js/test_strategies_switch.js آزموده می‌شود.
+  ctx.ODIN.CONFIG.strategies.scalping.enabled = false;
   return ctx.ODIN;
 }
 
