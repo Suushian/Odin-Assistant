@@ -75,6 +75,28 @@
   }
   O.agoFa = agoFa;
 
+  // وضعیت تازگی منابع؛ عمداً از fetchedAt و پرچم‌های واقعی snapshot استفاده می‌کند
+  // و زمان چرخه را به‌جای زمان دریافت قیمت جا نمی‌زند.
+  O.sourceFreshnessLabel = function (kind, snap, nowMs) {
+    if (!snap) return 'هنوز دریافت نشده';
+    var age = (Number(snap.fetchedAt) > 0) ? agoFa(Number(snap.fetchedAt)) : 'زمان نامشخص';
+    if (kind === 'calendar') {
+      if (snap.stale) return 'دادهٔ کهنه · ' + age;
+      if (snap.fromCache) return 'کش · ' + age;
+      if (!snap.ok) return 'ناموجود';
+      return 'دریافت زنده · ' + age;
+    }
+    if (kind === 'news') {
+      var good = Number(snap.feedsOk) || 0;
+      var failed = Number(snap.feedsFailed) || 0;
+      if (good === 0 && failed > 0) return 'دریافت ناموفق';
+      if (failed > 0) return 'ناقص (' + failed + ' فید ناموفق) · ' + age;
+      if (!snap.ok) return 'خبر مرتبطی پیدا نشد · ' + age;
+      return 'دریافت موفق · ' + age;
+    }
+    return 'وضعیت نامشخص';
+  };
+
   // ── اسپارک‌لاین (SVG درون‌خطی، مونوکروم) ────────────────────
   function sparkline(vals) {
     if (!vals || vals.length < 2) return '';
