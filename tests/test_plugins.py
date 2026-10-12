@@ -439,6 +439,11 @@ def test_phase7_unification() -> None:
     from src.config import load_config
     from src.judge.scoring import judge_all, judge_config
     from src.plugins.judge import JudgePlugin
+    from src.plugins.strategies import STRATEGY_RULES, StrategyAdapter
+
+    def rules_for(cfg):
+        return [StrategyAdapter(k, cfg) for _pid, k in STRATEGY_RULES
+                if (cfg.get("strategies", {}).get(k) or {}).get("enabled", True)]
     import src.engine as E
 
     gen = _load_judge_golden_module()
@@ -468,7 +473,7 @@ def test_phase7_unification() -> None:
     # را تزریق می‌کند و از S3 استراتژی‌ها را هم؛ برابری دو مسیر فقط با
     # تزریقِ متناظر معنا دارد (همان الگوی به‌روزرسانی seamها در ۳a)
     j_direct = judge_all([a], {a.symbol: md}, ctx_sat,
-                         strategy_rules=gen.DEFAULT_STRATEGY_RULES)[0]
+                         strategy_rules=rules_for(cfg_off))[0]
     A(gen.judgment_dump(j_plugin) == gen.judgment_dump(j_direct),
       "veto.weekend=false: مسیر پلاگین == مسیر مستقیم (بایت‌به‌بایت)")
     A([v.key for v in j_direct.vetoes] == [] and j_direct.signal is not None,
@@ -490,7 +495,7 @@ def test_phase7_unification() -> None:
                            veto=cfg_all["judge"]["veto"])
     A(gen.judgment_dump(jp_all.judge_all([a], {a.symbol: md}, ctx_all)[0])
       == gen.judgment_dump(judge_all([a], {a.symbol: md}, ctx_all,
-                                     strategy_rules=gen.DEFAULT_STRATEGY_RULES)[0]),
+                                     strategy_rules=rules_for(cfg_all))[0]),
       "همه‌خاموش: مسیر پلاگین == مسیر مستقیم (بدون وتو، سیگنال شنبه)")
 
     # ── ۴) binding داور/ریسک به judge.enabled + fallback بایت‌به‌بایت ──
@@ -553,6 +558,7 @@ def test_strategy_registry_gate() -> None:
     import copy
     from src.judge.scoring import judge_all
     from src.plugins.judge import JudgePlugin
+    from src.plugins.strategies import STRATEGY_RULES, StrategyAdapter
 
     gen = _load_judge_golden_module()
     a = gen.make_analysis()
@@ -569,7 +575,8 @@ def test_strategy_registry_gate() -> None:
     jp = JudgePlugin(info["context"])
     j_plugin = jp.judge_all([a], {a.symbol: md}, ctx)[0]
     j_direct = judge_all([a], {a.symbol: md}, ctx,
-                         strategy_rules=gen.DEFAULT_STRATEGY_RULES)[0]
+                         strategy_rules=[StrategyAdapter(k, CFG) for _pid, k in STRATEGY_RULES
+                                         if (CFG.get("strategies", {}).get(k) or {}).get("enabled", True)])[0]
     A(gen.judgment_dump(j_plugin) == gen.judgment_dump(j_direct),
       "دروازه: مسیر registry == مسیر مستقیم (بایت‌به‌بایت)")
     A(j_plugin.signal is not None and j_plugin.strategies
