@@ -367,7 +367,8 @@ A([p.id for p in provs] == ["strategy-trend-pullback", "strategy-london-breakout
 ctx = mk_ctx()
 cases = [("trend_pullback", mk_a(), md_bull),
          ("london_breakout", mk_a(price=1.1060), md_lb),
-         ("carry", mk_pair("AUDJPY", "AUD", "JPY"), None),\n         ("scalping", mk_a(), mk_md(mk_h1(last_bull())))]
+         ("carry", mk_pair("AUDJPY", "AUD", "JPY"), None),
+         ("scalping", mk_a(), mk_md(mk_h1(last_bull())))]
 mods = {"trend_pullback": trend_pullback, "london_breakout": london_breakout,
         "carry": carry, "scalping": scalping}
 scfgs = {"trend_pullback": SCFG_TP, "london_breakout": SCFG_LB, "carry": SCFG_CARRY, "scalping": {}}
