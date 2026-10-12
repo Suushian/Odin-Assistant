@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
 """پلاگین‌های استراتژی (v0.26 — S1: ثبت در registry، مصرف در S3).
 
-سه adapter نازک با قرارداد جدید `odin.strategy@1` — delegation خالص به
+چهار adapter نازک با قرارداد جدید `odin.strategy@1` — delegation خالص به
 ماژول‌های src/strategies/* (منطق آنجاست، اینجا فقط ثبت و اتصال config):
 
   strategy-trend-pullback  → strategies.trend_pullback.evaluate
   strategy-london-breakout → strategies.london_breakout.evaluate
   strategy-carry           → strategies.carry.evaluate
+  strategy-scalping        → strategies.scalping.evaluate
 
 اتصال فعال/غیرفعال: strategies.<key>.enabled (dot-path فاز ۷ در
 config-bridge) — خاموش‌کردن یک استراتژی یعنی حذفش از فهرستِ توافق‌ها،
@@ -27,6 +28,7 @@ STRATEGY_RULES: List[Tuple[str, str]] = [
     ("strategy-trend-pullback", "trend_pullback"),
     ("strategy-london-breakout", "london_breakout"),
     ("strategy-carry", "carry"),
+    ("strategy-scalping", "scalping"),
 ]
 
 
@@ -44,10 +46,10 @@ class StrategyAdapter:
         self._scfg: dict = dict(strategies.get(key) or {})
 
     def evaluate(self, a: Any, md: Any, ctx: Any) -> Any:
-        from ..strategies import carry, london_breakout, trend_pullback
+        from ..strategies import carry, london_breakout, scalping, trend_pullback
         mod = {"trend_pullback": trend_pullback,
                "london_breakout": london_breakout,
-               "carry": carry}[self.key]
+               "carry": carry, "scalping": scalping}[self.key]
         return mod.evaluate(a, md, self._scfg, ctx)
 
 
@@ -59,7 +61,8 @@ def plugins() -> List[Tuple[PluginManifest, Any]]:
                 id=pid, version="1.0.0",
                 provides=["odin.strategy@1"],
                 config={"section": "strategies",
-                        "enabled_key": f"{key}.enabled", "default": True},
+                        "enabled_key": f"{key}.enabled",
+                        "default": True},
                 platforms=["desktop", "android"],
                 stage="judge", priority=10 * (i + 1), optional=True),
             lambda ctx, k=key: StrategyAdapter(

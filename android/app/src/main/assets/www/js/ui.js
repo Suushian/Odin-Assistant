@@ -846,10 +846,11 @@
     // استراتژی‌های ورود (S4 — v0.27) — کلیدها از راه buildCfg به همان
     // آبشارِ فعال/غیرفعالِ فاز ۷ می‌رسند (strategies.<key>.enabled)
     html += '<div class="card"><div class="section-title" style="margin-top:0">' + ct('target', 'استراتژی‌های ورود', 13) + '</div>' +
-      '<div class="hint" style="margin-bottom:6px">سیگنال فقط با توافقِ استراتژی صادر می‌شود — هر سه خاموش = بدون سیگنال (عمدی، صادقانه).</div>' +
+      '<div class="hint" style="margin-bottom:6px">سیگنال با توافق استراتژی‌ها صادر می‌شود؛ خاموش‌کردن همه یعنی بدون سیگنال.</div>' +
       row2('strategy_tp_enabled', 'trend-up', 'روند + پولبک', 'روند H4+H1 · پولبک RSI · تأییدِ ادامهٔ حرکت', set.strategy_tp_enabled !== false) +
       row2('strategy_lb_enabled', 'clock', 'شکست لندن', 'شکستِ محدودهٔ آسیا فقط در ۰۷ تا ۱۱ UTC', set.strategy_lb_enabled !== false) +
       row2('strategy_carry_enabled', 'coins', 'کری (نرخ بهره)', 'فقط «توافق» می‌آورد — به‌تنهایی سیگنال نمی‌سازد', set.strategy_carry_enabled !== false) +
+      row2('strategy_scalping_enabled', 'activity', 'اسکالپ M15', 'مومنتوم M15 با فیلتر جهت H1 · حد ضرر/هدف اختصاصی', set.strategy_scalping_enabled !== false) +
       '<div class="set-row"><div><div class="set-label">حداقل توافقِ استراتژی‌ها</div><div class="set-sub">۰ = دروازه خاموش · ۳ = هر سه هم‌جهت (بسیار سخت‌گیرانه)</div></div>' +
       '<span class="stepper"><button data-step="strategy_min_agree:-1">−</button><span class="val">' + O.faNum(set.strategy_min_agree | 0) + '</span><button data-step="strategy_min_agree:1">+</button></span></div>' +
       '</div>';

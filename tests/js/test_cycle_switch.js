@@ -105,7 +105,7 @@ async function testInlinePins() {
   A(hasLog(s1g, 'هیچ سیگنالی صادر نشد'),
     'لاگِ صادقانهٔ «هیچ سیگنالی صادر نشد» در چرخهٔ دروازه‌دار');
 
-  // ۱پ) S4 — مسیرِ *تنظیمات گوشی*: هر سه استراتژی خاموش → config-bridge →
+  // ۱پ) S4 — مسیرِ *تنظیمات گوشی*: استراتژی‌های قابل تنظیم خاموش → config-bridge →
   // registry → دروازهٔ fail-closed (بدون جهشِ مستقیمِ CONFIG — سیم‌کشی واقعی)
   const s1s = await gen.runScenario('svc_settings_strategies_off');
   A(s1s.notify.length === 0, 'تنظیمات: خاموشِ همهٔ استراتژی‌ها → بدون اعلان سیگنال');
@@ -121,7 +121,14 @@ async function testInlinePins() {
   A(!Array.isArray(s1s.storage['journal.jsonl']),
     'بدون سیگنال → ژورنال رکوردی نگرفت');
 
-  // ۱ت) S4 — min_agree=2 از تنظیمات: EURUSD فقط یک موافق دارد → رد
+  // ۱ت) اسکالپ مستقل از تنظیمات گوشی خاموش می‌شود و binding registry هم خاموش است.
+  const s1sc = await gen.runScenario('svc_settings_scalping_off');
+  A((s1sc.storage['settings'] || {}).strategy_scalping_enabled === false,
+    'تنظیمات: خاموشی اسکالپ در settings ذخیره می‌شود');
+  A(s1sc.scalpingEnabled === false && s1sc.scalpingPluginEnabled === false,
+    'تنظیمات: scalping.enabled در config و پلاگین strategy-scalping هر دو خاموش‌اند');
+
+  // ۱ث) S4 — min_agree=2 از تنظیمات: EURUSD فقط یک موافق دارد → رد
   const s1m = await gen.runScenario('svc_settings_min_agree_2');
   const st11 = s1m.storage['state.last'];
   const eur11 = st11 && st11.judgments.filter((j) => j.symbol === 'EURUSD')[0];
@@ -268,8 +275,7 @@ async function testRegistryWhenPresent() {
 
   // idهای پلاگین‌های JS — همان نام‌های پایتون (تقارن بین‌موتوری)
   // (فاز ۶b: ۱۵ قاعدهٔ داور اضافه شد — فهرست ساختاری است، نه طلاییِ رفتاری)
-  // (S2 v0.26: سه پلاگین strategy-* اضافه شد — ۲۶→۲۹؛ ثبتِ بی‌اثر تا سوییچ
-  //  S3؛ آینهٔ src/plugins/strategies.py با همان id/priority/stage/binding)
+  // (S3: چهار پلاگین strategy-* در مسیر فعال داور؛ آینهٔ src/plugins/strategies.py)
   const ids = reg.all().map((r) => r.id);
   const expectedIds = ['data-yahoo', 'data-tradingview', 'analysis-technical',
     'analysis-strength', 'session', 'fundamental-calendar', 'fundamental-news',
@@ -278,9 +284,9 @@ async function testRegistryWhenPresent() {
     'veto-event', 'veto-vol-spike', 'veto-breaking-news',
     'ev-trend', 'ev-level', 'ev-fundamental', 'ev-momentum',
     'ev-strength', 'ev-news', 'ev-tv', 'ev-session',
-    'strategy-trend-pullback', 'strategy-london-breakout', 'strategy-carry'];
+    'strategy-trend-pullback', 'strategy-london-breakout', 'strategy-carry', 'strategy-scalping'];
   A(ids.join(',') === expectedIds.join(','),
-    '۲۹ پلاگین اندروید با idهای متقارن پایتون (۱۱ فاز ۶ + ۱۵ قاعدهٔ داور فاز ۶b + ۳ استراتژی S2): ' + JSON.stringify(ids));
+    '۳۰ پلاگین اندروید با idهای متقارن پایتون (۱۱ زیرساخت/داده + ۱۵ قاعدهٔ داور + ۴ استراتژی): ' + JSON.stringify(ids));
   A(info.disabled.length === 0, 'با config پیش‌فرض هیچ پلاگینی disabled نیست');
 
   // bindingها: خاموشی فیچرها → پلاگین مربوطه غیرفعال (همان کلیدهای موجود)

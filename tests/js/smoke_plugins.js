@@ -60,13 +60,11 @@ async function main() {
     const app = gen.createApp({});
     const O = app.O;
     const built = O.buildDefaultRegistry(O.deepFill(O.CONFIG, {}), 'android');
-    // S2 (v0.26): ۲۶→۲۹ — سه پلاگین strategy-* (قرارداد odin.strategy@1،
-    // آینهٔ src/plugins/strategies.py) افزوده شد. مصرف‌کننده هنوز ندارند
-    // (سوییچ داور در S3) — صرفِ ثبت، رفتاری را عوض نمی‌کند. دلیلِ تغییرِ
-    // پین، همان الگوی S1 (قراردادها ۱۵→۱۶) است: افزودنیِ ثبت‌شده و مستند.
-    ok(built.registry.all().length === 29
+    // S3 (فعال‌سازی اسکالپ): ۲۹→۳۰ — چهار پلاگین strategy-* فعال‌اند؛
+    // اسکالپ در مسیر واقعی داور مصرف می‌شود و همچنان SL/TP اختصاصی دارد.
+    ok(built.registry.all().length === 30
        && built.registry.all().every((r) => r.enabled),
-      'config پیش‌فرض: هر ۲۹ پلاگین فعال (۱۱ فاز ۶ + ۱۵ قاعدهٔ داور فاز ۶b + ۳ استراتژی S2)');
+      'config پیش‌فرض: هر ۳۰ پلاگین فعال (۱۱ فاز ۶ + ۱۵ قاعدهٔ داور + ۴ استراتژی)');
 
     const off = O.deepFill(O.CONFIG, { judge: { enabled: false } });
     const b2 = O.buildDefaultRegistry(off, 'android');
@@ -190,7 +188,7 @@ async function main() {
       auto_refresh_enabled: true, auto_refresh_min: 15, notify_enabled: true,
       background_enabled: true, animations_enabled: true,
       strategy_tp_enabled: true, strategy_lb_enabled: true,
-      strategy_carry_enabled: true, strategy_min_agree: 1
+      strategy_carry_enabled: true, strategy_scalping_enabled: true, strategy_min_agree: 1
     };
     const mkS = (cfg, issues) => ({
       cfg: cfg, settings: JSON.parse(JSON.stringify(baseSettings)),
@@ -202,11 +200,13 @@ async function main() {
     // حالت سالم: همه فعال
     let html = O.renderSettings(mkS(O.deepFill(O.CONFIG, {})));
     ok(html.includes('وضعیت پلاگین‌ها'), 'کارت «وضعیت پلاگین‌ها» در تنظیمات هست');
-    ok(html.includes(O.faNum(29) + ' پلاگین · ' + O.faNum(29) + ' فعال'),
-      'خلاصه: ۲۹ پلاگین · ۲۹ فعال (ارقام فارسی از registry.status())');
+    ok(html.includes(O.faNum(30) + ' پلاگین · ' + O.faNum(30) + ' فعال'),
+      'خلاصه: ۳۰ پلاگین · ۳۰ فعال (ارقام فارسی از registry.status())');
     ok(!html.includes('>خطا<'), 'در حالت سالم هیچ قرصِ «خطا» نیست');
     ok(html.includes('data-yahoo') && html.includes('strategy-carry'),
       'id پلاگین‌ها در فهرست هست');
+    ok(html.includes('اسکالپ M15') && html.includes('data-set="strategy_scalping_enabled"'),
+      'کلید مستقل اسکالپ M15 در تنظیمات رندر می‌شود');
 
     // کلید فیچری خاموش → «غیرفعال»
     const cfgOff = JSON.parse(JSON.stringify(O.CONFIG));

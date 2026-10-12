@@ -344,14 +344,13 @@
     });
   });
 
-  // ── استراتژی‌های ورود (S2) — id/ترتیب/binding آینهٔ src/plugins/strategies.py ──
-  // (plugin-id, strategy_key) — priority ۱۰..۳۰ = ترتیب ارزیابی قطعی؛
-  // اتصال به strategies.<key>.enabled (dot-path فاز ۷). مصرف‌کننده در S3
-  // وصل می‌شود — تا آن زمان این ثبت‌ها بی‌اثرند (چرخه دست‌نخورده).
+  // ── استراتژی‌های ورود — id/ترتیب/binding آینهٔ src/plugins/strategies.py ──
+  // priority ۱۰..۴۰ ترتیب ارزیابی قطعی است؛ وضعیت فعال از config کنترل می‌شود.
   var STRATEGY_DEFS = [
     ['strategy-trend-pullback', 'trend_pullback'],
     ['strategy-london-breakout', 'london_breakout'],
-    ['strategy-carry', 'carry']
+    ['strategy-carry', 'carry'],
+    ['strategy-scalping', 'scalping']
   ];
   STRATEGY_DEFS.forEach(function (d, i) {
     DEFS.push({

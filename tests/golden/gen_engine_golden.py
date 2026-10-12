@@ -143,6 +143,8 @@ def make_tv_map(symbol_names):
 def make_cfg():
     from src.config import load_config
     cfg = copy.deepcopy(load_config())
+    # چرخهٔ طلایی رفتار پیشین را پین می‌کند؛ مسیر فعال اسکالپ در تست داور جداگانه است.
+    (cfg.get("strategies") or {}).setdefault("scalping", {})["enabled"] = False
     cfg["data_source"] = "yahoo"                  # seam مستقیم YahooSource (هر دو نسخه)
     cfg["telegram"] = {"send_reports": True, "bot_token": "123:fake-token",
                        "chat_id": "42"}

@@ -491,20 +491,122 @@
       + fa(fmtSign2(diff)) + '٪ (' + base + ' در برابر ' + quote + ')');
   }
 
+
+  // استراتژی اسکالپ M15 با فیلتر جهت H1 — آینهٔ src/strategies/scalping.py
+  var KEY_SCALPING = 'scalping', NAME_SCALPING = 'اسکالپ M15 با فیلتر H1';
+  function scalpPeriod(c,k,d,m) { var n=Number(c[k]===undefined?d:c[k]); return isFinite(n)&&Math.floor(n)===n&&n>=m?n:d; }
+  function scalpPositive(c,k,d) { var n=Number(c[k]===undefined?d:c[k]); return isFinite(n)&&n>0?n:d; }
+  function scalpEma(xs,n) { var a=2/(n+1), out=[], v; for(var i=0;i<xs.length;i++){v=i===0?xs[i]:a*xs[i]+(1-a)*v;out.push(v);} return out; }
+  function scalpEval(a,md,scfg,ctx) {
+    scfg=copyDict(scfg);
+    var hf=scalpPeriod(scfg,'h1_fast_ema',20,2), hs=scalpPeriod(scfg,'h1_slow_ema',50,3);
+    var mf=scalpPeriod(scfg,'m15_fast_ema',9,2), ms=scalpPeriod(scfg,'m15_slow_ema',21,3);
+    var ap=scalpPeriod(scfg,'atr_period',14,2), lb=scalpPeriod(scfg,'breakout_lookback',3,1);
+    var minBody=scalpPositive(scfg,'min_body_atr',0.15), maxExt=scalpPositive(scfg,'max_extension_atr',1.5);
+    var maxMA=scalpPeriod(scfg,'max_m15_age_minutes',45,1), maxHA=scalpPeriod(scfg,'max_h1_age_minutes',90,1);
+    if(hf>=hs||mf>=ms)return noneV(KEY_SCALPING,NAME_SCALPING,'تنظیم EMA نامعتبر است — دورهٔ سریع باید از دورهٔ کند کوتاه‌تر باشد');
+    if(!md)return noneV(KEY_SCALPING,NAME_SCALPING,'دادهٔ بازار برای اسکالپ در دسترس نیست');
+    var h=md.h1,m=md.m15;
+    if(!h||!m)return noneV(KEY_SCALPING,NAME_SCALPING,'دادهٔ H1 یا M15 در دسترس نیست');
+    var rh=hs+2, rm=Math.max(ms+2,ap+2,lb+3);
+    if(h.length<rh||m.length<rm)return noneV(KEY_SCALPING,NAME_SCALPING,'دادهٔ کافی نیست — H1 حداقل '+rh+' و M15 حداقل '+rm+' کندل لازم دارد');
+    var now=ctxNow(ctx), ht=dateOfMs(h[h.length-1].t), mt=dateOfMs(m[m.length-1].t);
+    if(!ht||!mt)return noneV(KEY_SCALPING,NAME_SCALPING,'زمان آخرین کندل H1 یا M15 قابل تشخیص نیست');
+    var ha=(now-ht)/60000, ma=(now-mt)/60000;
+    if(ha < -5||ma < -5)return noneV(KEY_SCALPING,NAME_SCALPING,'زمان آخرین کندل در آینده است — دادهٔ بازار معتبر نیست');
+    if(ha>maxHA||ma>maxMA)return noneV(KEY_SCALPING,NAME_SCALPING,'دادهٔ بازار کهنه است — برای اسکالپ به کندل تازهٔ H1 و M15 نیاز داریم');
+    var hc=[], mo=[], mc=[], mh=[], ml=[], i;
+    for(i=0;i<h.length;i++){var ho=Number(h[i].o), hh=Number(h[i].h), hl=Number(h[i].l), hc0=Number(h[i].c);
+      if(!isFinite(ho)||!isFinite(hh)||!isFinite(hl)||!isFinite(hc0))return noneV(KEY_SCALPING,NAME_SCALPING,'دادهٔ کندل‌ها خوانا یا عددی نیست');hc.push(hc0);}
+    for(i=0;i<m.length;i++){var oo=Number(m[i].o), hi=Number(m[i].h), lo=Number(m[i].l), cc=Number(m[i].c);
+      if(!isFinite(oo)||!isFinite(hi)||!isFinite(lo)||!isFinite(cc))return noneV(KEY_SCALPING,NAME_SCALPING,'دادهٔ کندل‌ها خوانا یا عددی نیست');
+      mo.push(oo);mh.push(hi);ml.push(lo);mc.push(cc);}
+    var hfe=scalpEma(hc,hf), hse=scalpEma(hc,hs), fe=scalpEma(mc,mf), se=scalpEma(mc,ms), tr=[];
+    for(i=0;i<mc.length;i++){var r=mh[i]-ml[i];if(i>0)r=Math.max(r,Math.abs(mh[i]-mc[i-1]),Math.abs(ml[i]-mc[i-1]));tr.push(r);}
+    var atr=0;for(i=tr.length-ap;i<tr.length;i++)atr+=tr[i];atr/=ap;
+    var close=mc[mc.length-1], open=mo[mo.length-1], body=Math.abs(close-open), fast=fe[fe.length-1], slow=se[se.length-1], pf=fe[fe.length-2];
+    var pl=ml[ml.length-2], ph=mh[mh.length-2], pc=mc[mc.length-2], hi2=-Infinity, lo2=Infinity;
+    for(i=mc.length-lb-1;i<mc.length-1;i++){hi2=Math.max(hi2,mh[i]);lo2=Math.min(lo2,ml[i]);}
+    var vals=[hfe[hfe.length-1],hse[hse.length-1],hc[hc.length-1],fast,slow,pf,pl,ph,pc,close,open,atr,body,hi2,lo2];
+    for(i=0;i<vals.length;i++)if(!isFinite(vals[i]))return noneV(KEY_SCALPING,NAME_SCALPING,'ATR یا مقادیر اندیکاتورها معتبر نیست');
+    if(atr<=0)return noneV(KEY_SCALPING,NAME_SCALPING,'ATR یا مقادیر اندیکاتورها معتبر نیست');
+    var dir, dirFa, entryFa, ext;
+    if(hfe[hfe.length-1]>hse[hse.length-1]&&hc[hc.length-1]>hfe[hfe.length-1])dir='BUY';
+    else if(hfe[hfe.length-1]<hse[hse.length-1]&&hc[hc.length-1]<hfe[hfe.length-1])dir='SELL';
+    else return noneV(KEY_SCALPING,NAME_SCALPING,'فیلتر H1 جهت معتبر و هم‌سو نشان نمی‌دهد');
+    if(body<minBody*atr)return noneV(KEY_SCALPING,NAME_SCALPING,'بدنهٔ کندل M15 ضعیف است — کمتر از '+fa(minBody.toFixed(2))+' ATR');
+    if(dir==='BUY'){
+      if(!(fast>slow&&close>fast&&close>open))return noneV(KEY_SCALPING,NAME_SCALPING,'مومنتوم M15 با جهت صعودی H1 هم‌سو نیست');
+      var br=close>hi2, rec=pl<=pf&&pc<=pf&&close>fast;
+      if(!(br||rec))return noneV(KEY_SCALPING,NAME_SCALPING,'ورود تأیید نشد — نه شکست سقف کوتاه‌مدت داریم و نه بازپس‌گیری EMA');
+      ext=(close-fast)/atr;dirFa='صعودی';entryFa=br?'شکست سقف کوتاه‌مدت':'بازپس‌گیری EMA پس از پولبک';
+    }else{
+      if(!(fast<slow&&close<fast&&close<open))return noneV(KEY_SCALPING,NAME_SCALPING,'مومنتوم M15 با جهت نزولی H1 هم‌سو نیست');
+      var bd=close<lo2, recs=ph>=pf&&pc>=pf&&close<fast;
+      if(!(bd||recs))return noneV(KEY_SCALPING,NAME_SCALPING,'ورود تأیید نشد — نه شکست کف کوتاه‌مدت داریم و نه ازدست‌رفتن EMA');
+      ext=(fast-close)/atr;dirFa='نزولی';entryFa=bd?'شکست کف کوتاه‌مدت':'ازدست‌رفتن EMA پس از پولبک';
+    }
+    if(ext>maxExt)return noneV(KEY_SCALPING,NAME_SCALPING,'قیمت بیش از حد کشیده شده است — فاصله از EMA سریع '+fa(ext.toFixed(2))+' ATR');
+    var sep=Math.abs(fast-slow)/atr, strength=Math.min(1,Math.max(0.55,0.55+0.25*sep+0.10*(body/atr)));
+    var reasons=['فیلتر H1 صعودی/نزولی: جهت '+dirFa+' تأیید شد','ورود M15: '+entryFa+'؛ EMA سریع/کند هم‌جهت‌اند',
+      'بدنهٔ کندل '+fa((body/atr).toFixed(2))+' ATR و فاصله از EMA سریع '+fa(ext.toFixed(2))+' ATR است'];
+    return verdict(KEY_SCALPING,NAME_SCALPING,dir,strength,true,reasons,NAME_SCALPING+': پیشنهاد '+dir+' — فیلتر H1 + تأیید M15');
+  }
+
+  // حد ضرر/هدف اختصاصی اسکالپ: ساختار M15 + ATR، بدون clamp کردن ریسک نامعتبر.
+  function scalpLevels(direction, entry, m15, rcfg) {
+    rcfg = copyDict(rcfg);
+    var lookback = scalpPeriod(rcfg, 'scalping_sl_lookback', 5, 2);
+    var ap = scalpPeriod(rcfg, 'scalping_atr_period', 14, 2);
+    var buf = scalpPositive(rcfg, 'scalping_sl_buffer_atr', 0.2);
+    var minAtr = scalpPositive(rcfg, 'scalping_min_sl_atr', 0.6);
+    var maxAtr = scalpPositive(rcfg, 'scalping_max_sl_atr', 2.5);
+    var rr = scalpPositive(rcfg, 'scalping_reward_risk', 1.5);
+    if ((direction !== 'BUY' && direction !== 'SELL') || !isFinite(entry) || entry <= 0 || minAtr >= maxAtr || !m15) return null;
+    var need = Math.max(ap + 1, lookback);
+    if (m15.length < need) return null;
+    var hi=[], lo=[], cl=[], tr=[], i;
+    for (i=0;i<m15.length;i++) {
+      var h=Number(m15[i].h), l=Number(m15[i].l), c=Number(m15[i].c);
+      if (!isFinite(h)||!isFinite(l)||!isFinite(c)||h<l) return null;
+      hi.push(h);lo.push(l);cl.push(c);
+      var range=h-l;
+      if(i>0) range=Math.max(range,Math.abs(h-cl[i-1]),Math.abs(l-cl[i-1]));
+      tr.push(range);
+    }
+    var atr=0; for(i=tr.length-ap;i<tr.length;i++) atr+=tr[i]; atr/=ap;
+    if (!isFinite(atr)||atr<=0) return null;
+    var sl, risk, extreme;
+    if(direction==='BUY') {
+      extreme=Infinity; for(i=lo.length-lookback;i<lo.length;i++) extreme=Math.min(extreme,lo[i]);
+      sl=extreme-buf*atr; if(!(sl<entry)) return null; risk=entry-sl;
+    } else {
+      extreme=-Infinity; for(i=hi.length-lookback;i<hi.length;i++) extreme=Math.max(extreme,hi[i]);
+      sl=extreme+buf*atr; if(!(sl>entry)) return null; risk=sl-entry;
+    }
+    var ratio=risk/atr;
+    if(!isFinite(ratio)||ratio<minAtr||ratio>maxAtr) return null;
+    var tp=entry+(direction==='BUY'?1:-1)*risk*rr;
+    if(!isFinite(tp)||(direction==='BUY'&&tp<=entry)||(direction==='SELL'&&tp>=entry)) return null;
+    return {sl:sl,tp:tp,risk:risk,capped:false};
+  }
+
   // ── صادرات — کلیدها snake_case همان کلیدهای config/registry پایتون ──
   O.strategies = {
     trendPullback: { key: KEY_TP, nameFa: NAME_TP, evaluate: evalTrendPullback },
     londonBreakout: { key: KEY_LB, nameFa: NAME_LB, evaluate: evalLondonBreakout },
-    carry: { key: KEY_CARRY, nameFa: NAME_CARRY, evaluate: evalCarry }
+    carry: { key: KEY_CARRY, nameFa: NAME_CARRY, evaluate: evalCarry },
+    scalping: { key: KEY_SCALPING, nameFa: NAME_SCALPING, evaluate: scalpEval, computeLevels: scalpLevels }
   };
 
   // ترتیب = priority ارزیابی (آینهٔ STRATEGY_RULES در src/plugins/strategies.py)
-  O.STRATEGY_KEYS = ['trend_pullback', 'london_breakout', 'carry'];
+  O.STRATEGY_KEYS = ['trend_pullback', 'london_breakout', 'carry', 'scalping'];
 
   var BY_KEY = {
     trend_pullback: O.strategies.trendPullback,
     london_breakout: O.strategies.londonBreakout,
-    carry: O.strategies.carry
+    carry: O.strategies.carry,
+    scalping: O.strategies.scalping
   };
   O.strategyFor = function (key) {
     var m = BY_KEY[key];

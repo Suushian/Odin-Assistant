@@ -92,7 +92,7 @@ function decode(v) {                       // "__NaN__" → NaN (بازگشتی)
   }
   return v;
 }
-const CAMEL = { trend_pullback: 'trendPullback', london_breakout: 'londonBreakout', carry: 'carry' };
+const CAMEL = { trend_pullback: 'trendPullback', london_breakout: 'londonBreakout', carry: 'carry', scalping: 'scalping' };
 
 function buildMd(h1) {
   if (h1 === null || h1 === undefined) return null;
@@ -186,9 +186,11 @@ function testKeyListFromPythonSource() {
   const re = /\("([^"]+)",\s*"([^"]+)"\)/g;
   let g;
   while ((g = re.exec(m[1])) !== null) pairs.push([g[1], g[2]]);
-  A(pairs.length === 3, 'سه جفت (plugin_id, key) انتظار است — یافت: ' + pairs.length);
+  A(pairs.length === 4, 'چهار جفت (plugin_id, key) انتظار است — یافت: ' + pairs.length);
   A(stableStringify(O.STRATEGY_KEYS) === stableStringify(pairs.map((p) => p[1])),
-    'O.STRATEGY_KEYS باید == کلیدهای STRATEGY_RULES پایتون باشد');
+    'O.STRATEGY_KEYS باید هر چهار استراتژی فعال Android را به ترتیب priority داشته باشد');
+  A(!!O.strategies.scalping && O.strategies.scalping.key === 'scalping',
+    'آینهٔ اسکالپ باید موجود باشد، حتی وقتی در registry فعال نیست');
   pairs.forEach((p) => {
     A(!!O.strategyFor(p[1]) && typeof O.strategyFor(p[1]).evaluate === 'function',
       'strategyFor(\'' + p[1] + '\') باید ماژولِ evaluateدار بدهد');
@@ -236,22 +238,31 @@ function testBadTimestampBar() {
 }
 
 function testRegistryPath(scenarios) {
-  // ثبت سه پلاگین strategy-* + ترتیب priority + adapter==ماژول==طلایی
+  // ثبت چهار پلاگین strategy-* + ترتیب priority + adapter==ماژول==طلایی
   const built = O.buildDefaultRegistry(O.CONFIG, 'android');
   const ids = built.registry.all().map((r) => r.id);
-  ['strategy-trend-pullback', 'strategy-london-breakout', 'strategy-carry'].forEach((pid) => {
+  ['strategy-trend-pullback', 'strategy-london-breakout', 'strategy-carry', 'strategy-scalping'].forEach((pid) => {
     A(ids.indexOf(pid) >= 0, 'پلاگین «' + pid + '» باید در registry JS ثبت شود');
   });
   const provs = built.registry.providers('odin.strategy@1');
-  A(provs.length === 3, 'odin.strategy@1 باید ۳ فراهم‌کننده داشته باشد — ' + provs.length);
+  A(provs.length === 4, 'odin.strategy@1 باید ۴ فراهم‌کننده داشته باشد — ' + provs.length);
   A(stableStringify(provs.map((p) => p.id)) ===
-    stableStringify(['strategy-trend-pullback', 'strategy-london-breakout', 'strategy-carry']),
-    'ترتیب فراهم‌کنندگان = priority اعلامی (۱۰/۲۰/۳۰) — آینهٔ پایتون');
+    stableStringify(['strategy-trend-pullback', 'strategy-london-breakout', 'strategy-carry', 'strategy-scalping']),
+    'ترتیب فراهم‌کنندگان = priority اعلامی (۱۰/۲۰/۳۰/۴۰) — آینهٔ پایتون');
 
   // adapter == ماژول (scfg پیش‌فرضِ config.js == SCFG_* طلایی — هم‌مقدار با config.yaml)
   const names = { trend_pullback: 'tp_buy_golden', london_breakout: 'lb_buy_golden', carry: 'carry_audjpy_buy' };
   provs.forEach((rec) => {
     const key = rec.manifest.config.enabled_key.split('.')[0];
+    if (key === 'scalping') {
+      const inst = (rec.instance !== null && rec.instance !== undefined)
+        ? rec.instance : rec.factory(built.info.context);
+      const viaReg = inst.evaluate({}, null, null);
+      const direct = O.strategies.scalping.evaluate({}, null, O.CONFIG.strategies.scalping, null);
+      A(stableStringify(viaReg) === stableStringify(direct),
+        'adapter اسکالپ باید بایت‌به‌بایت == ماژول باشد');
+      return;
+    }
     const s = scenarios.filter((x) => x.name === names[key])[0];
     A(!!s, 'سناریوی نمایندهٔ ' + key + ' در طلایی نیست');
     const inst = (rec.instance !== null && rec.instance !== undefined)
@@ -271,16 +282,16 @@ function testRegistryPath(scenarios) {
   cfgOff.strategies.carry.enabled = false;
   const built2 = O.buildDefaultRegistry(cfgOff, 'android');
   A(stableStringify(built2.registry.providers('odin.strategy@1').map((p) => p.id)) ===
-    stableStringify(['strategy-trend-pullback', 'strategy-london-breakout']),
-    'strategies.carry.enabled=false باید پلاگین را از فراهم‌کننده‌ها حذف کند');
+    stableStringify(['strategy-trend-pullback', 'strategy-london-breakout', 'strategy-scalping']),
+    'strategies.carry.enabled=false باید فقط carry را از فراهم‌کننده‌ها حذف کند');
 
   // enable/disable — plugins override صریح (برنده بر کلید فیچری)
   const cfgOv = JSON.parse(JSON.stringify(O.CONFIG));
   cfgOv.plugins = { 'strategy-london-breakout': { enabled: false } };
   const built3 = O.buildDefaultRegistry(cfgOv, 'android');
   A(stableStringify(built3.registry.providers('odin.strategy@1').map((p) => p.id)) ===
-    stableStringify(['strategy-trend-pullback', 'strategy-carry']),
-    'plugins override صریح باید برنده شود (فاز ۷)');
+    stableStringify(['strategy-trend-pullback', 'strategy-carry', 'strategy-scalping']),
+    'plugins override صریح باید فقط london_breakout را حذف کند (فاز ۷)');
 
   // لاگ ثبت — فارسی و شامل استراتژی‌ها (آینهٔ میخ D پایتون)
   A(built.info.log.some((l) => l.indexOf('strategy-') >= 0),
@@ -303,6 +314,13 @@ function testConfigMirror() {
     && lb.asia_min_bars === 5 && lb.min_range_atr === 0.5
     && lb.max_range_atr === 3.0 && lb.breakout_margin_atr === 0.15,
     'london_breakout باید آینهٔ config.yaml باشد');
+  const sc = st.scalping;
+  A(sc.enabled === true && sc.h1_fast_ema === 20 && sc.h1_slow_ema === 50
+    && sc.m15_fast_ema === 9 && sc.m15_slow_ema === 21 && sc.atr_period === 14
+    && sc.breakout_lookback === 3 && sc.min_body_atr === 0.15
+    && sc.max_extension_atr === 1.5 && sc.max_m15_age_minutes === 45
+    && sc.max_h1_age_minutes === 90,
+    'scalping باید آینهٔ تنظیمات فعال config.yaml باشد');
   const ca = st.carry;
   A(ca.enabled === true && ca.min_diff === 1.5 && ca.news_min_score === 4,
     'carry باید آینهٔ config.yaml باشد');
@@ -353,6 +371,63 @@ function testGuards() {
 }
 
 // ══════════════════════════════════════════════════════════════
+
+function testScalpingMirror() {
+  const strat = O.strategies.scalping;
+  A(!!strat && strat.key === 'scalping', 'اسکالپ باید در آینهٔ Android ثبت باشد');
+  const now = Date.UTC(2026, 9, 12, 19, 30);
+  function frame(dir, count, step, interval, age) {
+    const rows = [];
+    for (let i = 0; i < count; i++) {
+      const close = dir === 'BUY' ? 1 + i * step : 2 - i * step;
+      const open = i === count - 1 ? (dir === 'BUY' ? close - step : close + step)
+        : close - (dir === 'BUY' ? step * 0.2 : -step * 0.2);
+      rows.push({ t: now - (count - 1 - i) * interval - (age || 0), o: open,
+        h: Math.max(open, close) + step * 2, l: Math.min(open, close) - step * 2, c: close });
+    }
+    return rows;
+  }
+  const cfg = { h1_fast_ema: 20, h1_slow_ema: 50, m15_fast_ema: 9, m15_slow_ema: 21,
+    atr_period: 14, breakout_lookback: 3, min_body_atr: 0.15, max_extension_atr: 1.5 };
+  function run(dir, hdir, setup, over, age) {
+    const h1 = frame(hdir || dir, 60, 0.001, 3600000, age);
+    const m15 = frame(dir, 40, 0.0002, 900000, age);
+    if (setup === false) m15[m15.length - 1].c = m15[m15.length - 1].o;
+    return strat.evaluate({}, { h1, m15 }, Object.assign({}, cfg, over || {}), { nowMs: now });
+  }
+  const buy = run('BUY');
+  A(buy.direction === 'BUY' && buy.proposes, 'ستاپ صعودی M15 باید BUY بدهد');
+  const sell = run('SELL');
+  A(sell.direction === 'SELL' && sell.proposes, 'ستاپ نزولی M15 باید SELL بدهد');
+  const conflict = run('BUY', 'SELL');
+  A(conflict.direction === 'NONE' && conflict.reasons_fa[0].indexOf('H1') >= 0, 'تعارض H1 باید رد شود');
+  const missing = strat.evaluate({}, null, cfg, { nowMs: now });
+  A(missing.direction === 'NONE', 'دادهٔ بازارِ مفقود باید رد شود');
+  const stale = run('BUY', 'BUY', true, null, 7200000);
+  A(stale.direction === 'NONE' && stale.reasons_fa[0].indexOf('کهنه') >= 0, 'کندل کهنه باید رد شود');
+  const short = strat.evaluate({}, { h1: frame('BUY', 30, 0.001, 3600000), m15: frame('BUY', 40, 0.0002, 900000) }, cfg, { nowMs: now });
+  A(short.direction === 'NONE' && short.reasons_fa[0].indexOf('کافی نیست') >= 0, 'دادهٔ ناکافی باید رد شود');
+  const flat = run('BUY', 'BUY', false);
+  A(flat.direction === 'NONE', 'کندل تخت نباید سیگنال بدهد');
+  const stretched = run('BUY', 'BUY', true, { max_extension_atr: 0.01 });
+  A(stretched.direction === 'NONE' && stretched.reasons_fa[0].indexOf('کشیده شده') >= 0, 'ورود بیش‌ازحد کشیده‌شده باید رد شود');
+  A(JSON.stringify(buy) === JSON.stringify(run('BUY')), 'خروجی اسکالپ باید قطعی باشد');
+
+  const riskBars = [];
+  for (let i = 0; i < 30; i++) riskBars.push({ t: now - (29-i)*900000, o: 1.2, h: 1.201, l: 1.199, c: 1.2 });
+  const rcfg = { scalping_sl_lookback: 5, scalping_atr_period: 14, scalping_sl_buffer_atr: 0.2,
+    scalping_min_sl_atr: 0.6, scalping_max_sl_atr: 2.5, scalping_reward_risk: 1.5 };
+  const riskBuy = strat.computeLevels('BUY', 1.2, riskBars, rcfg);
+  A(!!riskBuy && riskBuy.sl < 1.2 && riskBuy.tp > 1.2, 'حدود اسکالپ BUY باید جهت معتبر داشته باشند');
+  A(Math.abs((riskBuy.tp - 1.2) / (1.2 - riskBuy.sl) - 1.5) < 1e-12, 'هدف اسکالپ باید دقیقاً 1.5R باشد');
+  const riskSell = strat.computeLevels('SELL', 1.2, riskBars, rcfg);
+  A(!!riskSell && riskSell.sl > 1.2 && riskSell.tp < 1.2, 'حدود اسکالپ SELL باید جهت معتبر داشته باشند');
+  A(strat.computeLevels('BUY', 1.1987, riskBars, rcfg) === null, 'استاپ ساختاری بیش‌ازحد تنگ باید رد شود، نه clamp');
+  A(strat.computeLevels('BUY', 1.2, riskBars.slice(0, 10), rcfg) === null, 'تاریخچه ATR ناکافی باید رد شود');
+  A(strat.computeLevels('BUY', 1.2, null, rcfg) === null, 'داده M15 غایب باید رد شود');
+}
+
+testScalpingMirror();
 const scenarios = testGoldenBattery();
 testVerdictShape(scenarios);
 testDeterminism(scenarios);

@@ -197,21 +197,27 @@ judge:
     level_buffer_atr: 0.3    # حد ضرر کمی آن‌سوی حمایت/مقاومت قرار می‌گیرد
     max_sl_atr: 3.0          # سقف فاصلهٔ حد ضرر (ریسک بزرگ نشود)
     min_sl_atr: 0.6          # کف فاصلهٔ حد ضرر (با نویز خورد نشود)
-    reward_risk: 2.0         # نسبت سود به ریسکِ هدف (۱:۲)
+    reward_risk: 2.0         # نسبت سود به ریسکِ عمومی (۱:۲)
+    scalping_reward_risk: 1.5 # نسبت سود به ریسک اسکالپ M15 (۱:۱٫۵)
+    scalping_sl_lookback: 5   # کندل‌های M15 برای ساختار حد ضرر
+    scalping_atr_period: 14   # دورهٔ ATR روی M15
+    scalping_sl_buffer_atr: 0.2 # بافر پشت ساختار بر حسب ATR M15
+    scalping_min_sl_atr: 0.6  # ریسک کمتر از این نسبت به ATR رد می‌شود
+    scalping_max_sl_atr: 2.5  # ریسک بیشتر از این نسبت به ATR رد می‌شود
     max_risk_percent: 1.0    # فقط برای نمایش در پیام سیگنال
 
 # ══════════════════════════════════════════════════════════════
 #  استراتژی‌های ورود (v0.26) — 🎯 سیگنال بر اساس استراتژی
 # ══════════════════════════════════════════════════════════════
-# سه استراتژیِ مستقل (src/strategies + پلاگین‌های strategy-*) جهتِ ورود را
+# چهار استراتژیِ مستقل (src/strategies + پلاگین‌های strategy-*) جهتِ ورود را
 # «پیشنهاد» می‌دهند و داور فقط وقتی سیگنال می‌سازد که دست‌کم min_agree
 # استراتژیِ فعال با جهتِ سیگنال هم‌جهت باشند. وتوها، جدول امتیاز (۱۱) و
 # آستانهٔ min_score بدون تغییر باقی می‌مانند — استراتژی لایهٔ دروازه است،
 # نه جایگزینِ داور.
 #   • trend_pullback  — روند H4+H1 + پولبک RSI + تأیید ادامهٔ حرکت (کندل H1)
 #   • london_breakout — شکستِ معتبرِ محدودهٔ آسیا در پنجرهٔ صبحِ لندن
-#   • carry           — صرفِ نرخ بهره + هم‌جهتی فاندامنتال (فقط «توافق»؛
-#                       به‌تنهایی سیگنال نمی‌سازد — proposes=false)
+#   • carry           — صرفِ نرخ بهره
+#   • scalping        — مومنتوم و شکست/بازپس‌گیری M15 با فیلتر جهت H1؛ SL/TP اختصاصی M15؛ فعال در مسیر واقعی سیگنال
 strategies:
   min_agree: 1               # حداقل تعداد استراتژی‌های هم‌جهت برای صدور سیگنال
   trend_pullback:
@@ -229,6 +235,18 @@ strategies:
     min_range_atr: 0.5       # کف عرض محدوده نسبت به ATR (تنگ‌تر = نویز)
     max_range_atr: 3.0       # سقف عرض محدوده نسبت به ATR (پهن‌تر = حرکت رفته)
     breakout_margin_atr: 0.15  # حداقل نفوذ فراتر از سطح برای «شکست معتبر»
+  scalping:
+    enabled: true            # فعال‌سازی کنترل‌شده پس از تکمیل parity Python/Android و SL/TP اختصاصی
+    h1_fast_ema: 20
+    h1_slow_ema: 50
+    m15_fast_ema: 9
+    m15_slow_ema: 21
+    atr_period: 14
+    breakout_lookback: 3
+    min_body_atr: 0.15
+    max_extension_atr: 1.5
+    max_m15_age_minutes: 45
+    max_h1_age_minutes: 90
   carry:
     enabled: true
     min_diff: 1.5            # حداقل اختلاف نرخ (واحد درصد) برای سوگیری
@@ -321,7 +339,7 @@ telegram:
 #   · veto-tf-conflict · veto-range · veto-event · veto-vol-spike
 #   · veto-breaking-news · ev-trend · ev-level · ev-fundamental · ev-momentum
 #   · ev-strength · ev-news · ev-tv · ev-session · strategy-trend-pullback
-#   · strategy-london-breakout · strategy-carry · journal · notify-telegram
+#   · strategy-london-breakout · strategy-carry · strategy-scalping · journal · notify-telegram
 #   · alerts-price · report-renderer
 # مثال (فقط شکل را نشان می‌دهد — به‌صورت پیش‌فرض فعال نکنید):
 #   plugins:

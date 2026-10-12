@@ -508,14 +508,30 @@
     }
 
     var rcfg = ctx.jcfg.risk;
-    var lv = (riskFn || O.computeLevels)(j.direction, a.price, a.atr, a.support, a.resistance, rcfg);
+    var scalpSelected = (j.strategies || []).some(function (v) {
+      return v.key === 'scalping' && v.direction === j.direction && v.proposes;
+    });
+    var lv, rr;
+    if (scalpSelected) {
+      lv = O.strategies && O.strategies.scalping && O.strategies.scalping.computeLevels
+        ? O.strategies.scalping.computeLevels(j.direction, a.price, md && md.m15, rcfg) : null;
+      if (!lv) {
+        j.reject_reason = 'NO_SETUP';
+        j.reject_detail = 'حد ضرر ساختاری اسکالپ با ATR M15 سازگار نیست یا دادهٔ لازم موجود نیست؛ سیگنال برای جلوگیری از ریسک نامعتبر رد شد';
+        return j;
+      }
+      rr = +(rcfg.scalping_reward_risk || 1.5);
+    } else {
+      lv = (riskFn || O.computeLevels)(j.direction, a.price, a.atr, a.support, a.resistance, rcfg);
+      rr = +rcfg.reward_risk;
+    }
     if (lv.capped) {
       j.warnings.push('حد ضرر از سطح کلیدی دور بود و به سقف ' + O.faNum(O.pyFixed(+rcfg.max_sl_atr, 1)) + '×ATR محدود شد');
     }
     var opp = j.direction === 'BUY' ? a.resistance : a.support;
     if (opp != null && Math.abs(opp - a.price) < Math.abs(lv.tp - a.price)) {
       var kind = j.direction === 'BUY' ? 'مقاومت' : 'حمایت';
-      j.warnings.push(kind + ' ' + O.fmtG(opp) + ' سر راه هدف است — رسیدن به هدف سخت‌تر از چیزی است که نسبت ۱:' + O.faRatio(+rcfg.reward_risk) + ' پیشنهاد می‌دهد');
+      j.warnings.push(kind + ' ' + O.fmtG(opp) + ' سر راه هدف است — رسیدن به هدف سخت‌تر از چیزی است که نسبت ۱:' + O.faRatio(rr) + ' پیشنهاد می‌دهد');
     }
 
     var pip = a.pip || 0.0001;
@@ -527,7 +543,7 @@
       stars: j.max_score ? Math.max(1, Math.min(5, pyRound(j.score / j.max_score * 5))) : 1,
       entry: a.price, sl: lv.sl, tp: lv.tp, pip: pip, atr: a.atr,
       risk_pips: risk / pip, reward_pips: Math.abs(lv.tp - a.price) / pip,
-      rr: +rcfg.reward_risk,
+      rr: rr,
       is_gold: pip >= 0.5, session_fa: ctx.status.label, now: ctx.nowMs,
       evidences: j.evidences, warnings: j.warnings, sl_capped: lv.capped,
       strategies: j.strategies

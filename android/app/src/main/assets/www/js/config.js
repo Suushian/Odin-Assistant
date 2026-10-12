@@ -73,13 +73,14 @@
       level: { close_atr: 0.5, near_atr: 1.5 },
       risk: {
         sl_atr_multiplier: 1.5, max_sl_atr: 3.0, min_sl_atr: 0.6,
-        level_buffer_atr: 0.3, reward_risk: 2.0, max_risk_percent: 1.0
+        level_buffer_atr: 0.3, reward_risk: 2.0, scalping_reward_risk: 1.5,
+        scalping_sl_lookback: 5, scalping_atr_period: 14, scalping_sl_buffer_atr: 0.2,
+        scalping_min_sl_atr: 0.6, scalping_max_sl_atr: 2.5, max_risk_percent: 1.0
       }
     },
 
-    // استراتژی‌های ورود (v0.26 — S2) — پورتِ بخش strategies در config.yaml
-    // (منبع حقیقت همان YAML است؛ جدول نرخ‌ها دستی و با تأیید مالک ۲۰۲۶-۰۹-۲۴
-    // به‌روز می‌شود). در S2 مصرف‌کننده ندارند؛ دروازهٔ توافقِ داور در S3.
+    // استراتژی‌های ورود — پورت بخش strategies در config.yaml؛ YAML منبع حقیقت است.
+    // اسکالپ پس از تکمیل parity و SL/TP اختصاصی در مسیر فعال داور قرار دارد.
     strategies: {
       min_agree: 1,
       trend_pullback: {
@@ -89,6 +90,12 @@
         enabled: true, asia_start_hour: 0, asia_end_hour: 7,
         london_open_hour: 7, trade_window_hours: 4, asia_min_bars: 5,
         min_range_atr: 0.5, max_range_atr: 3.0, breakout_margin_atr: 0.15
+      },
+      scalping: {
+        enabled: true, h1_fast_ema: 20, h1_slow_ema: 50,
+        m15_fast_ema: 9, m15_slow_ema: 21, atr_period: 14,
+        breakout_lookback: 3, min_body_atr: 0.15, max_extension_atr: 1.5,
+        max_m15_age_minutes: 45, max_h1_age_minutes: 90
       },
       carry: {
         enabled: true, min_diff: 1.5, news_min_score: 4,

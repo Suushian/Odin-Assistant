@@ -71,6 +71,7 @@
     strategy_tp_enabled: true,
     strategy_lb_enabled: true,
     strategy_carry_enabled: true,
+    strategy_scalping_enabled: true,
     strategy_min_agree: 1
   };
 
@@ -88,7 +89,8 @@
         min_agree: (st.strategy_min_agree | 0),
         trend_pullback: { enabled: st.strategy_tp_enabled !== false },
         london_breakout: { enabled: st.strategy_lb_enabled !== false },
-        carry: { enabled: st.strategy_carry_enabled !== false }
+        carry: { enabled: st.strategy_carry_enabled !== false },
+        scalping: { enabled: st.strategy_scalping_enabled !== false }
       }
     });
   }

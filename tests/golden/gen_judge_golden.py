@@ -69,6 +69,9 @@ WED_THIN = datetime(2026, 9, 23, 3, 0, tzinfo=timezone.utc)       # توکیو/�
 SAT = datetime(2026, 9, 19, 12, 0, tzinfo=timezone.utc)           # شنبه — بازار بسته
 
 CFG = load_config()
+# فایل طلایی، رفتار تاریخیِ سه استراتژی را پین می‌کند؛ فعال‌سازی اسکالپ
+# در test_strategy_registry_gate به‌صورت مستقل پوشش داده می‌شود.
+(CFG.get("strategies") or {}).setdefault("scalping", {})["enabled"] = False
 ACFG = CFG["analysis"]
 JCFG = CFG["judge"]
 SYMS = CFG["symbols"]
@@ -79,7 +82,8 @@ SCFG_ROOT = CFG.get("strategies") or {}
 # قواعد ضبط می‌شود چون مسیر production (registry) همیشه آن‌ها را تزریق
 # می‌کند؛ مسیرِ strategy_rules=None (رفتار v0.25) جدا در test_judge_rules
 # پین شده است.
-DEFAULT_STRATEGY_RULES = [StrategyAdapter(k, CFG) for _pid, k in STRATEGY_RULES]
+DEFAULT_STRATEGY_RULES = [StrategyAdapter(k, CFG) for _pid, k in STRATEGY_RULES
+                          if (SCFG_ROOT.get(k) or {}).get("enabled", True)]
 
 
 class ThrowingRule:
