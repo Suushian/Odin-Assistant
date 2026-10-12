@@ -79,7 +79,8 @@ SCFG_ROOT = CFG.get("strategies") or {}
 # قواعد ضبط می‌شود چون مسیر production (registry) همیشه آن‌ها را تزریق
 # می‌کند؛ مسیرِ strategy_rules=None (رفتار v0.25) جدا در test_judge_rules
 # پین شده است.
-DEFAULT_STRATEGY_RULES = [StrategyAdapter(k, CFG) for _pid, k in STRATEGY_RULES]
+DEFAULT_STRATEGY_RULES = [StrategyAdapter(k, CFG) for _pid, k in STRATEGY_RULES
+                          if (SCFG_ROOT.get(k) or {}).get("enabled", True)]
 
 
 class ThrowingRule:
