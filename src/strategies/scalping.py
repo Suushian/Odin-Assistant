@@ -10,7 +10,7 @@ from __future__ import annotations
 from typing import Any, Optional
 
 from ..fa import fa_num
-from .base import StrategyVerdict, none
+from .base import StrategyVerdict, ctx_now, none
 
 KEY = "scalping"
 NAME_FA = "اسکالپ M15 با فیلتر H1"
@@ -27,6 +27,8 @@ def evaluate(a: Any, md: Optional[Any], scfg: Optional[dict] = None,
     lookback = _period(scfg, "breakout_lookback", 3, minimum=1)
     min_body_atr = _positive(scfg, "min_body_atr", 0.15)
     max_extension_atr = _positive(scfg, "max_extension_atr", 1.5)
+    max_m15_age = _period(scfg, "max_m15_age_minutes", 45, minimum=1)
+    max_h1_age = _period(scfg, "max_h1_age_minutes", 90, minimum=1)
 
     if h1_fast_n >= h1_slow_n or m15_fast_n >= m15_slow_n:
         return none(KEY, NAME_FA, "تنظیم EMA نامعتبر است — دورهٔ سریع باید از دورهٔ کند کوتاه‌تر باشد")
@@ -43,6 +45,18 @@ def evaluate(a: Any, md: Optional[Any], scfg: Optional[dict] = None,
     if len(h1) < required_h1 or len(m15) < required_m15:
         return none(KEY, NAME_FA,
                     f"دادهٔ کافی نیست — H1 حداقل {required_h1} و M15 حداقل {required_m15} کندل لازم دارد")
+
+    now = ctx_now(ctx)
+    h1_time = _utc_timestamp(h1.index[-1])
+    m15_time = _utc_timestamp(m15.index[-1])
+    if h1_time is None or m15_time is None:
+        return none(KEY, NAME_FA, "زمان آخرین کندل H1 یا M15 قابل تشخیص نیست")
+    h1_age = (now - h1_time).total_seconds() / 60.0
+    m15_age = (now - m15_time).total_seconds() / 60.0
+    if h1_age < -5 or m15_age < -5:
+        return none(KEY, NAME_FA, "زمان آخرین کندل در آینده است — دادهٔ بازار معتبر نیست")
+    if h1_age > max_h1_age or m15_age > max_m15_age:
+        return none(KEY, NAME_FA, "دادهٔ بازار کهنه است — برای اسکالپ به کندل تازهٔ H1 و M15 نیاز داریم")
 
     try:
         for frame in (h1, m15):
@@ -157,3 +171,17 @@ def _finite(value: float) -> bool:
         return value == value and abs(value) != float("inf")
     except Exception:
         return False
+
+
+def _utc_timestamp(value: Any):
+    """Convert an index value to UTC; naive timestamps follow the data contract."""
+    try:
+        stamp = value.to_pydatetime() if hasattr(value, "to_pydatetime") else value
+        if not hasattr(stamp, "tzinfo"):
+            return None
+        from datetime import timezone
+        if stamp.tzinfo is None:
+            return stamp.replace(tzinfo=timezone.utc)
+        return stamp.astimezone(timezone.utc)
+    except Exception:
+        return None
