@@ -185,3 +185,59 @@ def _utc_timestamp(value: Any):
         return stamp.astimezone(timezone.utc)
     except Exception:
         return None
+
+
+def compute_scalping_levels(direction: str, entry: float, m15: Any,
+                            rcfg: Optional[dict] = None) -> Optional[tuple[float, float, float, bool]]:
+    """Return M15 structure/ATR SL-TP, or None when the setup is not safely placeable.
+
+    Unlike the general judge risk rule, scalp stops are never clamped to an ATR
+    boundary: if the recent structure produces an implausible risk distance, reject.
+    """
+    cfg = dict(rcfg or {})
+    lookback = _period(cfg, "scalping_sl_lookback", 5, minimum=2)
+    atr_n = _period(cfg, "scalping_atr_period", 14, minimum=2)
+    buffer_atr = _positive(cfg, "scalping_sl_buffer_atr", 0.2)
+    min_atr = _positive(cfg, "scalping_min_sl_atr", 0.6)
+    max_atr = _positive(cfg, "scalping_max_sl_atr", 2.5)
+    rr = _positive(cfg, "scalping_reward_risk", 1.5)
+    try:
+        entry = float(entry)
+    except (TypeError, ValueError):
+        return None
+    if (direction not in ("BUY", "SELL") or not _finite(entry)
+            or entry <= 0 or min_atr >= max_atr or m15 is None):
+        return None
+    try:
+        required = max(atr_n + 1, lookback)
+        if len(m15) < required:
+            return None
+        high = m15["High"].astype(float)
+        low = m15["Low"].astype(float)
+        close = m15["Close"].astype(float)
+        if not all(_finite(float(x)) for series in (high, low, close) for x in series.iloc[-required:]):
+            return None
+        previous = close.shift(1)
+        true_range = (high - low).combine((high - previous).abs(), max).combine((low - previous).abs(), max)
+        atr = float(true_range.rolling(atr_n).mean().iloc[-1])
+        if not _finite(atr) or atr <= 0:
+            return None
+        if direction == "BUY":
+            sl = float(low.iloc[-lookback:].min()) - buffer_atr * atr
+            if not sl < entry:
+                return None
+            risk = entry - sl
+        else:
+            sl = float(high.iloc[-lookback:].max()) + buffer_atr * atr
+            if not sl > entry:
+                return None
+            risk = sl - entry
+        ratio = risk / atr
+        if not _finite(ratio) or ratio < min_atr or ratio > max_atr:
+            return None
+        tp = entry + (1 if direction == "BUY" else -1) * risk * rr
+        if not _finite(tp) or (direction == "BUY" and tp <= entry) or (direction == "SELL" and tp >= entry):
+            return None
+        return sl, tp, risk, False
+    except (TypeError, ValueError, KeyError, IndexError, AttributeError, ZeroDivisionError):
+        return None
