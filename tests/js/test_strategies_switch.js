@@ -92,7 +92,7 @@ function decode(v) {                       // "__NaN__" → NaN (بازگشتی)
   }
   return v;
 }
-const CAMEL = { trend_pullback: 'trendPullback', london_breakout: 'londonBreakout', carry: 'carry' };
+const CAMEL = { trend_pullback: 'trendPullback', london_breakout: 'londonBreakout', carry: 'carry', scalping: 'scalping' };
 
 function buildMd(h1) {
   if (h1 === null || h1 === undefined) return null;
@@ -353,6 +353,50 @@ function testGuards() {
 }
 
 // ══════════════════════════════════════════════════════════════
+
+function testScalpingMirror() {
+  const strat = O.strategies.scalping;
+  A(!!strat && strat.key === 'scalping', 'اسکالپ باید در آینهٔ Android ثبت باشد');
+  const now = Date.UTC(2026, 9, 12, 19, 30);
+  function frame(dir, count, step, interval, age) {
+    const rows = [];
+    for (let i = 0; i < count; i++) {
+      const close = dir === 'BUY' ? 1 + i * step : 2 - i * step;
+      const open = i === count - 1 ? (dir === 'BUY' ? close - step : close + step)
+        : close - (dir === 'BUY' ? step * 0.2 : -step * 0.2);
+      rows.push({ t: now - (count - 1 - i) * interval - (age || 0), o: open,
+        h: Math.max(open, close) + step * 2, l: Math.min(open, close) - step * 2, c: close });
+    }
+    return rows;
+  }
+  const cfg = { h1_fast_ema: 20, h1_slow_ema: 50, m15_fast_ema: 9, m15_slow_ema: 21,
+    atr_period: 14, breakout_lookback: 3, min_body_atr: 0.15, max_extension_atr: 1.5 };
+  function run(dir, hdir, setup, over, age) {
+    const h1 = frame(hdir || dir, 60, 0.001, 3600000, age);
+    const m15 = frame(dir, 40, 0.0002, 900000, age);
+    if (setup === false) m15[m15.length - 1].c = m15[m15.length - 1].o;
+    return strat.evaluate({}, { h1, m15 }, Object.assign({}, cfg, over || {}), { nowMs: now });
+  }
+  const buy = run('BUY');
+  A(buy.direction === 'BUY' && buy.proposes, 'ستاپ صعودی M15 باید BUY بدهد');
+  const sell = run('SELL');
+  A(sell.direction === 'SELL' && sell.proposes, 'ستاپ نزولی M15 باید SELL بدهد');
+  const conflict = run('BUY', 'SELL');
+  A(conflict.direction === 'NONE' && conflict.reasons_fa[0].indexOf('H1') >= 0, 'تعارض H1 باید رد شود');
+  const missing = strat.evaluate({}, null, cfg, { nowMs: now });
+  A(missing.direction === 'NONE', 'دادهٔ بازارِ مفقود باید رد شود');
+  const stale = run('BUY', 'BUY', true, null, 7200000);
+  A(stale.direction === 'NONE' && stale.reasons_fa[0].indexOf('کهنه') >= 0, 'کندل کهنه باید رد شود');
+  const short = strat.evaluate({}, { h1: frame('BUY', 30, 0.001, 3600000), m15: frame('BUY', 40, 0.0002, 900000) }, cfg, { nowMs: now });
+  A(short.direction === 'NONE' && short.reasons_fa[0].indexOf('کافی نیست') >= 0, 'دادهٔ ناکافی باید رد شود');
+  const flat = run('BUY', 'BUY', false);
+  A(flat.direction === 'NONE', 'کندل تخت نباید سیگنال بدهد');
+  const stretched = run('BUY', 'BUY', true, { max_extension_atr: 0.01 });
+  A(stretched.direction === 'NONE' && stretched.reasons_fa[0].indexOf('کشیده شده') >= 0, 'ورود بیش‌ازحد کشیده‌شده باید رد شود');
+  A(JSON.stringify(buy) === JSON.stringify(run('BUY')), 'خروجی اسکالپ باید قطعی باشد');
+}
+
+testScalpingMirror();
 const scenarios = testGoldenBattery();
 testVerdictShape(scenarios);
 testDeterminism(scenarios);
