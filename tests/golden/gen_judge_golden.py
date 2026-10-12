@@ -69,6 +69,9 @@ WED_THIN = datetime(2026, 9, 23, 3, 0, tzinfo=timezone.utc)       # توکیو/�
 SAT = datetime(2026, 9, 19, 12, 0, tzinfo=timezone.utc)           # شنبه — بازار بسته
 
 CFG = load_config()
+# فایل طلایی، رفتار تاریخیِ سه استراتژی را پین می‌کند؛ فعال‌سازی اسکالپ
+# در test_strategy_registry_gate به‌صورت مستقل پوشش داده می‌شود.
+(CFG.get("strategies") or {}).setdefault("scalping", {})["enabled"] = False
 ACFG = CFG["analysis"]
 JCFG = CFG["judge"]
 SYMS = CFG["symbols"]
