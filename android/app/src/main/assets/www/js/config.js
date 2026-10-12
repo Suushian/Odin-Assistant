@@ -73,7 +73,9 @@
       level: { close_atr: 0.5, near_atr: 1.5 },
       risk: {
         sl_atr_multiplier: 1.5, max_sl_atr: 3.0, min_sl_atr: 0.6,
-        level_buffer_atr: 0.3, reward_risk: 2.0, max_risk_percent: 1.0
+        level_buffer_atr: 0.3, reward_risk: 2.0, scalping_reward_risk: 1.5,
+        scalping_sl_lookback: 5, scalping_atr_period: 14, scalping_sl_buffer_atr: 0.2,
+        scalping_min_sl_atr: 0.6, scalping_max_sl_atr: 2.5, max_risk_percent: 1.0
       }
     },
 
