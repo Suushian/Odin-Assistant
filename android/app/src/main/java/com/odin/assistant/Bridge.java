@@ -124,7 +124,12 @@ public class Bridge {
                     if (in != null) {
                         byte[] buf = new byte[16384];
                         int n;
-                        while ((n = in.read(buf)) > 0) bos.write(buf, 0, n);
+                        while ((n = in.read(buf)) > 0) {
+                            if (bos.size() + n > 4 * 1024 * 1024) {
+                                throw new java.io.IOException("Response too large");
+                            }
+                            bos.write(buf, 0, n);
+                        }
                         in.close();
                     }
                     payloadB64 = Base64.encodeToString(bos.toByteArray(), Base64.NO_WRAP);
