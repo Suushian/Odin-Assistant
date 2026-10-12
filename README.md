@@ -313,7 +313,7 @@
 - 🧪 اجرای تست‌ها: `python main.py --selftest` و
   `for t in tests/test_*.py; do python $t; done` و
   `for s in tests/js/smoke_*.js tests/js/test_*.js; do node $s; done`
-- 🌿 برنچ پیش‌فرض مخزن: **`main`**. ورک‌فلوهای CI روی برنچ پیش‌فرض اجرا می‌شوند؛ `ANDROID` و `android` فقط آینه‌های نگه‌داری‌شده‌اند و وضعیت همگامی آن‌ها را `branch-sync.yml` گزارش می‌کند.
+- 🌿 برنچ پیش‌فرض مخزن: **`main`**؛ این تنها برنچ فعال فعلی است. `ANDROID` و `android` نام‌های تاریخی‌اند و اگر دوباره ایجاد شوند، نگهبان `branch-sync.yml` همگامی آن‌ها را بررسی می‌کند.
   ⚠️ هم‌زمانی `ANDROID` و `android` روی فایل‌سیستمِ case-insensitive
   (ویندوز/مک) می‌تواند خطای `cannot lock ref` بدهد — راه‌حل:
   `git pack-refs --all` و هرگز checkout هم‌زمان هر دو
