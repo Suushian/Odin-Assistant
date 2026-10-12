@@ -801,9 +801,25 @@ def judge_symbol(a: SymbolAnalysis, sym_cfg: dict, md: Optional[MarketData],
 
     # ۶) ساخت سیگنال
     rcfg = ctx.jcfg["risk"]
-    _levels = compute_levels if risk_fn is None else risk_fn
-    sl, tp, risk, capped = _levels(j.direction, a.price, a.atr,
-                                   a.support, a.resistance, rcfg)
+    scalp_selected = any(v.get("key") == "scalping"
+                         and v.get("direction") == j.direction and v.get("proposes")
+                         for v in j.strategies)
+    if scalp_selected:
+        from ..strategies.scalping import compute_scalping_levels
+        levels = compute_scalping_levels(j.direction, a.price,
+                                         getattr(md, "m15", None), rcfg)
+        if levels is None:
+            j.reject_reason = "NO_SETUP"
+            j.reject_detail = ("حد ضرر ساختاری اسکالپ با ATR M15 سازگار نیست یا دادهٔ لازم موجود نیست؛ "
+                               "سیگنال برای جلوگیری از ریسک نامعتبر رد شد")
+            return j
+        sl, tp, risk, capped = levels
+        rr = float(rcfg.get("scalping_reward_risk", 1.5))
+    else:
+        _levels = compute_levels if risk_fn is None else risk_fn
+        sl, tp, risk, capped = _levels(j.direction, a.price, a.atr,
+                                       a.support, a.resistance, rcfg)
+        rr = float(rcfg.get("reward_risk", 2.0))
     if capped:
         cap = float(rcfg.get("max_sl_atr", 3.0))
         j.warnings.append(f"حد ضرر از سطح کلیدی دور بود و به سقف "
@@ -812,7 +828,7 @@ def judge_symbol(a: SymbolAnalysis, sym_cfg: dict, md: Optional[MarketData],
     if opp is not None and abs(opp - a.price) < abs(tp - a.price):
         kind = "مقاومت" if j.direction == "BUY" else "حمایت"
         j.warnings.append(f"{kind} {opp:.5g} سر راه هدف است — رسیدن به هدف سخت‌تر "
-                          f"از چیزی است که نسبت ۱:{fa_ratio(float(rcfg.get('reward_risk', 2.0)))} "
+                          f"از چیزی است که نسبت ۱:{fa_ratio(rr)} "
                           f"پیشنهاد می‌دهد")
 
     pip = a.pip or 0.0001
@@ -823,7 +839,7 @@ def judge_symbol(a: SymbolAnalysis, sym_cfg: dict, md: Optional[MarketData],
         stars=max(1, min(5, round(j.score / j.max_score * 5))) if j.max_score else 1,
         entry=a.price, sl=sl, tp=tp, pip=pip, atr=a.atr,
         risk_pips=risk / pip, reward_pips=abs(tp - a.price) / pip,
-        rr=float(rcfg.get("reward_risk", 2.0)),
+        rr=rr,
         is_gold=bool(pip >= 0.5), session_fa=ctx.status.label, now=ctx.now,
         evidences=j.evidences, warnings=j.warnings, sl_capped=capped,
         strategies=j.strategies,
