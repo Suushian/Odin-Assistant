@@ -121,6 +121,7 @@ jobs:
           node tests/js/smoke_plugins.js
           node tests/js/test_external_url.js
           node tests/js/test_news_render_xss.js
+          node tests/js/test_source_freshness.js
           node tests/js/test_cycle_switch.js
           node tests/js/test_judge_switch.js
 
