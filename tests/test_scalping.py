@@ -106,7 +106,7 @@ def main():
           "scalp BUY reward/risk must be configurable 1.5R")
     sell = scalping.compute_scalping_levels("SELL", 1.2000, risk_bars, rcfg)
     check(sell is not None and sell[1] < 1.2000 < sell[0], "scalp SELL SL/TP direction")
-    check(scalping.compute_scalping_levels("BUY", 1.19995, risk_bars, rcfg) is None,
+    check(scalping.compute_scalping_levels("BUY", 1.1987, risk_bars, rcfg) is None,
           "too-tight structural stop must be rejected, never clamped")
     check(scalping.compute_scalping_levels("BUY", 1.2000, risk_bars.iloc[:10], rcfg) is None,
           "insufficient ATR history must be rejected")
