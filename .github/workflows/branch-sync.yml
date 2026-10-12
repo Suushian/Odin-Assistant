@@ -22,7 +22,7 @@ name: Branch sync guard
 on:
   push:
     # عمدی: فقط روی برنچ‌های «آینه». پوش به ANDROID خودش تست کامل می‌گیرد.
-    branches: [ main, android ]
+    branches: [ main, ANDROID, android ]
   schedule:
     # هر ۶ ساعت، تا واگرایی‌ای که از راه دیگری (مثلاً ویرایش در وب) ایجاد
     # شده هم گرفته شود. دقیقهٔ ۱۷ عمداً غیررُند است تا به صفِ رأس ساعت نخورد.
@@ -47,15 +47,15 @@ jobs:
         with:
           fetch-depth: 0        # برای مقایسهٔ نسبیتِ کامیت‌ها لازم است
 
-      - name: Compare ANDROID / main / android
+      - name: Compare main / ANDROID / android
         env:
-          PRIMARY: ANDROID
+          PRIMARY: main
         run: |
           set -euo pipefail
           # مقدار پیش‌فرض عمدی: اسکریپت زیر `set -u` است و اگر PRIMARY از
           # طریق env نرسد، با «unbound variable» می‌میرد — و مرگِ نگهبان یعنی
           # هیچ‌کس نمی‌فهمد برنچ‌ها واگرا شده‌اند. پس پیش‌فرض می‌گذاریم.
-          PRIMARY="${PRIMARY:-ANDROID}"
+          PRIMARY="${PRIMARY:-main}"
           git fetch --quiet origin '+refs/heads/*:refs/remotes/origin/*' --no-tags
 
           # --verify --quiet عمدی است: بدون آن، git rev-parse روی refِ ناموجود
@@ -86,7 +86,7 @@ jobs:
           # تساویِ ساده کافی نیست: باید جهتِ اختلاف را هم بگوییم، چون
           # «آینه جلوتر است» (کد تست‌نشده) خطرناک‌تر از «آینه عقب‌تر است»
           # (فقط نیاز به fast-forward دارد) است.
-          for BR in main android; do
+          for BR in ANDROID android; do
             S=$(sha_of "$BR")
             if [[ -z "$S" ]]; then
               echo "  ⊘ برنچ $BR روی remote وجود ندارد — مقایسه رد شد"
