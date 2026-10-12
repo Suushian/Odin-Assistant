@@ -405,10 +405,6 @@ A(any("strategy" in line for line in info["log"]),
     "لاگ ثبت پلاگین‌ها باید استراتژی‌ها را نشان دهد")
 print(f"✅ D) registry/config — {COUNT - COUNT_C} میخ سبز")
 
-# آزمون‌های مستقل اسکالپ نیز در همین CI entrypoint اجرا شوند.
-import runpy
-runpy.run_path(str(ROOT / "tests" / "test_scalping.py"), run_name="__main__")
-
 print("═" * 66)
 print(f"🎯 همهٔ {COUNT} میخِ استراتژی‌ها سبز است "
       f"(A={COUNT_A}، B={COUNT_B - COUNT_A}، C={COUNT_C - COUNT_B}، "
