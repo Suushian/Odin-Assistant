@@ -174,6 +174,11 @@
       return html;
     }
 
+    // نشانگر تازگی منابع بر اساس وضعیت واقعی snapshot، نه زمان اجرای چرخه.
+    html += '<div class="card-sub" style="margin:0 2px 10px;line-height:1.8" aria-label="تازگی منابع">' +
+      'تازگی داده‌ها · تقویم: ' + esc(O.sourceFreshnessLabel('calendar', st.calSnap, nowMs)) +
+      ' · اخبار: ' + esc(O.sourceFreshnessLabel('news', st.newsSnap, nowMs)) + '</div>';
+
     // کارت نمادها
     (st.analyses || []).forEach(function (a) {
       var chip = VERDICT_CHIP[a.verdict] || ['wait', 'hourglass', a.verdict];
