@@ -600,7 +600,7 @@
   };
 
   // ترتیب = priority ارزیابی (آینهٔ STRATEGY_RULES در src/plugins/strategies.py)
-  O.STRATEGY_KEYS = ['trend_pullback', 'london_breakout', 'carry'];
+  O.STRATEGY_KEYS = ['trend_pullback', 'london_breakout', 'carry', 'scalping'];
 
   var BY_KEY = {
     trend_pullback: O.strategies.trendPullback,
