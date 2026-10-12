@@ -80,13 +80,18 @@ def main():
           "insufficient H1 candles must be rejected")
     v = scalping.evaluate(a, None, CFG, ctx)
     check(v.direction == "NONE", "missing market data must be rejected")
+    stale = market("BUY")
+    stale.m15.index = stale.m15.index - pd.Timedelta(hours=2)
+    stale.h1.index = stale.h1.index - pd.Timedelta(hours=2)
+    v = scalping.evaluate(a, stale, CFG, ctx)
+    check(v.direction == "NONE" and "کهنه" in v.reasons_fa[0], "stale candles must be rejected")
     v = scalping.evaluate(a, market("BUY"), dict(CFG, max_extension_atr=0.01), ctx)
     check(v.direction == "NONE" and "کشیده شده" in v.reasons_fa[0],
           "overextended entry must be rejected")
     first = scalping.evaluate(a, market("BUY"), CFG, ctx).to_dict()
     second = scalping.evaluate(a, market("BUY"), CFG, ctx).to_dict()
     check(first == second, "strategy evaluation must be deterministic")
-    print("OK: 8 scalping regression checks passed")
+    print("OK: 9 scalping regression checks passed")
 
 
 if __name__ == "__main__":
