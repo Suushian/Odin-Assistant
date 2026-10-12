@@ -1,0 +1,252 @@
+# -*- coding: utf-8 -*-
+"""گزارش‌نویس کنسول به زبان فارسی ساده.
+
+ورودی: فهرست SymbolAnalysis + رتبه‌بندی قدرت ارزها
+خروجی: متن کامل گزارش (رشته) — همان متنی که در مراحل بعد به تلگرام هم می‌رود.
+"""
+from __future__ import annotations
+
+from datetime import datetime, timezone
+from typing import List, Tuple
+
+from ..analysis.technical import SymbolAnalysis
+
+SEP = "─" * 62
+DSEP = "═" * 62
+
+VERDICT_FA = {
+    "RANGE":     "❌ بازار بی‌روند (رنج) — طبق قوانین، فعلاً سیگنالی صادر نمی‌شود",
+    "BUY_SETUP": "🟢 شرایط «سیگنال خرید» در حال شکل‌گیری است (تصمیم نهایی با داور — مرحله ۳)",
+    "SELL_SETUP":"🔴 شرایط «سیگنال فروش» در حال شکل‌گیری است (تصمیم نهایی با داور — مرحله ۳)",
+    "WAIT":      "⏳ در انتظار — مدارک کافی برای صدور سیگنال جمع نشده",
+    "DATA":      "⚠️ داده کافی برای تحلیل این نماد در دسترس نیست",
+}
+
+TREND_FA = {"bullish": "صعودی 📈", "bearish": "نزولی 📉", "none": "نامشخص ❔"}
+
+RECOMMENDATION_FA = {
+    "STRONG_BUY": "خرید قوی 🟢🟢", "BUY": "خرید 🟢", "NEUTRAL": "خنثی ⚪",
+    "SELL": "فروش 🔴", "STRONG_SELL": "فروش قوی 🔴🔴",
+}
+TV_DIR = {"STRONG_BUY": 2, "BUY": 1, "NEUTRAL": 0, "SELL": -1, "STRONG_SELL": -2}
+
+SOURCE_FA = {
+    "yahoo": "Yahoo Finance",
+    "twelvedata": "Twelve Data",
+    "auto": "خودکار (Yahoo — زاپاس: Twelve Data)",
+}
+
+
+def _fmt_price(v: float, pip: float) -> str:
+    """اعشار بر اساس pip — همان قاعدهٔ report/signal تا JPY سه‌رقمی بماند."""
+    import math
+    dec = max(0, min(6, int(round(-math.log10(pip))) + 1)) if pip and pip > 0 else 2
+    return f"{v:.{dec}f}"
+
+
+def _fmt_dist(v: float, pip: float) -> str:
+    """فاصله تا سطوح: برای طلا با دلار، بقیه با پیپ."""
+    if pip >= 0.5:      # طلا و فلزات
+        return f"{v:.0f}$"
+    return f"{v / pip:.0f} پیپ"
+
+
+def _adx_word(v: float) -> str:
+    if v >= 25:
+        return "قوی 💪"
+    if v >= 20:
+        return "متوسط 🙂"
+    return "ضعیف/بی‌روند ⚠️"
+
+
+def _momentum_line(a: SymbolAnalysis) -> str:
+    if a.rsi_rising and a.rsi < 45:
+        return f"RSI={a.rsi:.0f} و رو به بالا ↗️ — پولبک در حال برگشت (منطقه ورود) ⭐"
+    if not a.rsi_rising and a.rsi > 55:
+        return f"RSI={a.rsi:.0f} و رو به پایین ↘️ — اصلاح در روند نزولی (منطقه ورود فروش) ⭐"
+    if a.rsi > 70:
+        return f"RSI={a.rsi:.0f} — اشباع خرید؛ برای ورود جدید دیر است ⚠️"
+    if a.rsi < 30:
+        return f"RSI={a.rsi:.0f} — اشباع فروش؛ منتظر تایید برگشت ⏳"
+    return f"RSI={a.rsi:.0f} — وضعیت خنثی"
+
+
+def _tv_line(a: SymbolAnalysis, tv, tf_label: str) -> str:
+    """خط تاییدیه تریدینگ‌ویو — مقایسه امتیاز رسمی TV با تحلیل خودمان."""
+    if tv is None:
+        return f"   🔍 تاییدیه تریدینگ‌ویو ({tf_label}): در دسترس نبود ⚠️"
+    rec_fa = RECOMMENDATION_FA.get(tv.recommendation, tv.recommendation)
+    rsi_s = f" | RSI={tv.rsi:.0f}" if tv.rsi is not None else ""
+    line = (f"   🔍 تاییدیه تریدینگ‌ویو ({tf_label}): {rec_fa} "
+            f"({tv.buy} خرید / {tv.sell} فروش / {tv.neutral} خنثی){rsi_s}")
+    our = {"BUY_SETUP": 1, "SELL_SETUP": -1}.get(a.verdict, 0)
+    tv_dir = TV_DIR.get(tv.recommendation, 0)
+    if our != 0:
+        if tv_dir == our:
+            line += " — هم‌جهت با تحلیل ما ✅ (پشتوانه قوی‌تر)"
+        elif tv_dir == 0:
+            line += " — تریدینگ‌ویو خنثی است ➖"
+        else:
+            line += " — خلاف جهت تحلیل ما ⚠️ (با احتیاط!)"
+    return line
+
+
+def render_symbol(a: SymbolAnalysis, tv=None, tv_tf: str = "4h",
+                  veto_events=None, extra_lines=None, now=None) -> str:
+    """بخش یک نماد در گزارش.
+
+    Args:
+        veto_events: رویدادهای پراثر نزدیک که سیگنال این نماد را وتو می‌کنند (مرحله ۲)
+        extra_lines: خط‌های اضافی (مثل تایید/رد خبری) که قبل از جمع‌بندی چاپ می‌شوند
+        now:         زمان مرجع گزارش — باید در کل گزارش یکسان باشد، وگرنه
+                     شمارش معکوس وتو با فهرست تقویم تناقض پیدا می‌کند
+    """
+    lines = [
+        SEP,
+        f"📊 {a.symbol} — {a.fa_name}",
+        f"   💵 قیمت فعلی: {_fmt_price(a.price, a.pip)}",
+    ]
+    if a.verdict == "DATA":
+        lines.append(f"   🧾 جمع‌بندی: {VERDICT_FA['DATA']}")
+        return "\n".join(lines)
+
+    agree = ("— تایم‌فریم ۱ ساعته هم تایید می‌کند ✅" if a.h1_agrees
+             else "— ولی ۱ ساعته هم‌جهت نیست ⚠️")
+    lines.append(f"   🧭 روند (۴ ساعته): {TREND_FA[a.trend]} {agree}")
+    lines.append(f"   💪 قدرت روند: ADX={a.adx:.0f} → {_adx_word(a.adx)}")
+    lines.append(f"   📉 مومنتوم (۱۵ دقیقه): {_momentum_line(a)}")
+
+    sup = (f"حمایت: {_fmt_price(a.support, a.pip)} ({_fmt_dist(a.price - a.support, a.pip)} پایین‌تر)"
+           if a.support else "حمایت نزدیکی پیدا نشد")
+    res = (f"مقاومت: {_fmt_price(a.resistance, a.pip)} ({_fmt_dist(a.resistance - a.price, a.pip)} بالاتر)"
+           if a.resistance else "مقاومت نزدیکی پیدا نشد")
+    lines.append(f"   🎚️ {sup} | {res}")
+    lines.append(f"   🌊 نوسان متوسط ساعتی: ATR={_fmt_dist(a.atr, a.pip)}")
+    lines.append(_tv_line(a, tv, tv_tf))
+    for x in (extra_lines or []):
+        lines.append(x)
+    if veto_events:
+        from .fundamental import render_veto
+        lines.append(render_veto(veto_events, a.symbol, now=now))
+        verdict = ("🚫 وتوی خبری فعال — با اینکه شرایط تکنیکال شکل گرفته، در این پنجره "
+                   "سیگنال صادر نمی‌شود")
+    else:
+        verdict = VERDICT_FA.get(a.verdict, a.verdict)
+    lines.append(f"   🧾 جمع‌بندی: {verdict}")
+    return "\n".join(lines)
+
+
+def render_strength(ranking: List[Tuple[str, float]],
+                    analyses: List[SymbolAnalysis]) -> str:
+    if not ranking:
+        return ""
+    lines = [SEP, "💱 رتبه‌بندی قدرت ارزها (۲۴ ساعت اخیر):"]
+    lines.append("   " + "  >  ".join(f"{c} ({v:+.2f}%)" for c, v in ranking))
+
+    fx = [c for c, _ in ranking if c != "XAU"]
+    if len(fx) >= 2:
+        strong, weak = fx[0], fx[-1]
+        aligned = [a.symbol for a in analyses if a.base == strong and a.quote == weak]
+        opposite = [a.symbol for a in analyses if a.base == weak and a.quote == strong]
+        if aligned:
+            lines.append(f"   💡 {strong} قوی‌ترین و {weak} ضعیف‌ترین ارز است → "
+                         f"{'، '.join(aligned)} هم‌جهت با جریان قدرت است ✅")
+        elif opposite:
+            lines.append(f"   💡 {strong} قوی‌ترین و {weak} ضعیف‌ترین ارز است → "
+                         f"{'، '.join(opposite)} خلاف جهت جریان قدرت است ⚠️")
+        else:
+            lines.append(f"   💡 قوی‌ترین ارز: {strong} | ضعیف‌ترین ارز: {weak} "
+                         f"(جفت مستقیم این دو در پوشش ما نیست)")
+    return "\n".join(lines)
+
+
+def render_report(analyses: List[SymbolAnalysis],
+                  ranking: List[Tuple[str, float]],
+                  source_name: str,
+                  tv_map: dict | None = None,
+                  tv_tf: str = "4h",
+                  cal_snap=None,
+                  news_snap=None,
+                  symbols_cfg: list | None = None,
+                  vetoes: dict | None = None,
+                  cal_horizon: float = 48.0,
+                  now=None,
+                  judge_summary: str = "",
+                  simulated: bool = False,
+                  journal_line: str = "") -> str:
+    """گزارش کامل (تکنیکال + تاییدیه تریدینگ‌ویو + تقویم اقتصادی + اخبار).
+
+    Args:
+        cal_snap:    CalendarSnapshot از موتور فاندامنتال (اختیاری)
+        news_snap:   NewsSnapshot از موتور اخبار (اختیاری)
+        symbols_cfg: فهرست نمادها از config (برای تفسیر رویدادها به جفت‌ارزها)
+        vetoes:      نگاشت نام نماد → فهرست رویدادهای وتوکننده
+        judge_summary: بخش آمادهٔ «⚖️ داور امتیازدهی» (خالی = بدون این بخش)
+    """
+    now = now or datetime.now(timezone.utc)
+    stamps = [a.last_candle for a in analyses if a.last_candle]
+    last = max(stamps).strftime("%Y-%m-%d %H:%M") if stamps else "—"
+    src_fa = SOURCE_FA.get(source_name, source_name)
+    tv_map = tv_map or {}
+    tv_on = bool(tv_map)
+    vetoes = vetoes or {}
+    symbols_cfg = symbols_cfg or []
+    fund_on = bool(cal_snap is not None or news_snap is not None)
+
+    parts = [
+        DSEP,
+        "🔎 گزارش تحلیل بازار — دستیار سیگنال فارکس",
+    ]
+    if simulated:
+        parts += [
+            "⚠️⚠️ حالت شبیه‌سازی ⚠️⚠️",
+            f"   زمان فرضی {now:%Y-%m-%d %H:%M} UTC است — دادهٔ بازار واقعی است ولی",
+            "   سشن/تقویم/داور بر اساس این زمان فرضی سنجیده شده‌اند.",
+            "   هیچ سیگنالی در این حالت به تلگرام ارسال یا در ژورنال ثبت نمی‌شود.",
+        ]
+    parts += [
+        f"🕒 زمان اجرا: {now:%Y-%m-%d %H:%M} UTC | منبع داده: {src_fa}",
+        f"📅 آخرین کندل بسته‌شده: {last} UTC"
+        + ("" if tv_on else " | ⚠️ تاییدیه تریدینگ‌ویو این بار در دسترس نبود"),
+        DSEP,
+    ]
+    for a in analyses:
+        extra = []
+        if news_snap is not None and news_snap.ok and a.verdict in ("BUY_SETUP", "SELL_SETUP"):
+            from .fundamental import news_lines_for_symbol
+            bias = "buy" if a.verdict == "BUY_SETUP" else "sell"
+            extra = news_lines_for_symbol(news_snap, a.base, a.quote, bias)
+        parts.append(render_symbol(a, tv=tv_map.get(a.symbol), tv_tf=tv_tf,
+                                   veto_events=vetoes.get(a.symbol), extra_lines=extra,
+                                   now=now))
+    strength = render_strength(ranking, analyses)
+    if strength:
+        parts.append(strength)
+
+    # ── بخش فاندامنتال (مرحله ۲) ──────────────────────────────
+    if cal_snap is not None:
+        from .fundamental import render_calendar
+        parts.append(render_calendar(cal_snap, symbols_cfg, now=now,
+                                     horizon_hours=cal_horizon))
+    if news_snap is not None:
+        from .fundamental import render_news
+        parts.append(render_news(news_snap))
+
+    # ── ⚖️ داور امتیازدهی (مرحله ۳) — قبل از پابرگ، چون نتیجهٔ نهایی است ──
+    if judge_summary:
+        parts.append(judge_summary)
+
+    # ──  یک خط کارنامه (مرحله ۴) — صدای «حلقهٔ صداقت» در هر گزارش ──
+    if journal_line:
+        parts.append(SEP)
+        parts.append(journal_line)
+
+    if any(a.symbol == "XAUUSD" for a in analyses):
+        parts.append(SEP)
+        parts.append("📎 طلا از Yahoo به‌صورت فیوچرز (GC=F) است — اختلاف چند دلاری با قیمت اسپات طبیعی است")
+    parts.append("")
+    parts.append("⚠️ این گزارش فقط تحلیل است، نه دستور معامله — تصمیم نهایی با شماست")
+    if not fund_on:
+        parts.append("ℹ️ موتور فاندامنتال/اخبار در این چرخه غیرفعال بود (config.yaml)")
+    parts.append(DSEP)
+    return "\n".join(parts)

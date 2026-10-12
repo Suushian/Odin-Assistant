@@ -1,0 +1,67 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# Secrets & local config — هرگز کامیت نشوند
+.env
+*.secret
+secrets.*
+config.local.yaml
+telegram_token.txt
+
+# Data & databases (ژورنال و کش داده محلی است)
+*.sqlite
+*.sqlite3
+*.db
+data/cache/
+logs/
+*.log
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# PyInstaller / Inno Setup artifacts
+build/
+dist/
+installer/Output/
+
+# باقی‌ماندهٔ ساخت اندروید (شاخهٔ android فایل .gitignore خودش را دارد؛
+# این قاعده‌ها برای وقتی است که پوشهٔ android/ در workspace باز است)
+.gradle/
+android/.gradle/
+android/keystore/
+android/keystore.properties
+android/local.properties
+tests/js/fixtures.json
+# دادهٔ اجرای اپ/تست‌ها وقتی data_dir به پوشهٔ اجرا می‌افتد (legacy/portable)
+/alerts.json
+/chart_*.json
+/license.dat
+/trial.dat
+/signals.jsonl
+/config.local.yaml
+/state.last.json
+shots-v20/
+
+# یادداشت ریلیز تولیدشده توسط installer/release_notes.py (در CI ساخته می‌شود)
+RELEASE_NOTES.md
+
+# خروجی تولیدشده توسط tools/make_project_report.py — فایل ساختنی در گیت ثبت نمی‌شود
+reports/
+
+# ── خروجی ساخت و کلیدهای امضا (هرگز نباید وارد گیت شوند) ──────────────
+*.apk
+*.aab
+*.jks
+*.keystore
+.kotlin/
+local.properties
+captures/
+*.hprof
