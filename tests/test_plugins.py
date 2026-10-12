@@ -390,16 +390,29 @@ def test_judge_registry_parity() -> None:
     A(golden_path.exists(), "فایل طلایی داور وجود ندارد")
     golden = json.loads(golden_path.read_text(encoding="utf-8"))
 
-    reg, info = build_default_registry(CFG)
+    # این باتری طلایی رفتار پیش از فعال‌سازی اسکالپ را پین می‌کند؛
+    # مسیر فعالِ چهار استراتژی جداگانه در test_strategy_registry_gate آزموده می‌شود.
+    import copy
+    cfg_baseline = copy.deepcopy(CFG)
+    cfg_baseline["strategies"]["scalping"]["enabled"] = False
+    reg, info = build_default_registry(cfg_baseline)
     jp = JudgePlugin(info["context"])             # registry-aware
+    original_rules = gen.DEFAULT_STRATEGY_RULES
+    from src.plugins.strategies import STRATEGY_RULES, StrategyAdapter
+    gen.DEFAULT_STRATEGY_RULES = [StrategyAdapter(k, cfg_baseline)
+                                  for _pid, k in STRATEGY_RULES
+                                  if (cfg_baseline.get("strategies", {}).get(k) or {}).get("enabled", True)]
 
     def j_sym(a, sym_cfg, md, ctx):
         # judge_symbol از مسیر پلاگین: judge_all تک‌نمادی همان معنا را دارد
         # (sym_cfg={} و datasets.get(symbol)=md — دقیقاً مثل judge_all)
         return jp.judge_all([a], {a.symbol: md}, ctx)[0]
 
-    plugin_bat = gen.build_battery(judge_symbol_fn=j_sym,
-                                   judge_all_fn=jp.judge_all)
+    try:
+        plugin_bat = gen.build_battery(judge_symbol_fn=j_sym,
+                                       judge_all_fn=jp.judge_all)
+    finally:
+        gen.DEFAULT_STRATEGY_RULES = original_rules
     if plugin_bat != golden:
         diff = [k for k in sorted(set(plugin_bat) | set(golden))
                 if plugin_bat.get(k) != golden.get(k)]
@@ -549,10 +562,10 @@ def test_strategy_registry_gate() -> None:
     # مسیر registry با همهٔ استراتژی‌های فعال == مسیر مستقیم با DEFAULT
     reg, info = build_default_registry(CFG)
     _v, _e, _r, s_rules = JudgePlugin(info["context"])._rules()
-    A(s_rules is not None and len(s_rules) == 3,
-      "providers(odin.strategy@1) باید ۳ قاعده به judge-core بدهد")
-    A([r.key for r in s_rules] == ["trend_pullback", "london_breakout", "carry"],
-      "ترتیب تزریق = priority (۱۰/۲۰/۳۰) — قطعی")
+    A(s_rules is not None and len(s_rules) == 4,
+      "providers(odin.strategy@1) باید ۴ قاعده به judge-core بدهد")
+    A([r.key for r in s_rules] == ["trend_pullback", "london_breakout", "carry", "scalping"],
+      "ترتیب تزریق = priority (۱۰/۲۰/۳۰/۴۰) — قطعی")
     jp = JudgePlugin(info["context"])
     j_plugin = jp.judge_all([a], {a.symbol: md}, ctx)[0]
     j_direct = judge_all([a], {a.symbol: md}, ctx,
@@ -566,7 +579,7 @@ def test_strategy_registry_gate() -> None:
 
     # همهٔ استراتژی‌ها خاموش → provider خالی → fail-closed صادقانه (D3)
     cfg_off = copy.deepcopy(CFG)
-    for k in ("trend_pullback", "london_breakout", "carry"):
+    for k in ("trend_pullback", "london_breakout", "carry", "scalping"):
         cfg_off["strategies"][k]["enabled"] = False
     reg_o, info_o = build_default_registry(cfg_off)
     A(reg_o.providers("odin.strategy@1") == [],
