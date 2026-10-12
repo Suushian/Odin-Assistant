@@ -359,16 +359,17 @@ for pid in ("strategy-trend-pullback", "strategy-london-breakout", "strategy-car
     A(pid in ids, f"پلاگین «{pid}» باید در registry ثبت شود")
 A(len(reg.all()) == 34, f"registry باید ۳۴ پلاگین داشته باشد، {len(reg.all())} است")
 provs = reg.providers("odin.strategy@1")
-A([p.id for p in provs] == ["strategy-trend-pullback", "strategy-london-breakout", "strategy-carry"],
-    "اسکالپ غیرفعال است؛ فراهم‌کنندگان فعال فقط ۱۰/۲۰/۳۰ هستند")
+A([p.id for p in provs] == ["strategy-trend-pullback", "strategy-london-breakout", "strategy-carry", "strategy-scalping"],
+    "چهار فراهم‌کنندهٔ فعال باید با priorityهای ۱۰/۲۰/۳۰/۴۰ مرتب باشند")
 
 # adapter == فراخوانی مستقیم (delegation خالص — بایت‌به‌بایت)
 ctx = mk_ctx()
 cases = [("trend_pullback", mk_a(), md_bull),
          ("london_breakout", mk_a(price=1.1060), md_lb),
-         ("carry", mk_pair("AUDJPY", "AUD", "JPY"), None)]
+         ("carry", mk_pair("AUDJPY", "AUD", "JPY"), None),
+         ("scalping", mk_a(), mk_md(mk_h1(last_bull())))]
 mods = {"trend_pullback": trend_pullback, "london_breakout": london_breakout,
-        "carry": carry}
+        "carry": carry, "scalping": scalping}
 scfgs = {"trend_pullback": SCFG_TP, "london_breakout": SCFG_LB, "carry": SCFG_CARRY}
 for rec, (key, a, md) in zip(provs, cases):
     inst = rec.instance if rec.instance is not None else rec.factory(info["context"])
@@ -393,14 +394,14 @@ A(plugin_enabled(cfg_off, [r.manifest for r in reg2.all()
                            if r.id == "strategy-carry"][0]) is False,
     "strategies.carry.enabled=false باید پلاگین را خاموش کند")
 A([p.id for p in reg2.providers("odin.strategy@1")]
-  == ["strategy-trend-pullback", "strategy-london-breakout"],
-    "استراتژی خاموش و اسکالپ پیش‌فرض باید از فراهم‌کنندگان حذف شوند")
+  == ["strategy-trend-pullback", "strategy-london-breakout", "strategy-scalping"],
+    "خاموش‌کردن carry نباید اسکالپ فعال را از فراهم‌کنندگان حذف کند")
 cfg_ov = load_config(str(ROOT / "config.yaml"))
 cfg_ov["plugins"] = {"strategy-london-breakout": {"enabled": False}}
 reg3, _ = build_default_registry(cfg_ov)
 A([p.id for p in reg3.providers("odin.strategy@1")]
-  == ["strategy-trend-pullback", "strategy-carry"],
-    "plugins override صریح باید برنده شود و اسکالپ خاموش بماند (فاز ۷)")
+  == ["strategy-trend-pullback", "strategy-carry", "strategy-scalping"],
+    "plugins override صریح باید فقط استراتژیِ انتخاب‌شده را خاموش کند (فاز ۷)")
 A(any("strategy" in line for line in info["log"]),
     "لاگ ثبت پلاگین‌ها باید استراتژی‌ها را نشان دهد")
 print(f"✅ D) registry/config — {COUNT - COUNT_C} میخ سبز")
