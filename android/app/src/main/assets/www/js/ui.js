@@ -15,6 +15,18 @@
   }
   O.esc = esc;
 
+  // URL خارجیِ قابل‌ناوبری را فقط پس از parse ساختاری بپذیر؛ بررسی regex
+  // به‌تنهایی برای user-info و URLهای مبهم کافی نیست.
+  O.safeExternalUrl = function (raw) {
+    try {
+      var u = new URL(String(raw == null ? '' : raw).trim());
+      if (!/^https?:$/.test(u.protocol) || !u.hostname || u.username || u.password) return '';
+      return u.href;
+    } catch (e) {
+      return '';
+    }
+  };
+
   // متن esc‌شدهٔ موتور → HTML با آیکون (ترتیب مهم: اول esc بعد icoStr)
   function eico(s, size) { return O.icoStr(esc(s), size); }
 
