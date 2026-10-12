@@ -360,8 +360,8 @@ for pid in ("strategy-trend-pullback", "strategy-london-breakout", "strategy-car
 A(len(reg.all()) == 34, f"registry باید ۳۴ پلاگین داشته باشد، {len(reg.all())} است")
 provs = reg.providers("odin.strategy@1")
 A([p.id for p in provs] == ["strategy-trend-pullback", "strategy-london-breakout",
-                            "strategy-carry"],
-    "ترتیب فراهم‌کنندگان = priority اعلامی (۱۰/۲۰/۳۰)")
+                            "strategy-carry", "strategy-scalping"],
+    "ترتیب فراهم‌کنندگان = priority اعلامی (۱۰/۲۰/۳۰/۴۰)")
 
 # adapter == فراخوانی مستقیم (delegation خالص — بایت‌به‌بایت)
 ctx = mk_ctx()
@@ -386,13 +386,13 @@ A(plugin_enabled(cfg_off, [r.manifest for r in reg2.all()
                            if r.id == "strategy-carry"][0]) is False,
     "strategies.carry.enabled=false باید پلاگین را خاموش کند")
 A([p.id for p in reg2.providers("odin.strategy@1")]
-  == ["strategy-trend-pullback", "strategy-london-breakout"],
+  == ["strategy-trend-pullback", "strategy-london-breakout", "strategy-scalping"],
     "استراتژی خاموش باید از فهرست فراهم‌کنندگان حذف شود")
 cfg_ov = load_config(str(ROOT / "config.yaml"))
 cfg_ov["plugins"] = {"strategy-london-breakout": {"enabled": False}}
 reg3, _ = build_default_registry(cfg_ov)
 A([p.id for p in reg3.providers("odin.strategy@1")]
-  == ["strategy-trend-pullback", "strategy-carry"],
+  == ["strategy-trend-pullback", "strategy-carry", "strategy-scalping"],
     "plugins override صریح باید برنده شود (فاز ۷)")
 A(any("strategy" in line for line in info["log"]),
     "لاگ ثبت پلاگین‌ها باید استراتژی‌ها را نشان دهد")
