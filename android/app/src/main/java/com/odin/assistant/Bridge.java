@@ -174,10 +174,24 @@ public class Bridge {
         });
     }
 
+    /**
+     * Opens only well-formed web URLs outside the app. Do not allow arbitrary
+     * schemes (for example intent:, file:, javascript:, or custom app links)
+     * to be supplied through the JavaScript bridge.
+     */
     @JavascriptInterface
     public void openExternal(String url) {
         try {
-            Intent i = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+            if (url == null || url.trim().isEmpty()) return;
+            Uri uri = Uri.parse(url.trim());
+            String scheme = uri.getScheme();
+            String host = uri.getHost();
+            if (scheme == null || host == null || host.trim().isEmpty()
+                    || uri.getUserInfo() != null
+                    || !("https".equalsIgnoreCase(scheme) || "http".equalsIgnoreCase(scheme))) {
+                return;
+            }
+            Intent i = new Intent(Intent.ACTION_VIEW, uri);
             i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             ctx.startActivity(i);
         } catch (Exception ignored) {
