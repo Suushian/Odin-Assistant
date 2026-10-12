@@ -61,7 +61,8 @@ def plugins() -> List[Tuple[PluginManifest, Any]]:
                 id=pid, version="1.0.0",
                 provides=["odin.strategy@1"],
                 config={"section": "strategies",
-                        "enabled_key": f"{key}.enabled", "default": True},
+                        "enabled_key": f"{key}.enabled",
+                        "default": key != "scalping"},
                 platforms=["desktop", "android"],
                 stage="judge", priority=10 * (i + 1), optional=True),
             lambda ctx, k=key: StrategyAdapter(
