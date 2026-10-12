@@ -129,7 +129,7 @@ EXPECTED_IDS = {
     # v0.26 (S1) — استراتژی‌های ورود با قراردادِ افزودنیِ odin.strategy@1
     # (تصمیم مالک: «سیگنال بر اساس استراتژی‌ها») — افزودنیِ ساختاری؛
     # مصرف‌کننده در S3 وصل می‌شود و تا آن زمان رفتار چرخه عوض نمی‌شود.
-    "strategy-trend-pullback", "strategy-london-breakout", "strategy-carry", "strategy-scalping", "strategy-scalping",
+    "strategy-trend-pullback", "strategy-london-breakout", "strategy-carry", "strategy-scalping",
 }
 # از فاز ۴ همهٔ قراردادها فراهم‌کننده دارند (veto@1/evidence@1 پر شدند)
 PROVIDED_NOW = set(CONTRACTS)
@@ -164,7 +164,6 @@ def test_registration() -> None:
     A(reg.by_id("fundamental-news").enabled is True, "news.enabled=true → فعال")
     A(reg.by_id("notify-telegram").enabled is True,
       "notify همیشه فعال است (guard «تنظیم نشده» داخل بدنهٔ send است — فاز ۳)")
-    A(reg.by_id("strategy-scalping").enabled is False, "اسکالپ تا تأیید parity باید خاموش باشد")
     A(reg.by_id("strategy-scalping").enabled is False, "اسکالپ تا تکمیل parity باید خاموش باشد")
     A(reg.by_id("fundamental-calendar").manifest.config["section"] == "fundamental",
       "تقویم باید به کلید fundamental.enabled متصل باشد")
