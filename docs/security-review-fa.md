@@ -44,7 +44,8 @@
 - `MainActivity.shouldOverrideUrlLoading`: بازکردن خارجی فقط برای URLهای معتبر HTTP/HTTPS؛ schemeهای دیگر داخل اپ یا بیرون از آن اجرا نمی‌شوند.
 - `O.safeExternalUrl` در `js/ui.js`: اعتبارسنجی ساختاری URL در لایهٔ JS نیز انجام می‌شود؛ مسیر مرورگرِ توسعه دیگر schemeهای دلخواه را به `window.open` نمی‌دهد و از `noopener,noreferrer` استفاده می‌کند.
 - `tests/js/test_external_url.js`: تست‌های منفی و مثبت برای HTTP/HTTPS، URL نسبی، `javascript:`, `file:`, `intent:`, `data:` و user-info اضافه شد.
-- `Bridge.http`: اعتبارسنجی URL اولیه، محدودکردن روش‌ها به GET/POST/HEAD، سقف ۱ MiB برای بدنه و سقف ۴ MiB برای پاسخ بافرشده.
+- `tests/js/test_news_render_xss.js`: تست‌های رگرسیون برای عنوان، منبع، کلیدواژه و URL آلودهٔ RSS اضافه شد و به هر دو workflow متصل شد.
+- `Bridge.http`: اعتبارسنجی URL اولیه و مقصد هر redirect، حداکثر ۵ redirect، رد redirect بین میزبان‌های متفاوت و downgrade از HTTPS به HTTP، محدودکردن روش‌ها به GET/POST/HEAD، سقف ۱ MiB برای بدنه و سقف ۴ MiB برای پاسخ بافرشده.
 
 این تغییرات سطح حمله را کاهش می‌دهند، اما ریدایرکت‌های HTTP هنوز اعتبارسنجی مقصد به مقصد ندارند و تست‌های اختصاصی این قواعد نیز هنوز اضافه نشده‌اند. اصلاحات به‌تنهایی همهٔ ریسک‌های WebView یا تزریق JavaScript را رفع نمی‌کنند.
 
