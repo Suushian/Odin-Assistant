@@ -335,6 +335,21 @@ async function runScenario(name, busSink) {
       await waitCycle(app.calls, 1);
       return record(app);
     }
+    case 'svc_settings_scalping_off': {
+      // تنظیم مستقل اسکالپ از تنظیمات گوشی → buildCfg → registry.
+      const app = createApp({
+        prefs: { settings: JSON.stringify({ strategy_scalping_enabled: false }) }
+      });
+      if (busSink) subscribeBus(app, busSink);
+      app.O.trialStart(app.pstorage);
+      app.O.svcStart();
+      await waitCycle(app.calls, 1);
+      const out = record(app);
+      out.scalpingEnabled = app.O.S.cfg.strategies.scalping.enabled;
+      out.scalpingPluginEnabled = app.O.buildDefaultRegistry(app.O.S.cfg, 'android')
+        .registry.byId('strategy-scalping').enabled;
+      return out;
+    }
     case 'svc_settings_min_agree_2': {
       // S4 (سناریوی ۱۱): min_agree=2 از تنظیمات گوشی — EURUSD آماده فقط
       // یک موافق دارد (trend_pullback) → NO_STRATEGY با دلیلِ شمارِ توافق
