@@ -149,7 +149,7 @@ def test_registration() -> None:
     A(ids == EXPECTED_IDS, f"مجموعهٔ پلاگین‌های ثبت‌شده فرق کرد: {ids ^ EXPECTED_IDS}")
     A(len(info["log"]) >= len(EXPECTED_IDS), "لاگ ثبت باید به‌ازای هر پلاگین خط داشته باشد")
     A(info["disabled"] == [], f"بدون plugins override صریح، فهرست override-disabled باید خالی باشد: {info['disabled']}")
-    A(len(info["order"]) == len(EXPECTED_IDS) - 1, "resolve باید همهٔ پلاگین‌های فعال را بچیند و اسکالپ خاموش را کنار بگذارد")
+    A(len(info["order"]) == len(EXPECTED_IDS), "resolve باید همهٔ پلاگین‌های فعال را در ترتیب وابستگی بچیند")
 
     for cid in PROVIDED_NOW:
         A(len(reg.providers(cid)) >= 1, f"قرارداد {cid} بدون فراهم‌کننده است")
@@ -164,7 +164,7 @@ def test_registration() -> None:
     A(reg.by_id("fundamental-news").enabled is True, "news.enabled=true → فعال")
     A(reg.by_id("notify-telegram").enabled is True,
       "notify همیشه فعال است (guard «تنظیم نشده» داخل بدنهٔ send است — فاز ۳)")
-    A(reg.by_id("strategy-scalping").enabled is False, "اسکالپ تا تکمیل parity باید خاموش باشد")
+    A(reg.by_id("strategy-scalping").enabled is True, "اسکالپ پس از تکمیل parity و SL/TP باید فعال باشد")
     A(reg.by_id("fundamental-calendar").manifest.config["section"] == "fundamental",
       "تقویم باید به کلید fundamental.enabled متصل باشد")
 
