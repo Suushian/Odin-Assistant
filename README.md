@@ -13,8 +13,8 @@
 بسته است.
 
 [![نسخه](https://img.shields.io/github/v/release/Suushian/Odin-Assistant?display_name=tag&style=for-the-badge&color=111111&labelColor=eeeeee&label=release)](https://github.com/Suushian/Odin-Assistant/releases/latest)
-[![CI — بیلد APK](https://img.shields.io/github/actions/workflow/status/Suushian/Odin-Assistant/build-android.yml?branch=ANDROID&style=for-the-badge&logo=githubactions&logoColor=white&label=APK%20CI&color=111111&labelColor=eeeeee)](https://github.com/Suushian/Odin-Assistant/actions/workflows/build-android.yml)
-[![CI — تست‌ها](https://img.shields.io/github/actions/workflow/status/Suushian/Odin-Assistant/build-release.yml?branch=ANDROID&style=for-the-badge&logo=githubactions&logoColor=white&label=Tests&color=111111&labelColor=eeeeee)](https://github.com/Suushian/Odin-Assistant/actions/workflows/build-release.yml)
+[![CI — بیلد APK](https://img.shields.io/github/actions/workflow/status/Suushian/Odin-Assistant/build-android.yml?branch=main&style=for-the-badge&logo=githubactions&logoColor=white&label=APK%20CI&color=111111&labelColor=eeeeee)](https://github.com/Suushian/Odin-Assistant/actions/workflows/build-android.yml)
+[![CI — تست‌ها](https://img.shields.io/github/actions/workflow/status/Suushian/Odin-Assistant/build-release.yml?branch=main&style=for-the-badge&logo=githubactions&logoColor=white&label=Tests&color=111111&labelColor=eeeeee)](https://github.com/Suushian/Odin-Assistant/actions/workflows/build-release.yml)
 [![اندروید](https://img.shields.io/badge/Android-7.0%2B-111111?style=for-the-badge&logo=android&logoColor=a4c639&labelColor=eeeeee)](https://github.com/Suushian/Odin-Assistant/releases/latest)
 [![حجم](https://img.shields.io/badge/APK-%7E0.4%20MB-111111?style=for-the-badge&labelColor=eeeeee)](https://github.com/Suushian/Odin-Assistant/releases/latest)
 ![هزینه داده](https://img.shields.io/badge/Data%20Cost-%240-111111?style=for-the-badge&labelColor=eeeeee)
