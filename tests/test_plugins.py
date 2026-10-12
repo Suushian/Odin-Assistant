@@ -148,7 +148,7 @@ def test_registration() -> None:
     ids = {r.id for r in reg.all()}
     A(ids == EXPECTED_IDS, f"مجموعهٔ پلاگین‌های ثبت‌شده فرق کرد: {ids ^ EXPECTED_IDS}")
     A(len(info["log"]) >= len(EXPECTED_IDS), "لاگ ثبت باید به‌ازای هر پلاگین خط داشته باشد")
-    A(info["disabled"] == ["strategy-scalping"], f"فقط اسکالپ باید پیش‌فرض خاموش باشد: {info['disabled']}")
+    A(info["disabled"] == [], f"بدون plugins override صریح، فهرست override-disabled باید خالی باشد: {info['disabled']}")
     A(len(info["order"]) == len(EXPECTED_IDS), "resolve باید همه را بچیند")
 
     for cid in PROVIDED_NOW:
