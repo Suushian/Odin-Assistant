@@ -12,16 +12,16 @@
 کامل را — با دلیل‌های مکتوب فارسی — روی گوشی‌ات می‌گذارد. حتی وقتی اپ
 بسته است.
 
-[![نسخه](https://img.shields.io/github/v/release/KhodeSushianm/Trading-Bot?display_name=tag&style=for-the-badge&color=111111&labelColor=eeeeee&label=release)](https://github.com/KhodeSushianm/Trading-Bot/releases/latest)
-[![CI — بیلد APK](https://img.shields.io/github/actions/workflow/status/KhodeSushianm/Trading-Bot/build-android.yml?branch=ANDROID&style=for-the-badge&logo=githubactions&logoColor=white&label=APK%20CI&color=111111&labelColor=eeeeee)](https://github.com/KhodeSushianm/Trading-Bot/actions/workflows/build-android.yml)
-[![CI — تست‌ها](https://img.shields.io/github/actions/workflow/status/KhodeSushianm/Trading-Bot/build-release.yml?branch=ANDROID&style=for-the-badge&logo=githubactions&logoColor=white&label=Tests&color=111111&labelColor=eeeeee)](https://github.com/KhodeSushianm/Trading-Bot/actions/workflows/build-release.yml)
-[![اندروید](https://img.shields.io/badge/Android-7.0%2B-111111?style=for-the-badge&logo=android&logoColor=a4c639&labelColor=eeeeee)](https://github.com/KhodeSushianm/Trading-Bot/releases/latest)
-[![حجم](https://img.shields.io/badge/APK-%7E0.4%20MB-111111?style=for-the-badge&labelColor=eeeeee)](https://github.com/KhodeSushianm/Trading-Bot/releases/latest)
+[![نسخه](https://img.shields.io/github/v/release/Suushian/Odin-Assistant?display_name=tag&style=for-the-badge&color=111111&labelColor=eeeeee&label=release)](https://github.com/Suushian/Odin-Assistant/releases/latest)
+[![CI — بیلد APK](https://img.shields.io/github/actions/workflow/status/Suushian/Odin-Assistant/build-android.yml?branch=main&style=for-the-badge&logo=githubactions&logoColor=white&label=APK%20CI&color=111111&labelColor=eeeeee)](https://github.com/Suushian/Odin-Assistant/actions/workflows/build-android.yml)
+[![CI — تست‌ها](https://img.shields.io/github/actions/workflow/status/Suushian/Odin-Assistant/build-release.yml?branch=main&style=for-the-badge&logo=githubactions&logoColor=white&label=Tests&color=111111&labelColor=eeeeee)](https://github.com/Suushian/Odin-Assistant/actions/workflows/build-release.yml)
+[![اندروید](https://img.shields.io/badge/Android-7.0%2B-111111?style=for-the-badge&logo=android&logoColor=a4c639&labelColor=eeeeee)](https://github.com/Suushian/Odin-Assistant/releases/latest)
+[![حجم](https://img.shields.io/badge/APK-%7E0.4%20MB-111111?style=for-the-badge&labelColor=eeeeee)](https://github.com/Suushian/Odin-Assistant/releases/latest)
 ![هزینه داده](https://img.shields.io/badge/Data%20Cost-%240-111111?style=for-the-badge&labelColor=eeeeee)
 
 <br>
 
-<a href="https://github.com/KhodeSushianm/Trading-Bot/releases/latest">
+<a href="https://github.com/Suushian/Odin-Assistant/releases/latest">
 <img src="https://img.shields.io/badge/⬇️%20%20دانلود%20APK%20—%20آخرین%20نسخه-111111?style=for-the-badge&labelColor=eeeeee" alt="دانلود APK از ریلیزها">
 </a>
 
@@ -196,7 +196,7 @@
 ## 📥 نصب و فعال‌سازی
 
 1. **دانلود:** `ODIN-Assistant-android-vX.Y.Z.apk` از
-   [ریلیزها](https://github.com/KhodeSushianm/Trading-Bot/releases/latest)
+   [ریلیزها](https://github.com/Suushian/Odin-Assistant/releases/latest)
    (بیلد و امضا در CI رسمی مخزن — اثر انگشت گواهی در صفحهٔ «دربارهٔ ما»
    قابل تطبیق است)
 2. **نصب:** اندروید ۷٫۰+ · اجازهٔ «نصب از منابع ناشناس» · بدون AndroidX و
@@ -313,8 +313,7 @@
 - 🧪 اجرای تست‌ها: `python main.py --selftest` و
   `for t in tests/test_*.py; do python $t; done` و
   `for s in tests/js/smoke_*.js tests/js/test_*.js; do node $s; done`
-- 🌿 برنچ پیش‌فرض: **`ANDROID`** — سه برنچ (`ANDROID`/`android`/`main`)
-  باید همیشه هم‌کامیت بمانند (نگهبان CI: `branch-sync.yml`).
+- 🌿 برنچ پیش‌فرض مخزن: **`main`**؛ این تنها برنچ فعال فعلی است. `ANDROID` و `android` نام‌های تاریخی‌اند و اگر دوباره ایجاد شوند، نگهبان `branch-sync.yml` همگامی آن‌ها را بررسی می‌کند.
   ⚠️ هم‌زمانی `ANDROID` و `android` روی فایل‌سیستمِ case-insensitive
   (ویندوز/مک) می‌تواند خطای `cannot lock ref` بدهد — راه‌حل:
   `git pack-refs --all` و هرگز checkout هم‌زمان هر دو
@@ -330,7 +329,7 @@
 ⚠️ این پروژه ابزار آموزشی/تحلیلی است، نه مشاورهٔ مالی. معامله در فارکس
 پرریسک است؛ هیچ سیستمی سود را تضمین نمی‌کند.
 
-[دانلود APK](https://github.com/KhodeSushianm/Trading-Bot/releases/latest) ·
+[دانلود APK](https://github.com/Suushian/Odin-Assistant/releases/latest) ·
 [تلگرام رسمی](https://t.me/Khode_Sushian) ·
 [تغییرات نسخه‌ها](CHANGELOG.md)
 

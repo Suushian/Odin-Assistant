@@ -67,15 +67,23 @@ public class MainActivity extends Activity {
         web.setWebViewClient(new WebViewClient() {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, String url) {
-                // لینک خبرها در مرورگر خود گوشی باز شود، نه داخل اپ
-                if (url != null && url.startsWith("http")) {
-                    try {
-                        startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url)));
-                    } catch (Exception ignored) {
+                // Only open well-formed HTTP(S) links externally; never hand arbitrary
+                // schemes from WebView content to Android's intent resolver.
+                if (url == null) return true;
+                try {
+                    Uri uri = Uri.parse(url);
+                    String scheme = uri.getScheme();
+                    String host = uri.getHost();
+                    if (host != null && !host.trim().isEmpty()
+                            && uri.getUserInfo() == null
+                            && scheme != null
+                            && ("https".equalsIgnoreCase(scheme) || "http".equalsIgnoreCase(scheme))) {
+                        startActivity(new Intent(Intent.ACTION_VIEW, uri));
+                        return true;
                     }
-                    return true;
+                } catch (Exception ignored) {
                 }
-                return false;
+                return true;
             }
         });
 

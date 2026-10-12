@@ -15,6 +15,21 @@
   }
   O.esc = esc;
 
+  // URL خارجیِ قابل‌ناوبری را فقط پس از parse ساختاری بپذیر؛ بررسی regex
+  // به‌تنهایی برای user-info و URLهای مبهم کافی نیست.
+  O.safeExternalUrl = function (raw) {
+    try {
+      var rawText = String(raw == null ? '' : raw).trim();
+      var authority = rawText.match(/^[a-z][a-z0-9+.-]*:\/\/([^/?#]*)/i);
+      var u = new URL(rawText);
+      if (!/^https?:$/.test(u.protocol) || !u.hostname || u.username || u.password
+          || !authority || authority[1].indexOf('@') >= 0) return '';
+      return u.href;
+    } catch (e) {
+      return '';
+    }
+  };
+
   // متن esc‌شدهٔ موتور → HTML با آیکون (ترتیب مهم: اول esc بعد icoStr)
   function eico(s, size) { return O.icoStr(esc(s), size); }
 

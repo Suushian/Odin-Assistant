@@ -52,7 +52,7 @@ public class Bridge {
 
     private static final String UA =
             "Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) "
-                    + "Chrome/126.0.0.0 Mobile Safari/537.36 ODINAssistant/0.19.0";
+                    + "Chrome/126.0.0.0 Mobile Safari/537.36 ODINAssistant/0.28.0";
 
     private final Context ctx;          // همیشه غیرnull (application context ترجیحاً)
     private final Activity act;         // در حالت سرویس null است
@@ -69,7 +69,7 @@ public class Bridge {
         this.prefs = this.ctx.getSharedPreferences("odin", Context.MODE_PRIVATE);
     }
 
-    /** درخواست HTTP روی thread پس‌زمینه؛ نتیجه با ODIN.httpDone به JS برمی‌گردد. */
+    /** درخواست HTTP روی thread پس‌زمینه؛ ریدایرکت‌ها به‌صورت دستی و امن دنبال می‌شوند. */
     @JavascriptInterface
     public void http(final int cbId, final String url, final String method,
                      final String body, final String contentType) {
@@ -80,38 +80,101 @@ public class Bridge {
                 String payloadB64 = "";
                 HttpURLConnection c = null;
                 try {
-                    c = (HttpURLConnection) new URL(url).openConnection();
-                    String m = (method == null || method.isEmpty()) ? "GET" : method.toUpperCase();
-                    c.setRequestMethod(m);
-                    c.setConnectTimeout(20000);
-                    c.setReadTimeout(25000);
-                    c.setInstanceFollowRedirects(true);
-                    c.setRequestProperty("User-Agent", UA);
-                    c.setRequestProperty("Accept", "*/*");
-                    c.setRequestProperty("Accept-Language", "en-US,en;q=0.9");
-                    if (body != null && !body.isEmpty()) {
-                        c.setDoOutput(true);
-                        c.setRequestProperty("Content-Type",
-                                contentType == null ? "application/json" : contentType);
-                        OutputStream os = c.getOutputStream();
-                        os.write(body.getBytes("UTF-8"));
-                        os.close();
+                    if (url == null || url.trim().isEmpty()) {
+                        throw new IllegalArgumentException("Invalid URL");
                     }
-                    status = c.getResponseCode();
-                    InputStream in;
-                    try {
-                        in = (status >= 200 && status < 400) ? c.getInputStream() : c.getErrorStream();
-                    } catch (Exception e) {
-                        in = null;
+                    URL current = new URL(url.trim());
+                    validateHttpUrl(current);
+                    String m = (method == null || method.trim().isEmpty())
+                            ? "GET" : method.trim().toUpperCase(java.util.Locale.ROOT);
+                    if (!("GET".equals(m) || "POST".equals(m) || "HEAD".equals(m))) {
+                        throw new IllegalArgumentException("Unsupported HTTP method");
                     }
-                    ByteArrayOutputStream bos = new ByteArrayOutputStream();
-                    if (in != null) {
-                        byte[] buf = new byte[16384];
-                        int n;
-                        while ((n = in.read(buf)) > 0) bos.write(buf, 0, n);
-                        in.close();
+                    String requestBody = body;
+                    if (requestBody != null && requestBody.getBytes("UTF-8").length > 1024 * 1024) {
+                        throw new IllegalArgumentException("Request body too large");
                     }
-                    payloadB64 = Base64.encodeToString(bos.toByteArray(), Base64.NO_WRAP);
+
+                    final String originalHost = current.getHost().toLowerCase(java.util.Locale.ROOT);
+                    final String originalProtocol = current.getProtocol().toLowerCase(java.util.Locale.ROOT);
+                    boolean completed = false;
+                    for (int redirects = 0; redirects <= 5; redirects++) {
+                        validateHttpUrl(current);
+                        c = (HttpURLConnection) current.openConnection();
+                        c.setInstanceFollowRedirects(false);
+                        c.setRequestMethod(m);
+                        c.setConnectTimeout(20000);
+                        c.setReadTimeout(25000);
+                        c.setRequestProperty("User-Agent", UA);
+                        c.setRequestProperty("Accept", "*/*");
+                        c.setRequestProperty("Accept-Language", "en-US,en;q=0.9");
+                        if (requestBody != null && !requestBody.isEmpty()
+                                && !("GET".equals(m) || "HEAD".equals(m))) {
+                            c.setDoOutput(true);
+                            c.setRequestProperty("Content-Type",
+                                    contentType == null ? "application/json" : contentType);
+                            OutputStream os = c.getOutputStream();
+                            try {
+                                os.write(requestBody.getBytes("UTF-8"));
+                            } finally {
+                                os.close();
+                            }
+                        }
+
+                        status = c.getResponseCode();
+                        String location = c.getHeaderField("Location");
+                        boolean isRedirect = status == 301 || status == 302 || status == 303
+                                || status == 307 || status == 308;
+                        if (isRedirect && location != null && !location.trim().isEmpty()) {
+                            if (redirects == 5) {
+                                throw new java.io.IOException("Too many redirects");
+                            }
+                            URL next = new URL(current, location);
+                            validateHttpUrl(next);
+                            if (!originalHost.equalsIgnoreCase(next.getHost())) {
+                                throw new java.io.IOException("Cross-host redirect blocked");
+                            }
+                            if ("https".equalsIgnoreCase(originalProtocol)
+                                    && !"https".equalsIgnoreCase(next.getProtocol())) {
+                                throw new java.io.IOException("HTTPS downgrade redirect blocked");
+                            }
+                            if (status == 303 || ((status == 301 || status == 302) && "POST".equals(m))) {
+                                m = "GET";
+                                requestBody = null;
+                            }
+                            c.disconnect();
+                            c = null;
+                            current = next;
+                            continue;
+                        }
+
+                        InputStream in;
+                        try {
+                            in = (status >= 200 && status < 400)
+                                    ? c.getInputStream() : c.getErrorStream();
+                        } catch (Exception e) {
+                            in = null;
+                        }
+                        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+                        if (in != null) {
+                            try {
+                                byte[] buf = new byte[16384];
+                                int n;
+                                while ((n = in.read(buf)) > 0) {
+                                    if (bos.size() + n > 4 * 1024 * 1024) {
+                                        throw new java.io.IOException("Response too large");
+                                    }
+                                    bos.write(buf, 0, n);
+                                }
+                            } finally {
+                                in.close();
+                            }
+                        }
+                        payloadB64 = Base64.encodeToString(bos.toByteArray(), Base64.NO_WRAP);
+                        completed = true;
+                        break;
+                    }
+                    if (!completed) throw new java.io.IOException("Redirect handling failed");
                 } catch (Exception e) {
                     String msg = e.getClass().getSimpleName() + ": "
                             + (e.getMessage() == null ? "" : e.getMessage());
@@ -124,13 +187,25 @@ public class Bridge {
                 ui.post(new Runnable() {
                     @Override
                     public void run() {
-                        web.evaluateJavascript(
-                                "ODIN.httpDone(" + cbId + "," + fs + ","
-                                        + JSONObject.quote(fp) + ")", null);
+                        if (web != null) {
+                            web.evaluateJavascript(
+                                    "ODIN.httpDone(" + cbId + "," + fs + ","
+                                            + JSONObject.quote(fp) + ")", null);
+                        }
                     }
                 });
             }
         });
+    }
+
+    /** اعتبارسنجی URL در هر مرحله؛ ریدایرکت cross-host و downgrade جداگانه رد می‌شوند. */
+    private static void validateHttpUrl(URL parsed) {
+        String protocol = parsed.getProtocol();
+        if (parsed.getHost() == null || parsed.getHost().trim().isEmpty()
+                || parsed.getUserInfo() != null
+                || !("https".equalsIgnoreCase(protocol) || "http".equalsIgnoreCase(protocol))) {
+            throw new IllegalArgumentException("Only HTTP(S) URLs without user-info are allowed");
+        }
     }
 
     // ── حافظهٔ محلی (ژورنال append-only، تنظیمات، کش) ──────────────
@@ -157,7 +232,7 @@ public class Bridge {
         try {
             return ctx.getPackageManager().getPackageInfo(ctx.getPackageName(), 0).versionName;
         } catch (Exception e) {
-            return "0.19.0";
+            return "0.28.0";
         }
     }
 
@@ -174,10 +249,24 @@ public class Bridge {
         });
     }
 
+    /**
+     * Opens only well-formed web URLs outside the app. Do not allow arbitrary
+     * schemes (for example intent:, file:, javascript:, or custom app links)
+     * to be supplied through the JavaScript bridge.
+     */
     @JavascriptInterface
     public void openExternal(String url) {
         try {
-            Intent i = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+            if (url == null || url.trim().isEmpty()) return;
+            Uri uri = Uri.parse(url.trim());
+            String scheme = uri.getScheme();
+            String host = uri.getHost();
+            if (scheme == null || host == null || host.trim().isEmpty()
+                    || uri.getUserInfo() != null
+                    || !("https".equalsIgnoreCase(scheme) || "http".equalsIgnoreCase(scheme))) {
+                return;
+            }
+            Intent i = new Intent(Intent.ACTION_VIEW, uri);
             i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             ctx.startActivity(i);
         } catch (Exception ignored) {

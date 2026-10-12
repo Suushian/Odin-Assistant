@@ -15,19 +15,17 @@ name: Build Android APK
 #      چسبانده می‌شدند؛ یعنی انتشار به یک انسان وابسته بود و دو بار جا افتاد. حالا
 #      خودش با `gh` روی Release می‌چسباند.
 
-# ── فیلتر برنچ (v0.23.0) ────────────────────────────────────────────────
-# فقط برنچ اصلی ANDROID بیلد می‌گیرد. main و android آینه‌اند و روی همان
-# کامیت؛ بیلد سه‌بارهٔ یک کد، هدرِ خالص بود (اندازه‌گیری: ۲۷ ران تکراری).
-# واگرایی توسط branch-sync.yml گرفته می‌شود، پس پوشش از دست نرفته.
+# ── برنچ‌های CI ────────────────────────────────────────────────────────
+# `main` تنها برنچ فعال فعلی مخزن است؛ بیلد روی همین برنچ و روی تگ‌های انتشار اجرا می‌شود.
 #
 # تگ‌ها همیشه بیلد می‌گیرند (آن‌ها ریلیز تولید می‌کنند) و android_guard
 # دسترس‌پذیری‌شان از ANDROID/android/main را چک می‌کند.
 on:
   push:
-    branches: [ "ANDROID" ]
+    branches: [ "main" ]
     tags: [ 'v*' ]
   pull_request:
-    branches: [ "ANDROID", "android", "main" ]
+    branches: [ "main" ]
   workflow_dispatch:
 
 # گروه بر پایهٔ ref → دو تگ متفاوت همدیگر را لغو نمی‌کنند (ریلیز از دست نمی‌رود)
@@ -121,6 +119,8 @@ jobs:
           node tests/js/smoke_onboarding.js
           node tests/js/smoke_core.js
           node tests/js/smoke_plugins.js
+          node tests/js/test_external_url.js
+          node tests/js/test_news_render_xss.js
           node tests/js/test_cycle_switch.js
           node tests/js/test_judge_switch.js
 

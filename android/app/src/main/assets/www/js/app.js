@@ -714,9 +714,17 @@
 
       if (t.dataset.ext) {
         ev.preventDefault();
+        // دفاع در عمق در خود JS نیز لازم است؛ مسیر مرورگرِ توسعه نباید
+        // schemeهای غیر وب را به window.open تحویل دهد.
         try {
-          if (typeof ODINNative !== 'undefined') ODINNative.openExternal(t.dataset.ext);
-          else window.open(t.dataset.ext, '_blank');
+          var safeExtUrl = O.safeExternalUrl(t.dataset.ext);
+          if (!safeExtUrl) return;
+          if (typeof ODINNative !== 'undefined' && ODINNative.openExternal) {
+            ODINNative.openExternal(safeExtUrl);
+          } else {
+            var extWin = window.open(safeExtUrl, '_blank', 'noopener,noreferrer');
+            if (extWin) extWin.opener = null;
+          }
         } catch (e) { }
         return;
       }
