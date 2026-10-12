@@ -119,6 +119,7 @@ jobs:
           node tests/js/smoke_onboarding.js
           node tests/js/smoke_core.js
           node tests/js/smoke_plugins.js
+          node tests/js/test_external_url.js
           node tests/js/test_cycle_switch.js
           node tests/js/test_judge_switch.js
 
