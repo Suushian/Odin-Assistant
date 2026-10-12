@@ -92,6 +92,12 @@
         london_open_hour: 7, trade_window_hours: 4, asia_min_bars: 5,
         min_range_atr: 0.5, max_range_atr: 3.0, breakout_margin_atr: 0.15
       },
+      scalping: {
+        enabled: true, h1_fast_ema: 20, h1_slow_ema: 50,
+        m15_fast_ema: 9, m15_slow_ema: 21, atr_period: 14,
+        breakout_lookback: 3, min_body_atr: 0.15, max_extension_atr: 1.5,
+        max_m15_age_minutes: 45, max_h1_age_minutes: 90
+      },
       carry: {
         enabled: true, min_diff: 1.5, news_min_score: 4,
         rates: {
