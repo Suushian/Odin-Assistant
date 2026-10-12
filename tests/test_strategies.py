@@ -359,25 +359,31 @@ for pid in ("strategy-trend-pullback", "strategy-london-breakout", "strategy-car
     A(pid in ids, f"پلاگین «{pid}» باید در registry ثبت شود")
 A(len(reg.all()) == 34, f"registry باید ۳۴ پلاگین داشته باشد، {len(reg.all())} است")
 provs = reg.providers("odin.strategy@1")
-A([p.id for p in provs] == ["strategy-trend-pullback", "strategy-london-breakout",
-                            "strategy-carry", "strategy-scalping"],
-    "ترتیب فراهم‌کنندگان = priority اعلامی (۱۰/۲۰/۳۰/۴۰)")
+A([p.id for p in provs] == ["strategy-trend-pullback", "strategy-london-breakout", "strategy-carry"],
+    "اسکالپ غیرفعال است؛ فراهم‌کنندگان فعال فقط ۱۰/۲۰/۳۰ هستند")
 
 # adapter == فراخوانی مستقیم (delegation خالص — بایت‌به‌بایت)
 ctx = mk_ctx()
 cases = [("trend_pullback", mk_a(), md_bull),
          ("london_breakout", mk_a(price=1.1060), md_lb),
-         ("carry", mk_pair("AUDJPY", "AUD", "JPY"), None),
-         ("scalping", mk_a(), mk_md(mk_h1(last_bull())))]
+         ("carry", mk_pair("AUDJPY", "AUD", "JPY"), None)]
 mods = {"trend_pullback": trend_pullback, "london_breakout": london_breakout,
-        "carry": carry, "scalping": scalping}
-scfgs = {"trend_pullback": SCFG_TP, "london_breakout": SCFG_LB, "carry": SCFG_CARRY, "scalping": {}}
+        "carry": carry}
+scfgs = {"trend_pullback": SCFG_TP, "london_breakout": SCFG_LB, "carry": SCFG_CARRY}
 for rec, (key, a, md) in zip(provs, cases):
     inst = rec.instance if rec.instance is not None else rec.factory(info["context"])
     got = inst.evaluate(a, md, ctx).to_dict()
     want = mods[key].evaluate(a, md, cfg["strategies"].get(key, {}), ctx).to_dict()
     A(got == want, f"adapter «{rec.id}» باید بایت‌به‌بایت == ماژول باشد")
     A(got["direction"] in ("BUY", "SELL", "NONE"), "direction معتبر")
+
+# اسکالپ ثبت است، اما تا تکمیل parity خاموش است؛ adapter فقط به‌صورت مستقیم آزموده می‌شود.
+from src.plugins.strategies import StrategyAdapter
+scalp_adapter = StrategyAdapter("scalping", {"strategies": cfg["strategies"]})
+scalp_md = mk_md(mk_h1(last_bull()))
+scalp_got = scalp_adapter.evaluate(mk_a(), scalp_md, ctx).to_dict()
+scalp_want = scalping.evaluate(mk_a(), scalp_md, cfg["strategies"]["scalping"], ctx).to_dict()
+A(scalp_got == scalp_want, "adapter اسکالپ باید با فراخوانی مستقیم برابر باشد")
 
 # enable/disable — کلید فیچری و plugins override
 cfg_off = load_config(str(ROOT / "config.yaml"))
@@ -387,14 +393,14 @@ A(plugin_enabled(cfg_off, [r.manifest for r in reg2.all()
                            if r.id == "strategy-carry"][0]) is False,
     "strategies.carry.enabled=false باید پلاگین را خاموش کند")
 A([p.id for p in reg2.providers("odin.strategy@1")]
-  == ["strategy-trend-pullback", "strategy-london-breakout", "strategy-scalping"],
-    "استراتژی خاموش باید از فهرست فراهم‌کنندگان حذف شود")
+  == ["strategy-trend-pullback", "strategy-london-breakout"],
+    "استراتژی خاموش و اسکالپ پیش‌فرض باید از فراهم‌کنندگان حذف شوند")
 cfg_ov = load_config(str(ROOT / "config.yaml"))
 cfg_ov["plugins"] = {"strategy-london-breakout": {"enabled": False}}
 reg3, _ = build_default_registry(cfg_ov)
 A([p.id for p in reg3.providers("odin.strategy@1")]
-  == ["strategy-trend-pullback", "strategy-carry", "strategy-scalping"],
-    "plugins override صریح باید برنده شود (فاز ۷)")
+  == ["strategy-trend-pullback", "strategy-carry"],
+    "plugins override صریح باید برنده شود و اسکالپ خاموش بماند (فاز ۷)")
 A(any("strategy" in line for line in info["log"]),
     "لاگ ثبت پلاگین‌ها باید استراتژی‌ها را نشان دهد")
 print(f"✅ D) registry/config — {COUNT - COUNT_C} میخ سبز")
