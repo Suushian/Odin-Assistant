@@ -186,9 +186,11 @@ function testKeyListFromPythonSource() {
   const re = /\("([^"]+)",\s*"([^"]+)"\)/g;
   let g;
   while ((g = re.exec(m[1])) !== null) pairs.push([g[1], g[2]]);
-  A(pairs.length === 3, 'سه جفت (plugin_id, key) انتظار است — یافت: ' + pairs.length);
-  A(stableStringify(O.STRATEGY_KEYS) === stableStringify(pairs.map((p) => p[1])),
-    'O.STRATEGY_KEYS باید == کلیدهای STRATEGY_RULES پایتون باشد');
+  A(pairs.length === 4, 'چهار جفت (plugin_id, key) انتظار است — یافت: ' + pairs.length);
+  A(stableStringify(O.STRATEGY_KEYS) === stableStringify(pairs.map((p) => p[1]).filter((k) => k !== 'scalping')),
+    'O.STRATEGY_KEYS باید فقط سه استراتژی فعال Android را شامل شود؛ اسکالپ فعلاً غیرفعال است');
+  A(!!O.strategies.scalping && O.strategies.scalping.key === 'scalping',
+    'آینهٔ اسکالپ باید موجود باشد، حتی وقتی در registry فعال نیست');
   pairs.forEach((p) => {
     A(!!O.strategyFor(p[1]) && typeof O.strategyFor(p[1]).evaluate === 'function',
       'strategyFor(\'' + p[1] + '\') باید ماژولِ evaluateدار بدهد');
