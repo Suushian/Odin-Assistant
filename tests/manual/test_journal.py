@@ -106,6 +106,7 @@ jr_guard = Journal(os.path.join(tmp.name, "guard.jsonl"))
 jr_guard.append(sig_rec("hist", "NZDUSD", "BUY", 0.6500, 0.6480, 0.6540, T1))
 guard_md = md_for("NZDUSD", T1 - timedelta(minutes=15), [
     (0.6545, 0.6475, 0.6500),  # قبل از ورود: هر دو سطح
+    (0.6510, 0.6490, 0.6500),  # در زمان ورود: بدون برخورد
     (0.6510, 0.6475, 0.6480),  # بعد از ورود: فقط SL
 ])
 resolve_open_signals(jr_guard, {"NZDUSD": guard_md}, now=NOW, cfg=cfg,
