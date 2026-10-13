@@ -18,7 +18,7 @@ sys.path.insert(0, str(_ROOT))
 from src.data.base import MarketData
 from src.journal.stats import compute_stats
 from src.journal.store import EXPIRED, SL, TP, Journal
-from src.journal.tracker import resolve_open_signals
+from src.journal.tracker import _both_touch, resolve_open_signals
 from src.report.journal import render_nightly, render_stats
 
 FAILS = []
@@ -121,8 +121,26 @@ check(abs(o.hit_rate - 0.5) < 1e-9, f"نرخ برد قطعی = ۵۰٪ ({o.hit_ra
 check(abs(o.avg_r - 0.5) < 1e-9, f"میانگین R = +0.5 ((2+2-1-1+0.5)/5) ({o.avg_r})")
 check(st.open_count == 1, f"یک سیگنال باز ({st.open_count})")
 check(len(st.by_week) == 1, f"یک هفتهٔ ISO ({sorted(st.by_week)})")
+# حتی اگر داده فقط از هفته‌های گذشته باشد، عنوان «این هفته» باید تقویمی باشد.
+future_now = NOW + timedelta(days=21)
+future_stats = compute_stats(entries, future_now)
+fy, fw, _ = future_now.isocalendar()
+py, pw, _ = (future_now - timedelta(days=7)).isocalendar()
+check(future_stats.this_week_key == f"{fy}-W{fw:02d}",
+      f"کلید این هفته از تقویم می‌آید، نه آخرین داده ({future_stats.this_week_key})")
+check(future_stats.last_week_key == f"{py}-W{pw:02d}",
+      f"کلید هفتهٔ قبل از تقویم می‌آید ({future_stats.last_week_key})")
 check("trend" in st.by_evidence and st.by_evidence["trend"].wins == 2,
       "همبستگی مدرک trend↔برد محاسبه شد")
+
+# کندل قبل از صدور سیگنال نباید یادداشت «برخورد دوگانه» بسازد.
+pre_signal_bars = md_for("TEST", T1 - timedelta(minutes=15), [
+    (1.3550, 1.3470, 1.3500),  # قبل از سیگنال: هر دو سطح
+    (1.3520, 1.3475, 1.3480),  # بعد از سیگنال: فقط SL
+])
+historical_entry = next(e for e in entries if e.id == "d")
+check(not _both_touch(historical_entry, pre_signal_bars),
+      "کندل پیش از سیگنال در تشخیص برخورد دوگانه لحاظ نمی‌شود")
 
 print()
 print("۳) گزارش‌ها")
