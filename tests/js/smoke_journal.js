@@ -16,6 +16,7 @@ const O = ctx.ODIN;
 const now = Date.parse('2026-10-13T12:00:00Z');
 const priorEntry = {
   id: 'old', ts: Date.parse('2026-09-01T12:00:00Z'),
+  outcome_ts: Date.parse('2026-10-12T12:00:00Z'),
   symbol: 'EURUSD', direction: 'BUY', score: 10, outcome: O.TP, r: 2,
   evidences: [], strategies: []
 };
@@ -23,6 +24,8 @@ const stats = O.computeStats([priorEntry], now);
 assert.strictEqual(stats.this_week_key, O.isoWeekKey(now));
 assert.strictEqual(stats.last_week_key, O.isoWeekKey(now - 7 * 86400000));
 assert.strictEqual(stats.by_score['۱۰–۱۱'].closed, 1);
+assert.strictEqual(stats.by_week[O.isoWeekKey(now)].closed, 1);
+assert.strictEqual(stats.by_week[O.isoWeekKey(priorEntry.ts)], undefined);
 
 const entry = {
   id: 'signal-1', ts: Date.parse('2026-10-13T10:00:00Z'),
