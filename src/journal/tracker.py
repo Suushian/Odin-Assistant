@@ -45,7 +45,7 @@ def _r_for(entry: Entry, outcome: str, close_price: float) -> float:
 
 
 def _scan_bars(entry: Entry, bars, conservative: bool):
-    """بررسی ترتیبی کندل‌ها. برمی‌گرداند (outcome, close_price) یا None."""
+    """بررسی ترتیبی کندل‌ها؛ نتیجه، قیمت بسته‌شدن و برخورد هم‌زمان را برمی‌گرداند."""
     for ts, high, low in bars:
         if ts <= entry.ts:
             continue
@@ -56,11 +56,12 @@ def _scan_bars(entry: Entry, bars, conservative: bool):
             hit_tp = low <= entry.tp
             hit_sl = high >= entry.sl
         if hit_tp and hit_sl:
-            return (SL, entry.sl) if conservative else (TP, entry.tp)
+            return ((SL, entry.sl, True) if conservative
+                    else (TP, entry.tp, True))
         if hit_tp:
-            return TP, entry.tp
+            return TP, entry.tp, False
         if hit_sl:
-            return SL, entry.sl
+            return SL, entry.sl, False
     return None
 
 
@@ -116,9 +117,9 @@ def resolve_open_signals(journal: Journal, datasets: dict,
                         f"با قیمت لحظهٔ انقضا بسته شد")
                 r_override = None
         elif hit is not None:
-            outcome, close_price = hit
+            outcome, close_price, both_touched = hit
             note = ("هر دو سطح در یک کندل خوردند؛ محتاطانه ضرر شمرده شد"
-                    if outcome == SL and conservative and _both_touch(entry, md) else "")
+                    if both_touched and outcome == SL and conservative else "")
         else:
             continue
 
@@ -132,16 +133,3 @@ def resolve_open_signals(journal: Journal, datasets: dict,
     return resolved
 
 
-def _both_touch(entry: Entry, md) -> bool:
-    """آیا کندلی هست که هر دو سطح را زده باشد؟ (فقط برای یادداشت صادقانه)."""
-    if md is None or md.m15 is None:
-        return False
-    for _ts, row in md.m15.iterrows():
-        high, low = float(row["High"]), float(row["Low"])
-        if entry.direction == "BUY":
-            if high >= entry.tp and low <= entry.sl:
-                return True
-        else:
-            if low <= entry.tp and high >= entry.sl:
-                return True
-    return False
