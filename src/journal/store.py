@@ -80,7 +80,9 @@ class Entry:
 
     @property
     def week_key(self) -> str:
-        y, w, _ = self.ts.isocalendar()
+        """هفتهٔ نتیجه بر اساس زمان بسته‌شدن؛ برای سیگنال باز از زمان صدور."""
+        when = self.outcome_ts or self.ts
+        y, w, _ = when.isocalendar()
         return f"{y}-W{w:02d}"
 
     def evidence_keys(self) -> list[str]:

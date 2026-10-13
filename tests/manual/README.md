@@ -1,15 +1,19 @@
-# 🧪 تست‌های دستی (خارج از CI)
+# 🧪 تست‌های دستی و تست‌های رگرسیون با اجرای مستقل
 
-این تست‌ها **عمداً در GitHub Actions اجرا نمی‌شوند**، چون به اینترنت زنده یا
-کتابخانهٔ GUI نیاز دارند و در CI باعث شکست‌های کاذب (flaky) می‌شوند.
+بیشتر تست‌های این پوشه عمداً در GitHub Actions اجرا نمی‌شوند، چون بعضی از آن‌ها
+به اینترنت زنده یا کتابخانهٔ GUI نیاز دارند و می‌توانند flaky باشند. بااین‌حال،
+`tests/manual/test_paths_install.py` یک استثنای آفلاین است و در workflow تست‌ها
+اجرا می‌شود.
 
-تست‌های **خودکار و آفلاین** که در CI روی هر push اجرا می‌شوند این‌ها هستند:
+تست‌های اصلی CI شامل موارد زیرند (فهرست کامل فرمان‌ها در
+`.github/workflows/build-release.yml` است):
 
 | فرمان | فایل |
 |---|---|
-| `python main.py --selftest` | داخل `main.py` |
-| `python panel.py --selftest` | داخل `panel.py` (فقط در جاب ویندوز) |
-| `python tests/check_config.py` | `tests/check_config.py` |
+| `python main.py --selftest` | خودآزمایی backend |
+| `python tests/check_config.py` | اعتبارسنجی پیکربندی |
+| `python tests/manual/test_paths_install.py` | مسیر دادهٔ نصب‌شده/پرتابل |
+| `python -m compileall -q src panel.py main.py` | بررسی نحوی کد پایتون |
 
 ---
 
