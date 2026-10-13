@@ -36,7 +36,7 @@ CHANGELOG = ROOT / "CHANGELOG.md"
 START = "<!-- RELEASE-NOTES-START -->"
 END = "<!-- RELEASE-NOTES-END -->"
 
-REPO = "KhodeSushianm/Trading-Bot"
+REPO = "Suushian/Odin-Assistant"
 
 
 def read_app_version() -> str:
