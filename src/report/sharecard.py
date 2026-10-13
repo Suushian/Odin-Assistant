@@ -35,7 +35,7 @@ def _get(s, key, default=None):
     return getattr(s, key, default)
 
 
-def build_share_spec(sig, version: str = "0.19.0") -> dict:
+def build_share_spec(sig, version: str = "dev") -> dict:
     """spec کارت — کلیدها/رشته‌ها دقیقاً مثل O.buildShareSpec در JS."""
     pip = float(_get(sig, "pip", 0.0001) or 0.0001)
     entry = float(_get(sig, "entry"))
