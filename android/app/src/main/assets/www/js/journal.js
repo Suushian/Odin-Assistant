@@ -150,12 +150,15 @@
 
   function bothTouch(e, md) {
     if (!md || !md.m15) return false;
-    return md.m15.some(function (bar) {
-      if (bar.t <= e.ts) return false;
-      return e.direction === 'BUY'
-        ? (bar.h >= e.tp && bar.l <= e.sl)
-        : (bar.l <= e.tp && bar.h >= e.sl);
-    });
+    for (var i = 0; i < md.m15.length; i++) {
+      var bar = md.m15[i];
+      if (bar.t <= e.ts) continue;
+      var hitTp = e.direction === 'BUY' ? bar.h >= e.tp : bar.l <= e.tp;
+      var hitSl = e.direction === 'BUY' ? bar.l <= e.sl : bar.h >= e.sl;
+      // Later candles happen after the simulated trade has already closed.
+      if (hitTp || hitSl) return hitTp && hitSl;
+    }
+    return false;
   }
 
   O.resolveOpenSignals = function (journal, datasets, nowMs, cfg, onLog) {
