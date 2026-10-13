@@ -49,7 +49,7 @@ python scripts/backtest/validate_data.py
 تست‌های رگرسیون مرتبط را اجرا کنید:
 
 ```bash
-python -m unittest tests.test_backtest_data -v
+python tests/test_backtest_data.py -v
 ```
 
 ## محدودیت‌های گزارش
