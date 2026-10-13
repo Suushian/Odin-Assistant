@@ -145,9 +145,11 @@ def _both_touch(entry: Entry, md) -> bool:
             continue
         high, low = float(row["High"]), float(row["Low"])
         if entry.direction == "BUY":
-            if high >= entry.tp and low <= entry.sl:
-                return True
+            hit_tp, hit_sl = high >= entry.tp, low <= entry.sl
         else:
-            if low <= entry.tp and high >= entry.sl:
-                return True
+            hit_tp, hit_sl = low <= entry.tp, high >= entry.sl
+        # Only the first candle that reaches either exit level can determine
+        # the outcome; later candles occur after the simulated trade is closed.
+        if hit_tp or hit_sl:
+            return hit_tp and hit_sl
     return False
