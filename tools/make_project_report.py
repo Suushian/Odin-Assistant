@@ -21,7 +21,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "reports" / "project-report.html"
-REPO = "KhodeSushianm/Trading-Bot"
+REPO = "Suushian/Odin-Assistant"
 
 
 # ── اندازه‌گیری ─────────────────────────────────────────────────────────
