@@ -71,6 +71,22 @@ def check_download_outputs(destination: Path, before: dict[Path, tuple[int, int]
     return errors
 
 
+def build_download_command(symbol: str, timeframe: str, args: argparse.Namespace, destination: Path) -> list[str]:
+    """Build a retry-enabled dukascopy-node CLI command."""
+    return [
+        "npx", "--yes", "dukascopy-node",
+        "-i", SYMBOLS[symbol],
+        "-from", args.from_date.isoformat(),
+        "-to", args.to_date.isoformat(),
+        "-t", timeframe,
+        "-f", "csv",
+        "-dir", str(destination),
+        "--retries", str(args.retries),
+        "--retry-pause", str(args.retry_pause_ms),
+        "--retry-on-empty",
+    ]
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--from-date", type=parse_date, default=dt.date(2026, 4, 13))
@@ -79,10 +95,16 @@ def main() -> int:
     parser.add_argument("--symbols", nargs="+", choices=sorted(SYMBOLS), default=list(SYMBOLS))
     parser.add_argument("--timeframes", nargs="+", choices=TIMEFRAMES, default=list(TIMEFRAMES))
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--retries", type=int, default=5, help="Retries per failed/empty provider artifact (default: 5)")
+    parser.add_argument("--retry-pause-ms", type=int, default=500, help="Pause between retries in milliseconds (default: 500)")
     args = parser.parse_args()
 
     if args.from_date >= args.to_date:
         parser.error("--from-date must be earlier than --to-date")
+    if args.retries < 1:
+        parser.error("--retries must be at least 1 when retry-on-empty is enabled")
+    if args.retry_pause_ms < 0:
+        parser.error("--retry-pause-ms must be zero or greater")
     if not args.dry_run and not (shutil.which("npx") or shutil.which("npx.cmd")):
         print("ERROR: Node.js/npm (npx) is required. Install Node.js 18+ first.", file=sys.stderr)
         return 2
@@ -91,15 +113,7 @@ def main() -> int:
     for symbol in args.symbols:
         for timeframe in args.timeframes:
             destination = args.output / symbol / timeframe.upper()
-            command = [
-                "npx", "--yes", "dukascopy-node",
-                "-i", SYMBOLS[symbol],
-                "-from", args.from_date.isoformat(),
-                "-to", args.to_date.isoformat(),
-                "-t", timeframe,
-                "-f", "csv",
-                "-dir", str(destination),
-            ]
+            command = build_download_command(symbol, timeframe, args, destination)
             print("$ " + " ".join(command))
             if args.dry_run:
                 continue
