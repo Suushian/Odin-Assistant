@@ -141,5 +141,8 @@ jobs:
       - name: Journal tracking, stats and report regression tests (آفلاین)
         run: python tests/manual/test_journal.py
 
+      - name: Share-card spec parity test (no Qt)
+        run: python tests/test_sharecard_spec.py
+
       - name: Byte-compile all sources
         run: python -m compileall -q src panel.py main.py
