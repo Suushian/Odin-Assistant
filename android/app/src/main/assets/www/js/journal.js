@@ -150,11 +150,15 @@
 
   function bothTouch(e, md) {
     if (!md || !md.m15) return false;
-    return md.m15.some(function (bar) {
-      return e.direction === 'BUY'
-        ? (bar.h >= e.tp && bar.l <= e.sl)
-        : (bar.l <= e.tp && bar.h >= e.sl);
-    });
+    for (var i = 0; i < md.m15.length; i++) {
+      var bar = md.m15[i];
+      if (bar.t <= e.ts) continue;
+      var hitTp = e.direction === 'BUY' ? bar.h >= e.tp : bar.l <= e.tp;
+      var hitSl = e.direction === 'BUY' ? bar.l <= e.sl : bar.h >= e.sl;
+      // Only the first candle reaching either exit level determines the outcome.
+      if (hitTp || hitSl) return hitTp && hitSl;
+    }
+    return false;
   }
 
   O.resolveOpenSignals = function (journal, datasets, nowMs, cfg, onLog) {
@@ -259,9 +263,9 @@
     Object.keys(st.by_evidence).forEach(function (k) { bucketRates(st.by_evidence[k]); });
     Object.keys(st.by_strategy).forEach(function (k) { bucketRates(st.by_strategy[k]); });
     st.expectancy = st.overall.avg_r;
-    var wks = Object.keys(st.by_week).sort();
-    st.this_week_key = wks.length ? wks[wks.length - 1] : null;
-    st.last_week_key = wks.length > 1 ? wks[wks.length - 2] : null;
+    // Weekly labels follow the calendar, not the newest historical record.
+    st.this_week_key = O.isoWeekKey(nowMs);
+    st.last_week_key = O.isoWeekKey(nowMs - 7 * 86400000);
     return st;
   };
 
