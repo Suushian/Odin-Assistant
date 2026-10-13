@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional
 
 from .store import Entry
@@ -69,16 +69,19 @@ class Stats:
     by_strategy: dict[str, Bucket] = field(default_factory=dict)
 
     @property
-    def last_week_key(self) -> Optional[str]:
-        keys = sorted(self.by_week)
-        if len(keys) < 2:
-            return None
-        return keys[-2]
+    def this_week_key(self) -> str:
+        """کلید هفتهٔ تقویمی جاری؛ نه جدیدترین هفتهٔ موجود در داده‌های تاریخی."""
+        year, week, _ = self.now.isocalendar()
+        return f"{year}-W{week:02d}"
 
     @property
-    def this_week_key(self) -> Optional[str]:
-        keys = sorted(self.by_week)
-        return keys[-1] if keys else None
+    def last_week_key(self) -> str:
+        """هفتهٔ ISO پیش از هفتهٔ جاری، با پشتیبانی از مرز سال."""
+        year, week, _ = self.now.isocalendar()
+        monday = datetime.fromisocalendar(year, week, 1)
+        previous = monday - timedelta(days=7)
+        prev_year, prev_week, _ = previous.isocalendar()
+        return f"{prev_year}-W{prev_week:02d}"
 
     @property
     def expectancy(self) -> Optional[float]:
