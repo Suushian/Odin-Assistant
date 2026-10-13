@@ -137,5 +137,8 @@ jobs:
       - name: Data-dir logic test (پرتابل vs نصب‌شده)
         run: python tests/manual/test_paths_install.py
 
+      - name: Journal tracking, stats and report regression tests (آفلاین)
+        run: python tests/manual/test_journal.py
+
       - name: Byte-compile all sources
         run: python -m compileall -q src panel.py main.py
