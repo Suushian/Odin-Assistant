@@ -26,7 +26,6 @@ def norm(value: str) -> str:
 
 def parse_timestamp(value: str) -> dt.datetime:
     value = value.strip().replace("Z", "+00:00")
-    # ISO timestamps and common Dukascopy CSV timestamp formats.
     for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M", "%Y.%m.%d %H:%M:%S", "%Y.%m.%d %H:%M"):
         try:
             parsed = dt.datetime.strptime(value, fmt)
@@ -45,6 +44,9 @@ def inspect_csv(path: Path) -> dict:
             "longest_gap_minutes": None, "start_utc": None, "end_utc": None,
             "columns": [], "status": "FAIL"}
     try:
+        if path.stat().st_size == 0:
+            base["errors"].append("Empty CSV file (0 bytes)")
+            return base
         with path.open("r", newline="", encoding="utf-8-sig") as handle:
             reader = csv.DictReader(handle)
             if not reader.fieldnames:
@@ -112,13 +114,16 @@ def main() -> int:
         return 2
 
     results = [inspect_csv(path) for path in files]
+    empty_files = sum(any("Empty CSV file (0 bytes)" in error for error in item["errors"]) for item in results)
+    failed_files = sum(item["status"] != "PASS" for item in results)
     args.report.parent.mkdir(parents=True, exist_ok=True)
     args.report.write_text(json.dumps({
         "generated_at_utc": dt.datetime.now(dt.timezone.utc).isoformat(),
         "input_directory": str(args.input),
         "files_checked": len(results),
-        "files_passed": sum(item["status"] == "PASS" for item in results),
-        "files_failed": sum(item["status"] != "PASS" for item in results),
+        "files_passed": len(results) - failed_files,
+        "files_failed": failed_files,
+        "empty_files": empty_files,
         "results": results,
     }, indent=2), encoding="utf-8")
 
@@ -128,8 +133,9 @@ def main() -> int:
               f'duplicates={item["duplicate_timestamps"]}, invalid_ohlc={item["invalid_ohlc_rows"]}')
         for error in item["errors"][:5]:
             print(f'     {error}')
+    print(f"Summary: checked={len(results)}, passed={len(results) - failed_files}, failed={failed_files}, empty={empty_files}")
     print(f"Report: {args.report}")
-    return 0 if all(item["status"] == "PASS" for item in results) else 1
+    return 0 if failed_files == 0 else 1
 
 
 if __name__ == "__main__":
