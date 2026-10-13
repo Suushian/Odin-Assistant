@@ -1,7 +1,8 @@
-# 🧪 تست‌های دستی (خارج از CI)
+# 🧪 تست‌های پوشهٔ manual
 
-این تست‌ها **عمداً در GitHub Actions اجرا نمی‌شوند**، چون به اینترنت زنده یا
-کتابخانهٔ GUI نیاز دارند و در CI باعث شکست‌های کاذب (flaky) می‌شوند.
+این پوشه هم تست‌های آفلاینِ قابل اجرا در CI دارد و هم تست‌های نیازمند اینترنت/GUI.
+فقط تست‌هایی که در workflow صریحاً فراخوانی شده‌اند در CI اجرا می‌شوند؛ نام پوشه
+به‌تنهایی به معنی دستی‌بودن یا خارج‌بودن از CI نیست.
 
 تست‌های **خودکار و آفلاین** که در CI روی هر push اجرا می‌شوند این‌ها هستند:
 
@@ -10,6 +11,7 @@
 | `python main.py --selftest` | داخل `main.py` |
 | `python panel.py --selftest` | داخل `panel.py` (فقط در جاب ویندوز) |
 | `python tests/check_config.py` | `tests/check_config.py` |
+| `python tests/manual/test_paths_install.py` | `tests/manual/test_paths_install.py` (آفلاین؛ منطق مسیر داده) |
 
 ---
 
