@@ -962,6 +962,7 @@
       '<path d="M24 4v8M24 36v8M8 24H4M44 24h-4"/><circle cx="24" cy="24" r="10"/>' +
       '<path d="M24 14a10 10 0 0 1 0 20" fill="#fff" stroke="none"/></svg>' +
       '<div style="font-size:17px;font-weight:800;color:#fff;margin-top:10px" dir="ltr">ODIN ASSISTANT</div>' +
+      '<div class="ink-cap" style="margin-top:3px;color:rgba(255,255,255,.78)" dir="ltr">Publisher: Sushian</div>' +
       '<div class="ink-cap" style="margin-top:4px"><span dir="ltr">ODIN ASSISTANT</span> — نسخهٔ اندروید ' + O.faNum(ver) + '</div>' +
       '<div style="margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,.14);font-size:12.5px;color:rgba(255,255,255,.85)">' +
       'سازنده و توسعه‌دهنده: <b style="color:#fff">Sushian Khoshkhani</b></div>' +
