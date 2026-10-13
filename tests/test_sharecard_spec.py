@@ -1,4 +1,10 @@
 """Pure Python share-card spec parity tests; no Qt dependency."""
+import pathlib
+import sys
+
+ROOT = pathlib.Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+
 from src.report.sharecard import build_share_spec
 
 SIGNAL = {
