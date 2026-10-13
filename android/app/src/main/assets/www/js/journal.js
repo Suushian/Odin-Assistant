@@ -151,6 +151,7 @@
   function bothTouch(e, md) {
     if (!md || !md.m15) return false;
     return md.m15.some(function (bar) {
+      if (bar.t <= e.ts) return false;
       return e.direction === 'BUY'
         ? (bar.h >= e.tp && bar.l <= e.sl)
         : (bar.l <= e.tp && bar.h >= e.sl);
@@ -259,9 +260,10 @@
     Object.keys(st.by_evidence).forEach(function (k) { bucketRates(st.by_evidence[k]); });
     Object.keys(st.by_strategy).forEach(function (k) { bucketRates(st.by_strategy[k]); });
     st.expectancy = st.overall.avg_r;
-    var wks = Object.keys(st.by_week).sort();
-    st.this_week_key = wks.length ? wks[wks.length - 1] : null;
-    st.last_week_key = wks.length > 1 ? wks[wks.length - 2] : null;
+    // Calendar weeks are anchored to now, not to the newest week with a
+    // closed signal; otherwise an old week can be mislabeled "this week".
+    st.this_week_key = O.isoWeekKey(nowMs);
+    st.last_week_key = O.isoWeekKey(nowMs - 7 * 86400000);
     return st;
   };
 
