@@ -137,5 +137,13 @@ jobs:
       - name: Data-dir logic test (پرتابل vs نصب‌شده)
         run: python tests/manual/test_paths_install.py
 
+      # تست‌های آفلاین ژورنال و لایسنس در CI هم اجرا شوند؛ پوشهٔ manual
+      # به‌تنهایی به معنی خارج‌بودن تست از CI نیست.
+      - name: Journal tracking and statistics regression tests
+        run: python tests/manual/test_journal.py
+
+      - name: License lifecycle regression tests
+        run: python tests/manual/test_license.py
+
       - name: Byte-compile all sources
         run: python -m compileall -q src panel.py main.py
