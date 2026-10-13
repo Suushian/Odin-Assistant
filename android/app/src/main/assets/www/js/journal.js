@@ -107,7 +107,11 @@
     return t.getUTCFullYear() + '-W' + String(weekNo).padStart(2, '0');
   };
 
-  O.entryWeekKey = function (e) { return O.isoWeekKey(e.ts); };
+  // Match Python: closed signals belong to the week they were resolved;
+  // open signals remain associated with their issuance week.
+  O.entryWeekKey = function (e) {
+    return O.isoWeekKey(e.outcome_ts != null ? e.outcome_ts : e.ts);
+  };
 
   // کلیدهای استراتژیِ هم‌جهت (آینهٔ e.strategies پایتون — کپی، نه مرجع)
   O.entryStrategyKeys = function (e) { return (e.strategies || []).slice(); };
