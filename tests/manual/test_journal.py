@@ -16,7 +16,7 @@ _ROOT = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(_ROOT))
 
 from src.data.base import MarketData
-from src.journal.stats import compute_stats
+from src.journal.stats import _score_bucket, compute_stats
 from src.journal.store import EXPIRED, SL, TP, Journal
 from src.journal.tracker import resolve_open_signals
 from src.report.journal import render_nightly, render_stats
@@ -100,6 +100,19 @@ check(by_id["b"].outcome == TP and by_id["b"].r == 2.0, f"ب) فروش→هدف 
 check(by_id["c"].outcome == SL and by_id["c"].r == -1.0, f"ج) حد ضرر R=-1 ({by_id['c'].outcome})")
 check(by_id["d"].outcome == SL, f"د) برخورد دوگانه → محتاطانه ضرر ({by_id['d'].outcome})")
 check("محتاطانه" in (by_id["d"].note or ""), "د) یادداشت صادقانهٔ برخورد دوگانه ثبت شد")
+
+# رگرسیون: برخورد دوگانهٔ کندلِ پیش از ورود نباید به‌عنوان علت خروج ثبت شود.
+jr_guard = Journal(os.path.join(tmp.name, "guard.jsonl"))
+jr_guard.append(sig_rec("hist", "NZDUSD", "BUY", 0.6500, 0.6480, 0.6540, T1))
+guard_md = md_for("NZDUSD", T1 - timedelta(minutes=15), [
+    (0.6545, 0.6475, 0.6500),  # قبل از ورود: هر دو سطح
+    (0.6510, 0.6475, 0.6480),  # بعد از ورود: فقط SL
+])
+resolve_open_signals(jr_guard, {"NZDUSD": guard_md}, now=NOW, cfg=cfg,
+                     on_log=lambda m: None)
+guard_entry = jr_guard.load()[0]
+check(guard_entry.outcome == SL and "محتاطانه" not in guard_entry.note,
+      "کندل قبل از ورود نباید یادداشت برخورد دوگانه بسازد")
 check(by_id["e"].outcome == EXPIRED, f"ه) انقضا ({by_id['e'].outcome})")
 check(abs(by_id["e"].r - 0.5) < 1e-6, f"ه) R انقضا از قیمت واقعی (=+0.5): {by_id['e'].r}")
 check(by_id["f"].is_open, "و) سیگنال بدون برخورد و داخل پنجره → باز می‌ماند")
@@ -121,6 +134,9 @@ check(abs(o.hit_rate - 0.5) < 1e-9, f"نرخ برد قطعی = ۵۰٪ ({o.hit_ra
 check(abs(o.avg_r - 0.5) < 1e-9, f"میانگین R = +0.5 ((2+2-1-1+0.5)/5) ({o.avg_r})")
 check(st.open_count == 1, f"یک سیگنال باز ({st.open_count})")
 check(len(st.by_week) == 1, f"یک هفتهٔ ISO ({sorted(st.by_week)})")
+check(st.this_week_key == "2026-W39", f"هفتهٔ جاری از تاریخ now محاسبه شد ({st.this_week_key})")
+check(st.last_week_key == "2026-W38", f"هفتهٔ قبل در مرز تقویمی درست محاسبه شد ({st.last_week_key})")
+check(_score_bucket(10) == "۱۰–۱۱", "امتیاز ۱۰ در بازهٔ ۱۰–۱۱ قرار می‌گیرد")
 check("trend" in st.by_evidence and st.by_evidence["trend"].wins == 2,
       "همبستگی مدرک trend↔برد محاسبه شد")
 
