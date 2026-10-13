@@ -1,65 +1,50 @@
-# 🧪 تست‌های دستی و تست‌های رگرسیون با اجرای مستقل
+# تست‌های دستی و تست‌های رگرسیون
 
-بیشتر تست‌های این پوشه عمداً در GitHub Actions اجرا نمی‌شوند، چون بعضی از آن‌ها
-به اینترنت زنده یا کتابخانهٔ GUI نیاز دارند و می‌توانند flaky باشند. بااین‌حال،
-`tests/manual/test_paths_install.py` یک استثنای آفلاین است و در workflow تست‌ها
-اجرا می‌شود.
+این پوشه تست‌هایی با نیازمندی‌های متفاوت دارد. نام پوشه به معنی خارج‌بودن همهٔ تست‌ها از CI نیست: فایل tests/manual/test_paths_install.py در workflow تست‌ها اجرا می‌شود. فایل .github/workflows/build-release.yml مرجع نهایی وضعیت CI است.
 
-تست‌های اصلی CI شامل موارد زیرند (فهرست کامل فرمان‌ها در
-`.github/workflows/build-release.yml` است):
+## تست‌های مهم
 
-| فرمان | فایل |
-|---|---|
-| `python main.py --selftest` | خودآزمایی backend |
-| `python tests/check_config.py` | اعتبارسنجی پیکربندی |
-| `python tests/manual/test_paths_install.py` | مسیر دادهٔ نصب‌شده/پرتابل |
-| `python -m compileall -q src panel.py main.py` | بررسی نحوی کد پایتون |
-
----
-
-## تست‌های این پوشه
-
-| فایل | نیازمندی | چه می‌سنجد |
+| فایل | نیازمندی | هدف |
 |---|---|---|
-| `test_news_direction.py` | اینترنت (RSS زنده) | ۱۴ حالت جهت‌دهی اخبار + **توزیع امتیازها** روی دادهٔ واقعی (تشخیص «تورم امتیاز» — وقتی همهٔ خبرها سقف می‌گیرند، امتیاز بی‌فایده است) |
-| `test_veto_report.py` | آفلاین | رندر خط وتو داخل گزارش کامل، یکدستی `now` در کل گزارش، ترجمهٔ عنوان‌ها، و اجرای `main.py --alerts --dry-run` |
-| `test_judge.py` | آفلاین (pandas لازم است) | **جامع‌ترین تست داور**: مسیر طلایی سیگنال، هر ۷ وتو به‌صورت جداگانه، تنظیم‌پذیری وتوها، امتیاز ناکافی + `unavailable`، `NO_SETUP`، ریاضی SL/TP در ۵ حالت، سقف تعداد سیگنال و مسیر `CAPPED`، خلاصهٔ داور، cooldown ضداسپم، فیلدهای ژورنال |
-| `test_gui_integration.py` | PySide6 + اینترنت | سیم‌کشی واقعی پنل↔موتور: ۵ تب، پرشدن هر تب، برچسب‌های وضعیت، و **منطق زمان‌بند بریفینگ** (شلیک در پنجرهٔ catch-up، عدم تکرار روزانه، عدم ارسال بی‌موقع) |
+| test_news_direction.py | اینترنت و RSS زنده | جهت‌دهی خبر و توزیع امتیازها روی دادهٔ واقعی |
+| test_veto_report.py | عمدتاً آفلاین | رندر دلیل وتو، یکدستی زمان گزارش، ترجمه و dry-run هشدار |
+| test_judge.py | آفلاین؛ pandas | داور، وتوها، امتیاز، SL/TP، سقف سیگنال و فیلدهای ژورنال |
+| test_gui_integration.py | PySide6؛ بعضی مسیرها وابسته به اینترنت | اتصال پنل، وضعیت تب‌ها و زمان‌بند بریفینگ |
+| test_paths_install.py | آفلاین | مسیرهای دادهٔ نصب‌شده و پرتابل؛ در CI هم اجرا می‌شود |
 
----
+برای فهرست دقیق فرمان‌های CI، workflow فعلی را ببینید؛ این جدول جایگزین آن نیست. تست‌های وابسته به GUI یا اینترنت ممکن است در محیط محدود اجرا نشوند یا نتیجهٔ وابسته به محیط بدهند.
+
+## تست‌های اجراشده در CI
+
+- python main.py --selftest
+- python tests/check_config.py
+- python tests/manual/test_paths_install.py
+- python -m compileall -q src panel.py main.py
+- تست‌های واحد و parity که صریحاً در build-release.yml آمده‌اند
+- اسموک‌های JavaScript که صریحاً در workflow آمده‌اند
 
 ## اجرا
 
-```bash
-pip install -r requirements.txt          # برای تست GUI به PySide6 نیاز داری
+از ریشهٔ مخزن:
 
-python tests/manual/test_judge.py            # آفلاین و قطعی — مهم‌ترین تست مرحله ۳
-python tests/manual/test_news_direction.py
-python tests/manual/test_veto_report.py
+    python tests/manual/test_judge.py
+    python tests/manual/test_veto_report.py
+    python tests/manual/test_paths_install.py
+    python tests/manual/test_news_direction.py
 
-# تست GUI بدون مانیتور (لینوکس/CI):
-QT_QPA_PLATFORM=offscreen python tests/manual/test_gui_integration.py
-```
+تست GUI در صورت نصب PySide6 و فراهم‌بودن محیط مناسب:
+
+    QT_QPA_PLATFORM=offscreen python tests/manual/test_gui_integration.py
 
 در ویندوز:
-```bat
-set QT_QPA_PLATFORM=offscreen
-python tests\manual\test_gui_integration.py
-```
 
-هر سه با کد خروجی `0` و پیام «✅ همهٔ تست‌ها پاس شدند» تمام می‌شوند.
+    set QT_QPA_PLATFORM=offscreen
+    python tests\manual\test_gui_integration.py
 
----
+موفقیت یک تست به معنی موفقیت همهٔ تست‌ها یا معتبر بودن بک‌تست مالی نیست. خروجی و کد خروجی هر فرمان را جداگانه بررسی کنید.
 
 ## نکته دربارهٔ تست GUI
 
-`test_gui_integration.py` در بخشی از تست، تابع `engine.run_briefing` را با یک
-mock جایگزین می‌کند تا زمان‌بند را **بدون انتظار برای ساعت واقعی** بسنجد.
-بعد از تست، تابع اصلی بازگردانده می‌شود و خود تست هم این بازگشت را
-assert می‌کند — وگرنه بخش‌های بعدی (که چرخهٔ واقعی می‌زنند) با mock اجرا
-می‌شدند و نتیجهٔ کاذب می‌دادند. (این باگ یک بار در همین تست رخ داد و رفع شد.)
+test_gui_integration.py در بخشی از تست، engine.run_briefing را با mock جایگزین می‌کند تا زمان‌بند بدون انتظار برای ساعت واقعی سنجیده شود. تابع اصلی باید پس از بخش mock بازگردانده شود؛ در غیر این صورت چرخه‌های بعدی ممکن است ناخواسته با mock اجرا شوند.
 
-> 💡 **چرا تست‌های داور با دادهٔ مصنوعی‌اند؟** چون داور به «الان کی است» وابسته است
-> (سشن، روز هفته، فاصله تا رویداد تقویم). اگر تست به زمان واقعی وابسته بود،
-> آخر هفته‌ها همه‌چیز وتوی «بازار بسته» می‌خورد و مسیر اصلی سیگنال هرگز
-> اجرا نمی‌شد. پس `now` تزریق می‌شود تا تست قطعی و آفلاین بماند.
+> سشن بازار، روز هفته و فاصله تا رویداد تقویم به زمان وابسته‌اند. تزریق now تست داور را قطعی و آفلاین نگه می‌دارد و از شکست تصادفی مسیر سیگنال در تعطیلات جلوگیری می‌کند.
