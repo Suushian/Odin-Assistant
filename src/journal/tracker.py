@@ -133,10 +133,16 @@ def resolve_open_signals(journal: Journal, datasets: dict,
 
 
 def _both_touch(entry: Entry, md) -> bool:
-    """آیا کندلی هست که هر دو سطح را زده باشد؟ (فقط برای یادداشت صادقانه)."""
+    """آیا کندلی پس از صدور سیگنال هر دو سطح را زده؟ (برای یادداشت نتیجه)."""
     if md is None or md.m15 is None:
         return False
-    for _ts, row in md.m15.iterrows():
+    for idx, row in md.m15.iterrows():
+        ts = (idx.to_pydatetime() if hasattr(idx, "to_pydatetime")
+              else datetime.fromisoformat(str(idx)))
+        if ts.tzinfo is None:
+            ts = ts.replace(tzinfo=timezone.utc)
+        if ts <= entry.ts:
+            continue
         high, low = float(row["High"]), float(row["Low"])
         if entry.direction == "BUY":
             if high >= entry.tp and low <= entry.sl:
