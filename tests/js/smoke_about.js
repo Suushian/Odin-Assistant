@@ -32,6 +32,7 @@ assert(about.includes('Sushian Khoshkhani'), 'creator name missing');
 assert(about.includes('© 2026 Sushian Khoshkhani — All rights reserved.'), 'copyright line missing');
 assert(about.includes('CN=Sushian Khoshkhani, OU=ODIN Assistant, O=Sushian Khoshkhani, C=IR'), 'cert subject missing');
 assert(about.includes('۰.۱۹.۰'), 'persian version missing');
+assert(about.includes('Publisher: Sushian'), 'publisher label missing');
 // اثر انگشت کلید امضای v0.13.0 (کلید تازه به نام Sushian Khoshkhani)
 assert(about.includes('bd11159e003b55b9ae53cd26c192dc6b2bea2840c787fddbd0f523a947cb5189'), 'cert SHA-256 fingerprint missing');
 // بدون ایموجی — همه‌جا آیکون SVG (v0.13.0)
