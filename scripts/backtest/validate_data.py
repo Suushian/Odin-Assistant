@@ -89,10 +89,12 @@ def inspect_csv(path: Path) -> dict:
             base["start_utc"] = unique[0].isoformat()
             base["end_utc"] = unique[-1].isoformat()
             gaps = [(unique[i] - unique[i - 1]).total_seconds() / 60 for i in range(1, len(unique))]
-            # Gap counts are raw observations, including normal market closures.
-            base["gaps_over_one_bar"] = sum(gap > 0 for gap in gaps)
+            timeframe = path.parent.name.upper()
+            expected_minutes = MINUTES.get(timeframe)
+            base["expected_bar_minutes"] = expected_minutes
+            base["gaps_over_one_bar"] = sum(gap > expected_minutes * 1.5 for gap in gaps) if expected_minutes else None
             base["longest_gap_minutes"] = max(gaps) if gaps else 0
-            base["note"] = "Gap metrics include weekends/market closures; inspect before treating gaps as missing bars."
+            base["note"] = "Large-gap counts include normal weekends/market closures; this is a triage metric, not proof of missing data."
             base["status"] = "PASS" if not base["errors"] and not base["invalid_ohlc_rows"] and not base["duplicate_timestamps"] and not base["non_monotonic_timestamps"] else "FAIL"
     except (OSError, UnicodeError, csv.Error) as exc:
         base["errors"].append(f"Cannot read CSV: {exc}")
