@@ -53,18 +53,24 @@ jobs:
       - id: chk
         name: Is this ref reachable from ANDROID, android or main?
         run: |
-          if [[ "${{ github.ref }}" != refs/tags/* ]]; then
+          # Use GitHub-provided environment variables rather than interpolating
+          # ref names directly into shell source.
+          if [[ "$GITHUB_REF" != refs/tags/* ]]; then
             echo "build=true" >> "$GITHUB_OUTPUT"
-            echo "not a tag push (ref=${{ github.ref }}) — android build allowed"
+            echo "not a tag push (ref=$GITHUB_REF) — android build allowed"
             exit 0
           fi
-          TAG_SHA=$(git rev-list -n 1 "${{ github.ref }}")
-          echo "tag ${{ github.ref_name }} -> $TAG_SHA"
+          TAG_SHA=$(git rev-list -n 1 "$GITHUB_REF")
+          echo "tag $GITHUB_REF_NAME -> $TAG_SHA"
           for BR in ANDROID android main; do
-            git fetch --no-tags origin "$BR" || true
-            BR_SHA=$(git rev-parse FETCH_HEAD 2>/dev/null || echo "")
+            REMOTE_REF="refs/remotes/origin/$BR"
+            if ! git fetch --no-tags origin "+refs/heads/$BR:$REMOTE_REF"; then
+              echo "  branch $BR not found or fetch failed — cannot use a stale FETCH_HEAD"
+              continue
+            fi
+            BR_SHA=$(git rev-parse "$REMOTE_REF^{commit}" 2>/dev/null || echo "")
             if [[ -z "$BR_SHA" ]]; then
-              echo "  branch $BR not found — cannot rule it out, keep trying"
+              echo "  branch $BR has no resolvable commit — keep trying"
               continue
             fi
             if git merge-base --is-ancestor "$TAG_SHA" "$BR_SHA" 2>/dev/null; then
@@ -75,7 +81,7 @@ jobs:
             echo "  ✗ not reachable from $BR ($BR_SHA)"
           done
           echo "build=false" >> "$GITHUB_OUTPUT"
-          echo "::notice::Tag ${{ github.ref_name }} is not reachable from android or main — skipping the Android build."
+          echo "::notice::Tag $GITHUB_REF_NAME is not reachable from ANDROID/android/main — skipping the Android build."
 
   build:
     needs: android_guard
