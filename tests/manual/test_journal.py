@@ -136,6 +136,7 @@ check("trend" in st.by_evidence and st.by_evidence["trend"].wins == 2,
 # کندل قبل از صدور سیگنال نباید یادداشت «برخورد دوگانه» بسازد.
 pre_signal_bars = md_for("TEST", T1 - timedelta(minutes=15), [
     (1.3550, 1.3470, 1.3500),  # قبل از سیگنال: هر دو سطح
+    (1.3520, 1.3500, 1.3510),  # کندل میانی: هیچ‌کدام
     (1.3520, 1.3475, 1.3480),  # بعد از سیگنال: فقط SL
 ])
 historical_entry = next(e for e in entries if e.id == "d")
