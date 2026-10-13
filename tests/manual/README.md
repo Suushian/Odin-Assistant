@@ -9,7 +9,7 @@
 | فرمان | فایل |
 |---|---|
 | `python main.py --selftest` | داخل `main.py` |
-| `python panel.py --selftest` | داخل `panel.py` (فقط در جاب ویندوز) |
+| `python panel.py --selftest` | تست محلی ویندوز؛ در workflow فعلی CI اجرا نمی‌شود |
 | `python tests/check_config.py` | `tests/check_config.py` |
 | `python tests/manual/test_paths_install.py` | `tests/manual/test_paths_install.py` (آفلاین؛ منطق مسیر داده) |
 | `python tests/manual/test_journal.py` | `tests/manual/test_journal.py` (آفلاین؛ ژورنال و آمار) |
