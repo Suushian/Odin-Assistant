@@ -143,6 +143,14 @@ historical_entry = next(e for e in entries if e.id == "d")
 check(not _both_touch(historical_entry, pre_signal_bars),
       "کندل پیش از سیگنال در تشخیص برخورد دوگانه لحاظ نمی‌شود")
 
+# پس از برخورد اولیهٔ SL، کندل‌های دیرتر دیگر نباید برچسب نتیجه را عوض کنند.
+later_double_touch = md_for("TEST", T1 + timedelta(minutes=15), [
+    (1.3520, 1.3475, 1.3480),  # اولین برخورد پس از سیگنال: فقط SL
+    (1.3550, 1.3470, 1.3500),  # کندل بعدی: هر دو سطح، ولی معامله قبلاً بسته است
+])
+check(not _both_touch(historical_entry, later_double_touch),
+      "کندل‌های پس از اولین خروج در یادداشت برخورد دوگانه لحاظ نمی‌شوند")
+
 print()
 print("۳) گزارش‌ها")
 print("=" * 78)
