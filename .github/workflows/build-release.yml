@@ -109,6 +109,7 @@ jobs:
           node tests/js/smoke_about.js
           node tests/js/smoke_icons.js
           node tests/js/smoke_license.js
+          node tests/js/smoke_journal.js
           node tests/js/smoke_alerts.js
           node tests/js/smoke_chart.js
           node tests/js/smoke_share.js
