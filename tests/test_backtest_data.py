@@ -9,7 +9,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts" / "backtest"))
 
-from download_data import check_download_outputs, csv_snapshot
+from download_data import build_download_command, check_download_outputs, csv_snapshot
 from validate_data import inspect_csv
 
 VALID_CSV = (
@@ -58,6 +58,21 @@ class HistoricalCsvValidationTests(unittest.TestCase):
             report = inspect_csv(path)
             self.assertEqual(report["status"], "FAIL")
             self.assertIn("No valid OHLC rows", report["errors"])
+
+    def test_download_command_retries_empty_provider_responses(self):
+        import argparse
+        args = argparse.Namespace(
+            from_date=__import__("datetime").date(2026, 4, 13),
+            to_date=__import__("datetime").date(2026, 10, 13),
+            retries=5,
+            retry_pause_ms=500,
+        )
+        command = build_download_command("EURUSD", "m15", args, Path("tmp/EURUSD/M15"))
+        self.assertIn("--retries", command)
+        self.assertEqual(command[command.index("--retries") + 1], "5")
+        self.assertIn("--retry-pause", command)
+        self.assertEqual(command[command.index("--retry-pause") + 1], "500")
+        self.assertIn("--retry-on-empty", command)
 
     def test_unchanged_stale_csv_does_not_count_as_new_output(self):
         with tempfile.TemporaryDirectory() as temp:
