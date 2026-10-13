@@ -33,7 +33,8 @@ const entry = {
 };
 const candles = [
   { t: entry.ts - 15 * 60000, h: 1.355, l: 1.347, c: 1.35 }, // before signal: both
-  { t: entry.ts + 15 * 60000, h: 1.352, l: 1.3475, c: 1.348 } // after signal: SL only
+  { t: entry.ts + 15 * 60000, h: 1.352, l: 1.3475, c: 1.348 }, // first outcome: SL only
+  { t: entry.ts + 30 * 60000, h: 1.355, l: 1.347, c: 1.350 } // later double-touch is irrelevant
 ];
 let stored = null;
 const journal = {
