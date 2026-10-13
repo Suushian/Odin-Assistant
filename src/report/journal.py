@@ -89,7 +89,7 @@ def render_stats(stats: Stats, open_entries: list[Entry] | None = None,
     # تفکیک امتیاز — پاسخ به «آیا آستانهٔ ۷ درست است؟»
     if stats.by_score:
         lines.append("─── به تفکیک امتیاز پشتوانه ───")
-        for k in ("۷", "۸", "۹", "۰–۱۱"):
+        for k in ("۷", "۸", "۹", "۱۰–۱۱"):
             if k in stats.by_score:
                 lines.append(f"   امتیاز {k:<6} {_bucket_line(stats.by_score[k])}")
         lines.append("   ↳ اگر بازهٔ بالاتر نرخ برد بهتری ندارد، آستانه/وزن‌ها بازنگری می‌خواهند.")
