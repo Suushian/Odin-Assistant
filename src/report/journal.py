@@ -71,7 +71,7 @@ def render_stats(stats: Stats, open_entries: list[Entry] | None = None,
             arrow = "↗ بهتر" if d > 0.001 else ("↘ بدتر" if d < -0.001 else "→ بدون تغییر")
             lines.append(f"   روند هفته‌به‌هفته: {arrow} ({fa_num(f'{d * 100:+.0f}')} نقطهٔ درصد)")
     else:
-        lines.append("   هفتهٔ قبل: داده‌ای برای مقایسه نیست (اولین هفتهٔ ثبت است)")
+        lines.append("   هفتهٔ قبل: داده‌ای برای مقایسه نیست")
 
     # تفکیک نماد
     if stats.by_symbol:
