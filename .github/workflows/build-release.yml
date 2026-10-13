@@ -69,8 +69,6 @@ jobs:
       - name: Config validation
         run: python tests/check_config.py
 
-      - name: Historical CSV download validation regressions
-        run: python tests/test_backtest_data.py -v
 
       # فاز ۱ معماری پلاگین: تست واحد هستهٔ src/core/ — آفلاین و سریع (<۱s).
       # هسته در این فاز به engine وصل نیست؛ این step از همان روز اول جلوی

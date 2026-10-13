@@ -56,7 +56,6 @@
 | [`step3-judge-signals-fa.md`](step3-judge-signals-fa.md) | **داور امتیازدهی**: ۷ دروازهٔ وتو، ۸ مدرک از ۱۱ امتیاز، ریاضی SL/TP، ضداسپم |
 | [`step4-journal-stats-fa.md`](step4-journal-stats-fa.md) | ژورنال append-only، پیگیری خودکار نتیجه از کندل‌ها، آمار دقت (حلقهٔ صداقت) |
 | [`test-step1-fa.md`](test-step1-fa.md) | 🧪 راهنمای قدم‌به‌قدم تست مرحلهٔ ۱ (موتور داده و تکنیکال) روی کامپیوتر خودتان — ~۱۰ دقیقه |
-| [`backtest-data.md`](backtest-data.md) | دریافت و اعتبارسنجی CSV تاریخی Dukascopy، گزارش پوشش/خطا و محدودیت‌های بک‌تست | تسک دادهٔ تاریخی و بک‌تست |
 
 ## 🖥️ اسناد نسخهٔ ویندوز (منجمد در v0.21.0)
 
@@ -88,7 +87,6 @@
 | `node tests/js/smoke_service.js` | رصد پس‌زمینه end-to-end با چرخهٔ زندهٔ واقعی |
 | `python main.py --selftest` | تقویم، قطبیت شاخص‌ها، جهت‌دهی اخبار، وتوها، ریاضی SL/TP، ژورنال، لایسنس |
 | `python tests/check_config.py` | ۲۳ بررسی `config.yaml` + نبودِ توکن تلگرام در ریپو |
-| `python tests/test_backtest_data.py -v` | رگرسیون دانلود تاریخی: خروجی تازه، CSV خالی/نامعتبر و جلوگیری از موفقیت کاذب فایل قدیمی |
 | `tests/manual/*` | ۱۴ سوئیت دستی: داور، ژورنال، وتو، اخبار، ممیزی، مسیرهای نصب، لایسنس، دیالوگ فعال‌سازی |
 
 > تست‌های GUI دسکتاپ (`panel.py --selftest` و بخشی از `tests/manual/`) به Qt نیاز
