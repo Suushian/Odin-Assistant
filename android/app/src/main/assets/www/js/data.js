@@ -156,6 +156,13 @@
     return Array.from(buckets.values()).sort(function (a, b) { return a.t - b.t; });
   };
 
+  O.keepCompleted4h = function (h4, nowMs) {
+    if (!Array.isArray(h4) || !h4.length) return [];
+    var now = (typeof nowMs === 'number') ? nowMs : Date.now();
+    var last = h4[h4.length - 1];
+    return Number(last.t) + 4 * 60 * 60000 > now ? h4.slice(0, -1) : h4.slice();
+  };
+
   O.fetchYahooSymbol = function (symCfg, hcfg) {
     var y = symCfg.yahoo || (symCfg.name + '=X');
     var h1Days = (hcfg && hcfg.yahoo_h1_days) || 60;
@@ -181,7 +188,7 @@
         }
         function finish(a, b) {
           if (!a || !b || a.length < 250) return null;
-          var h4 = O.resample4h(a);
+          var h4 = dropForming ? O.keepCompleted4h(O.resample4h(a)) : O.resample4h(a);
           if (h4.length < 210) return null;
           var md = { symbol: symCfg.name, m15: b, h1: a, h4: h4 };
           var problems = O.validateMarketData(md);
