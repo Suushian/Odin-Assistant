@@ -49,10 +49,18 @@ const short = sample(now);
 short.h1 = short.h1.slice(0, 200);
 assert(Array.from(O.validateMarketData(short, now)).some(x => x.startsWith('H1: تاریخچه ناکافی')));
 
+const h4Start = Date.UTC(2026, 9, 14, 8, 0);
+const h4 = [
+  { t: h4Start, o: 1.1, h: 1.2, l: 1.0, c: 1.15 },
+  { t: h4Start + 4 * 60 * 60000, o: 1.15, h: 1.25, l: 1.05, c: 1.2 }
+];
+assert.strictEqual(O.keepCompleted4h(h4, Date.UTC(2026, 9, 14, 14, 30)).length, 1);
+assert.strictEqual(O.keepCompleted4h(h4, Date.UTC(2026, 9, 14, 16, 0)).length, 2);
+
 const weekend = Date.UTC(2026, 9, 17, 12, 0);
 const weekendData = sample(weekend);
 weekendData.m15 = weekendData.m15.map(x => ({ ...x, t: x.t - 2 * 60 * 60000 }));
 weekendData.h1 = weekendData.h1.map(x => ({ ...x, t: x.t - 5 * 60 * 60000 }));
 assert(!Array.from(O.validateMarketData(weekendData, weekend)).some(x => x.includes('کهنه است')));
 
-console.log('market data quality tests passed (5 scenarios).');
+console.log('market data quality tests passed (7 scenarios).');
