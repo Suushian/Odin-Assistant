@@ -13,6 +13,7 @@
       { name: 'USDCAD', fa: 'دلار آمریکا به دلار کانادا', yahoo: 'USDCAD=X', tv: { screener: 'forex', exchange: 'FX', symbol: 'USDCAD' }, base: 'USD', quote: 'CAD', pip: 0.0001 },
       { name: 'AUDUSD', fa: 'دلار استرالیا به دلار آمریکا', yahoo: 'AUDUSD=X', tv: { screener: 'forex', exchange: 'FX', symbol: 'AUDUSD' }, base: 'AUD', quote: 'USD', pip: 0.0001 },
       { name: 'USDCHF', fa: 'دلار آمریکا به فرانک سوئیس', yahoo: 'USDCHF=X', tv: { screener: 'forex', exchange: 'FX', symbol: 'USDCHF' }, base: 'USD', quote: 'CHF', pip: 0.0001 },
+      { name: 'NZDUSD', fa: 'دلار نیوزیلند به دلار آمریکا', yahoo: 'NZDUSD=X', tv: { screener: 'forex', exchange: 'FX', symbol: 'NZDUSD' }, base: 'NZD', quote: 'USD', pip: 0.0001 },
       // طلا: Yahoo اسپات ندارد و فیوچرز GC=F را می‌دهد — اختلاف جزئی طبیعی است
       { name: 'XAUUSD', fa: 'طلا به دلار آمریکا (انس)', yahoo: 'GC=F', tv: { screener: 'cfd', exchange: 'OANDA', symbol: 'XAUUSD' }, base: 'XAU', quote: 'USD', pip: 1.0 }
     ],
