@@ -63,6 +63,12 @@ weekendData.m15 = weekendData.m15.map(x => ({ ...x, t: x.t - 2 * 60 * 60000 }));
 weekendData.h1 = weekendData.h1.map(x => ({ ...x, t: x.t - 5 * 60 * 60000 }));
 assert(!Array.from(O.validateMarketData(weekendData, weekend)).some(x => x.includes('کهنه است')));
 
+const futureWeekend = sample(weekend);
+futureWeekend.h1 = futureWeekend.h1.map(x => ({ ...x, t: x.t + 2 * 24 * 60 * 60000 }));
+assert(Array.from(O.validateMarketData(futureWeekend, weekend)).some(
+  x => x.startsWith('H1') && x.includes('آینده')
+), 'future-dated H1 data must be rejected even when FX is closed');
+
 const calendarLogs = [];
 const staleCalendar = {
   events: [{ title: 'test event' }],
