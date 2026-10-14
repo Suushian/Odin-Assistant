@@ -37,7 +37,16 @@ def main() -> None:
         Source("fallback", result=expected),
     ]
     assert auto.fetch({"name": "XAUUSD"}) is expected
-    print("auto-source fallback tests passed (2 scenarios).")
+
+    # Gold futures (Yahoo GC=F) must not silently fall back to spot XAU/USD.
+    auto._connected = [
+        Source("yahoo", result=None),
+        Source("twelvedata", result=expected),
+    ]
+    assert auto.fetch({"name": "XAUUSD"}) is None
+    # FX pairs can still use the Twelve Data fallback.
+    assert auto.fetch({"name": "GBPUSD"}) is expected
+    print("auto-source fallback tests passed (4 scenarios).")
 
 
 if __name__ == "__main__":
