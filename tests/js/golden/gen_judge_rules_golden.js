@@ -325,7 +325,7 @@ function buildBattery(O, opts) {
     level_sell_close: S({}),
     fund_high_soon: judge(makeAnalysis(), undefined, makeCtx(O, { calSnap: highSoonCal(FIXED_WED) })),
     fund_med_soon: judge(makeAnalysis(), undefined, makeCtx(O, { calSnap: medSoonCal(FIXED_WED) })),
-    fund_cal_failed: judge(makeAnalysis(), undefined, makeCtx(O, { calSnap: failedCal() })),
+    fund_cal_failed: judge(makeAnalysis(), undefined, makeCtx(O, { calSnap: failedCal(), jcfg: vOff('high_impact_event') })),
     fund_cal_off: judge(makeAnalysis(), undefined, makeCtx(O, { calSnap: null })),
     mom_buy_oversold: judge(makeAnalysis({ rsi: 25.0 })),
     mom_buy_high: judge(makeAnalysis({ rsi: 55.0 })),
