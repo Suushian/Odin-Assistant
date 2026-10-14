@@ -64,6 +64,12 @@ def main() -> None:
     errors = validate_market_data(weekend_data, weekend)
     assert not any("کهنه است" in e for e in errors), errors
 
+    # Future timestamps remain invalid even when the FX market is closed.
+    future_weekend = sample(weekend)
+    future_weekend.h1.index = future_weekend.h1.index + pd.Timedelta(days=2)
+    errors = validate_market_data(future_weekend, weekend)
+    assert any("H1" in e and "آینده" in e for e in errors), errors
+
     # H1 candles can be complete while the containing H4 bucket is not.
     from src.data.yahoo_source import YahooSource
     h1_idx = pd.date_range("2026-10-14 08:00:00", periods=6, freq="1h")
