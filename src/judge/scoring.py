@@ -354,7 +354,9 @@ def veto_event(a: SymbolAnalysis, sym_cfg: dict, md: Optional[MarketData],
     vc = ctx.jcfg["veto"]
     base, quote = a.base, a.quote
     if vc.get("high_impact_event", True) and ctx.cal_snap is not None:
-        if not ctx.cal_snap.ok:
+        # A stale cache may omit newly scheduled events, so it is not safe
+        # evidence for allowing a signal when live refresh failed.
+        if not ctx.cal_snap.ok or ctx.cal_snap.stale:
             return Veto(
                 "CALENDAR_UNAVAILABLE", "📅 تقویم اقتصادی در دسترس نیست",
                 "رویدادهای پراثر قابل تأیید نیستند؛ برای جلوگیری از معامله بدون بررسی ریسک خبری، سیگنال صادر نمی‌شود"
