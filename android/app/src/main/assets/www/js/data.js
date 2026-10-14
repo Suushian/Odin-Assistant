@@ -306,7 +306,9 @@
       var dates = events.map(function (e) { return new Date(e.when).toISOString().slice(0, 10); }).sort();
       return {
         events: events, fetchedAt: fetchedAt, fromCache: fromCache, stale: stale,
-        fetched: fetched, error: '', ok: events.length > 0, source: O.CAL_SOURCE_NAME,
+        fetched: fetched,
+        error: events.length ? '' : 'تقویم خالی یا فاقد رویداد معتبر است',
+        ok: events.length > 0, source: O.CAL_SOURCE_NAME,
         weekRange: dates.length ? [dates[0], dates[dates.length - 1]] : ['', '']
       };
     }
