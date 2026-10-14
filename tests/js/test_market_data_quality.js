@@ -12,6 +12,8 @@ const ctx = { console, Date, Map, Promise, URL, Uint8Array, TextDecoder, ODIN: O
 ctx.globalThis = ctx;
 vm.createContext(ctx);
 vm.runInContext(fs.readFileSync(source, 'utf8'), ctx, { filename: 'data.js' });
+const judgeSource = path.join(root, 'android', 'app', 'src', 'main', 'assets', 'www', 'js', 'judge.js');
+vm.runInContext(fs.readFileSync(judgeSource, 'utf8'), ctx, { filename: 'judge.js' });
 
 function rows(n, interval, end, base) {
   const out = [];
@@ -160,7 +162,21 @@ async function testCalendarCacheLifecycle() {
     assert.strictEqual(unavailable.fetched, false);
     assert.strictEqual(unavailable.error, 'HTTP -1');
     assert.strictEqual(requests, 2);
-    console.log('calendar cache lifecycle passed (3 real fetchCalendar paths).');
+
+    const analysis = { base: 'EUR', quote: 'USD' };
+    const unavailableVeto = O.vetoEvent(analysis, {}, null, {
+      jcfg: { veto: { high_impact_event: true } },
+      calSnap: { ok: false, error: 'HTTP -1', events: [] },
+      nowMs: fixedNow, eventVetoMinutes: 30
+    });
+    assert(unavailableVeto && unavailableVeto.key === 'CALENDAR_UNAVAILABLE', unavailableVeto);
+    const disabledVeto = O.vetoEvent(analysis, {}, null, {
+      jcfg: { veto: { high_impact_event: true } },
+      calSnap: { ok: false, error: 'غیرفعال در تنظیمات', events: [] },
+      nowMs: fixedNow, eventVetoMinutes: 30
+    });
+    assert.strictEqual(disabledVeto, null, 'explicitly disabled calendar remains an opt-out');
+    console.log('calendar cache lifecycle passed (3 fetch paths + fail-closed veto).');
   } finally {
     Date.now = savedNow;
   }
