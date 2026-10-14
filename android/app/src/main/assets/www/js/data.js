@@ -136,7 +136,7 @@
         else if (age > spec.maxAge) errors.push(spec.name + ': آخرین کندل کهنه است');
       }
     });
-    return errors.filter(function (e, i, all) { return all.indexOf(e) === i; };
+    return errors.filter(function (e, i, all) { return all.indexOf(e) === i; });
   };
 
   // H1 → H4 (دقیقاً مثل pandas resample("4h") روی ایندکس UTC:
