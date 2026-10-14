@@ -354,6 +354,11 @@ def veto_event(a: SymbolAnalysis, sym_cfg: dict, md: Optional[MarketData],
     vc = ctx.jcfg["veto"]
     base, quote = a.base, a.quote
     if vc.get("high_impact_event", True) and ctx.cal_snap is not None:
+        if not ctx.cal_snap.ok:
+            return Veto(
+                "CALENDAR_UNAVAILABLE", "📅 تقویم اقتصادی در دسترس نیست",
+                "رویدادهای پراثر قابل تأیید نیستند؛ برای جلوگیری از معامله بدون بررسی ریسک خبری، سیگنال صادر نمی‌شود"
+            )
         evs = veto_for_symbol(ctx.cal_snap, base, quote, ctx.now,
                               minutes=float(ctx.event_veto_minutes))
         if evs:
