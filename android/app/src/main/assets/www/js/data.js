@@ -105,8 +105,8 @@
     var marketOpen = !(weekday === 6 || (weekday === 5 && minute >= 1260) ||
       (weekday === 0 && minute < 1260));
     var frames = [
-      { name: 'M15', key: 'm15', min: 50, interval: 15 * 60000, maxAge: 45 * 60000 },
-      { name: 'H1', key: 'h1', min: 250, interval: 60 * 60000, maxAge: 90 * 60000 },
+      { name: 'M15', key: 'm15', min: 50, interval: 15 * 60000, maxAge: 45 * 60000, maxGap: 60 * 60000 },
+      { name: 'H1', key: 'h1', min: 250, interval: 60 * 60000, maxAge: 90 * 60000, maxGap: 3 * 60 * 60000 },
       { name: 'H4', key: 'h4', min: 210, interval: 4 * 60 * 60000, maxAge: null }
     ];
     frames.forEach(function (spec) {
@@ -125,6 +125,12 @@
           return;
         }
         if (t <= previous) errors.push(spec.name + ': ترتیب زمانی تکراری یا نامعتبر است');
+        else if (spec.maxGap && previous > -Infinity &&
+            new Date(t).toISOString().slice(0, 10) === new Date(previous).toISOString().slice(0, 10) &&
+            t - previous > spec.maxGap) {
+          // Ignore UTC date/session boundaries (weekends, holidays and FX rollover).
+          errors.push(spec.name + ': شکاف زمانی غیرعادی در دادهٔ کندل‌ها');
+        }
         previous = t;
         if (h < Math.max(o, c, l) || l > Math.min(o, c, h))
           errors.push(spec.name + ': رابطه OHLC ناسازگار است');
