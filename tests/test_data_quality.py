@@ -85,7 +85,7 @@ def main() -> None:
     h4 = YahooSource._to_h4(h1, now=pd.Timestamp("2026-10-14 14:30:00"))
     assert list(h4.index) == [pd.Timestamp("2026-10-14 08:00:00")], h4.index
 
-    print("data quality tests passed (6 scenarios).")
+    print("data quality tests passed (7 scenarios).")
 
 
 if __name__ == "__main__":
