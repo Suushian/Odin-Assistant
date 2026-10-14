@@ -97,7 +97,7 @@ O.collectFundamental(
 ).then(() => {
   assert(calendarLogs.some(line => line.includes('تقویم اقتصادی کهنه است')), calendarLogs);
   assert(calendarLogs.some(line => line.includes('95 دقیقه')), calendarLogs);
-  console.log('market data quality tests passed (8 scenarios, including stale calendar warning).');
+  console.log('market data quality tests passed (9 scenarios, including stale calendar warning).');
 }).catch(err => {
   console.error(err);
   process.exitCode = 1;
