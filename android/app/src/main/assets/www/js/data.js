@@ -126,7 +126,7 @@
         }
         if (t <= previous) errors.push(spec.name + ': ترتیب زمانی تکراری یا نامعتبر است');
         else if (spec.maxGap && previous > -Infinity &&
-            new Date(t).toISOString().slice(0, 10) === new Date(previous).toISOString().slice(0, 10) &&
+            Math.floor(t / 86400000) === Math.floor(previous / 86400000) &&
             t - previous > spec.maxGap) {
           // Ignore UTC date/session boundaries (weekends, holidays and FX rollover).
           errors.push(spec.name + ': شکاف زمانی غیرعادی در دادهٔ کندل‌ها');
