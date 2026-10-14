@@ -71,14 +71,16 @@ class YahooSource(DataSource):
         return df
 
     @staticmethod
-    def _to_h4(h1: pd.DataFrame) -> pd.DataFrame:
+    def _to_h4(h1: pd.DataFrame, now: pd.Timestamp | None = None) -> pd.DataFrame:
         h4 = (h1.resample("4h")
                 .agg({"Open": "first", "High": "max", "Low": "min", "Close": "last"})
                 .dropna())
         # H1 candles may be closed while their containing H4 bucket is not.
         # Keep only fully completed H4 candles (indices are normalized to UTC-naive).
         if not h4.empty:
-            now_utc = pd.Timestamp.now(tz="UTC").tz_localize(None)
+            now_utc = pd.Timestamp.now(tz="UTC").tz_localize(None) if now is None else pd.Timestamp(now)
+            if now_utc.tzinfo is not None:
+                now_utc = now_utc.tz_convert("UTC").tz_localize(None)
             if h4.index[-1] + pd.Timedelta(hours=4) > now_utc:
                 h4 = h4.iloc[:-1]
         return h4
