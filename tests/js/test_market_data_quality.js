@@ -135,6 +135,14 @@ async function testCalendarCacheLifecycle() {
     assert.strictEqual(fresh.fetchedAt, fixedNow - 10 * 60000);
     assert.strictEqual(requests, 0, 'fresh cache must avoid network requests');
 
+    const emptyCache = await O.fetchCalendar(cfg, {
+      get: () => JSON.stringify({ fetched_at: new Date(fixedNow).toISOString(), events: [] }),
+      set: () => {}, del: () => {}
+    });
+    assert.strictEqual(emptyCache.ok, false);
+    assert(emptyCache.error.includes('فاقد رویداد معتبر'), emptyCache.error);
+    assert.strictEqual(requests, 0, 'fresh but empty cache must be reported, not treated as verified no-events');
+
     const stale = await O.fetchCalendar(cfg, store(fixedNow - 95 * 60000));
     assert.strictEqual(stale.ok, true);
     assert.strictEqual(stale.stale, true);
