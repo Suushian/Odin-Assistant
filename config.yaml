@@ -66,6 +66,15 @@ symbols:
     quote: CHF
     pip: 0.0001
 
+  - name: NZDUSD
+    fa: "دلار نیوزیلند به دلار آمریکا"
+    yahoo: "NZDUSD=X"
+    td: "NZD/USD"
+    tv: {screener: forex, exchange: FX, symbol: NZDUSD}
+    base: NZD
+    quote: USD
+    pip: 0.0001
+
   - name: XAUUSD
     fa: "طلا به دلار آمریکا (انس)"
     yahoo: "GC=F"        # فیوچرز طلا (Yahoo اسپات ندارد) — اختلاف جزئی با اسپات طبیعی است
