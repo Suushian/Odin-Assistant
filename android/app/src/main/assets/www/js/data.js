@@ -488,7 +488,14 @@
         stale: false, fromCache: false, weekRange: ['', '']
       })).then(function (s) {
         mkt.calSnap = s;
-        if (s && s.ok) log('🏦 تقویم اقتصادی: ' + O.faNum(s.events.length) + ' رویداد' + (s.fromCache ? ' (از کش)' : ''));
+        if (s && s.stale) {
+          var ageMin = (typeof s.fetchedAt === 'number' && Number.isFinite(s.fetchedAt))
+            ? Math.max(0, Math.floor((Date.now() - s.fetchedAt) / 60000)) : null;
+          log('[!] تقویم اقتصادی کهنه است' + (ageMin !== null ? ' (' + O.faNum(ageMin) + ' دقیقه از آخرین دریافت)' : '') +
+            ' — رویدادهای ذخیره‌شده فقط برای احتیاط استفاده می‌شوند؛ نبود رویداد را تأییدشده فرض نکنید');
+        }
+        if (s && s.ok) log('🏦 تقویم اقتصادی: ' + O.faNum(s.events.length) + ' رویداد' +
+          (s.stale ? ' (کش کهنه)' : (s.fromCache ? ' (از کش تازه)' : '')));
         else log('[!] تقویم اقتصادی در دسترس نیست: ' + String((s && s.error) || '').slice(0, 80));
       });
 
