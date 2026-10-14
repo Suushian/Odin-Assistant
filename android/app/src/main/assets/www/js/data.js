@@ -199,9 +199,13 @@
           }
           return md;
         }
-        if (h1 && m15) return finish(h1, m15);
+        var primary = finish(h1, m15);
+        if (primary) return primary;
+        // Retry the alternate ticker when primary data is present but fails
+        // quality checks too; null-only fallback misses stale/malformed data.
+        if (!symCfg.yahoo_alt) return null;
         return new Promise(function (res) {
-          alt(function (a2, b2) { res(finish(a2 || h1, b2 || m15)); });
+          alt(function (a2, b2) { res(finish(a2, b2)); });
         });
       });
     }).catch(function () { return null; });
