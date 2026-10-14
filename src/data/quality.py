@@ -16,6 +16,7 @@ from .base import MarketData
 _REQUIRED = ("Open", "High", "Low", "Close")
 _MIN_BARS = {"m15": 50, "h1": 250, "h4": 210}
 _INTERVAL = {"m15": timedelta(minutes=15), "h1": timedelta(hours=1)}
+_MAX_INTRADAY_GAP = {"m15": timedelta(hours=1), "h1": timedelta(hours=3)}
 _MAX_AGE = {"m15": timedelta(minutes=45), "h1": timedelta(minutes=90)}
 
 
@@ -59,6 +60,14 @@ def validate_market_data(md: MarketData, now: datetime | None = None) -> list[st
                 errors.append(f"{name}: زمان کندل تکراری است")
             if not idx.is_monotonic_increasing:
                 errors.append(f"{name}: ترتیب زمانی کندل‌ها نامعتبر است")
+            if name in ("M15", "H1") and idx.is_monotonic_increasing:
+                gap_idx = idx.tz_convert("UTC").tz_localize(None) if idx.tz is not None else idx
+                max_gap = _MAX_INTRADAY_GAP[key]
+                for left, right in zip(gap_idx[:-1], gap_idx[1:]):
+                    # Ignore date/session boundaries (weekends, holidays and FX rollover).
+                    if left.date() == right.date() and right - left > max_gap:
+                        errors.append(f"{name}: شکاف زمانی غیرعادی در دادهٔ کندل‌ها")
+                        break
         except Exception:
             errors.append(f"{name}: شاخص زمانی نامعتبر است")
             continue
