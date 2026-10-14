@@ -49,6 +49,12 @@ const short = sample(now);
 short.h1 = short.h1.slice(0, 200);
 assert(Array.from(O.validateMarketData(short, now)).some(x => x.startsWith('H1: تاریخچه ناکافی')));
 
+const gap = sample(now);
+gap.h1.splice(100, 3);
+assert(Array.from(O.validateMarketData(gap, now)).some(
+  x => x.startsWith('H1') && x.includes('شکاف زمانی')
+), 'suspicious intraday H1 gaps must be rejected');
+
 const h4Start = Date.UTC(2026, 9, 14, 8, 0);
 const h4 = [
   { t: h4Start, o: 1.1, h: 1.2, l: 1.0, c: 1.15 },
