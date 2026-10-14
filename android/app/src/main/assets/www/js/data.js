@@ -129,11 +129,14 @@
         if (h < Math.max(o, c, l) || l > Math.min(o, c, h))
           errors.push(spec.name + ': رابطه OHLC ناسازگار است');
       });
-      if (spec.maxAge && marketOpen && rows.length) {
+      if (spec.maxAge && rows.length) {
         var lastT = Number(rows[rows.length - 1].t);
-        var age = now - (lastT + spec.interval);
-        if (lastT > now + 5 * 60000) errors.push(spec.name + ': زمان آخرین کندل در آینده است');
-        else if (age > spec.maxAge) errors.push(spec.name + ': آخرین کندل کهنه است');
+        if (lastT > now + 5 * 60000) {
+          errors.push(spec.name + ': زمان آخرین کندل در آینده است');
+        } else if (marketOpen) {
+          var age = now - (lastT + spec.interval);
+          if (age > spec.maxAge) errors.push(spec.name + ': آخرین کندل کهنه است');
+        }
       }
     });
     return errors.filter(function (e, i, all) { return all.indexOf(e) === i; });
