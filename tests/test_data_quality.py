@@ -57,6 +57,11 @@ def main() -> None:
     errors = validate_market_data(duplicate, now)
     assert any("تکراری" in e for e in errors), errors
 
+    gap = sample(now)
+    gap.h1 = gap.h1.drop(gap.h1.index[100:103])
+    errors = validate_market_data(gap, now)
+    assert any("H1" in e and "شکاف زمانی" in e for e in errors), errors
+
     weekend = datetime(2026, 10, 17, 12, 0, tzinfo=timezone.utc)  # Saturday
     weekend_data = sample(weekend)
     weekend_data.h1.index = weekend_data.h1.index - pd.Timedelta(days=1)
