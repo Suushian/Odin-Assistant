@@ -95,7 +95,7 @@
   O.vetoEvent = function (a, symCfg, md, ctx) {
     var vc = ctx.jcfg.veto;
     if (vc.high_impact_event !== false && ctx.calSnap &&
-        ctx.calSnap.error !== 'غیرفعال در تنظیمات' && !ctx.calSnap.ok) {
+        ctx.calSnap.error !== 'غیرفعال در تنظیمات' && ctx.calSnap.ok === false) {
       return Veto('CALENDAR_UNAVAILABLE', '📅 تقویم اقتصادی در دسترس نیست',
         'رویدادهای پراثر قابل تأیید نیستند؛ برای جلوگیری از معامله بدون بررسی ریسک خبری، سیگنال صادر نمی‌شود');
     }
