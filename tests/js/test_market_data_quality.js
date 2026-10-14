@@ -7,7 +7,7 @@ const assert = require('assert');
 
 const root = path.resolve(__dirname, '..', '..');
 const source = path.join(root, 'android', 'app', 'src', 'main', 'assets', 'www', 'js', 'data.js');
-const O = { CONFIG: {}, BUS: { emit: function () {} }, core: { EVENTS: { FUNDAMENTAL_COLLECTED: 'fundamental.collected' } } };
+const O = { CONFIG: {}, faNum: n => String(n), BUS: { emit: function () {} }, core: { EVENTS: { FUNDAMENTAL_COLLECTED: 'fundamental.collected' } } };
 const ctx = { console, Date, Map, Promise, URL, Uint8Array, TextDecoder, ODIN: O, fetch: () => Promise.reject(new Error('offline')) };
 ctx.globalThis = ctx;
 vm.createContext(ctx);
