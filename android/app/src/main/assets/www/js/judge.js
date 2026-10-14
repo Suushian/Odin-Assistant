@@ -94,6 +94,10 @@
 
   O.vetoEvent = function (a, symCfg, md, ctx) {
     var vc = ctx.jcfg.veto;
+    if (vc.high_impact_event !== false && ctx.calendarEnabled === true && !ctx.calSnap) {
+      return Veto('CALENDAR_UNAVAILABLE', '📅 تقویم اقتصادی در دسترس نیست',
+        'پلاگین تقویم در دسترس نیست؛ رویدادهای پراثر قابل تأیید نیستند و سیگنال صادر نمی‌شود');
+    }
     if (vc.high_impact_event !== false && ctx.calSnap &&
         ctx.calSnap.error !== 'غیرفعال در تنظیمات' &&
         (ctx.calSnap.ok === false || ctx.calSnap.stale === true)) {

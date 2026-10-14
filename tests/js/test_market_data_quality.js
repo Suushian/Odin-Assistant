@@ -170,6 +170,16 @@ async function testCalendarCacheLifecycle() {
       nowMs: fixedNow, eventVetoMinutes: 30
     });
     assert(unavailableVeto && unavailableVeto.key === 'CALENDAR_UNAVAILABLE', unavailableVeto);
+    const missingVeto = O.vetoEvent(analysis, {}, null, {
+      jcfg: { veto: { high_impact_event: true } }, calendarEnabled: true,
+      calSnap: null, nowMs: fixedNow, eventVetoMinutes: 30
+    });
+    assert(missingVeto && missingVeto.key === 'CALENDAR_UNAVAILABLE', missingVeto);
+    const missingDisabled = O.vetoEvent(analysis, {}, null, {
+      jcfg: { veto: { high_impact_event: true } }, calendarEnabled: false,
+      calSnap: null, nowMs: fixedNow, eventVetoMinutes: 30
+    });
+    assert.strictEqual(missingDisabled, null, 'explicitly disabled calendar remains an opt-out');
     const staleVeto = O.vetoEvent(analysis, {}, null, {
       jcfg: { veto: { high_impact_event: true } },
       calSnap: { ok: true, stale: true, error: 'HTTP -1', events: [{ title_fa: 'old event' }] },

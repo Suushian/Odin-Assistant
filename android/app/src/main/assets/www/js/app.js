@@ -384,6 +384,7 @@
             jcfg: S.cfg.judge, acfg: S.cfg.analysis, symbolsCfg: S.cfg.symbols,
             ranking: mkt.ranking, tvMap: mkt.tvMap,
             calSnap: mkt.calSnap || null, newsSnap: mkt.newsSnap || null,
+            calendarEnabled: S.cfg.fundamental.enabled !== false,
             nowMs: nowMs, status: status,
             // S3: دروازهٔ توافق فقط min_agree را از اینجا می‌خواند
             strategiesCfg: S.cfg.strategies || {},

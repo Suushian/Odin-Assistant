@@ -256,9 +256,6 @@ class JudgeContext:
     ranking: list[tuple[str, float]] = field(default_factory=list)
     tv_map: dict = field(default_factory=dict)
     cal_snap: Optional[CalendarSnapshot] = None
-    # Set by the engine from fundamental.enabled. Missing snapshot while enabled
-    # must fail closed; None while explicitly disabled remains an opt-out.
-    calendar_enabled: bool = False
     news_snap: Optional[NewsSnapshot] = None
     now: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     status: MarketStatus = field(default_factory=lambda: market_status(datetime.now(timezone.utc)))
@@ -269,6 +266,9 @@ class JudgeContext:
     # خوانده می‌شود (scfg هر استراتژی در adapter خودش bind شده، مثل فاز ۴).
     # پیش‌فرض خالی = min_agree ۱ (همان config.yaml).
     strategies_cfg: dict = field(default_factory=dict)
+    # Set by the engine from fundamental.enabled. Missing snapshot while enabled
+    # must fail closed; None while explicitly disabled remains an opt-out.
+    calendar_enabled: bool = False
 
 
 # ══════════════════════════════════════════════════════════════
