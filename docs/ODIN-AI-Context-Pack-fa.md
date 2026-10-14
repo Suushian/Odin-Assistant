@@ -147,10 +147,18 @@ docs/            این بسته + plugin-architecture-fa.md (سند مادر م
 
 ## ۷) CI و برنچ‌ها
 
-- push به `ANDROID` → تست کامل (پایتون + همهٔ JS آفلاین) + بیلد APK.
-- push به `main`/`android` → فقط `branch-sync.yml` (ارزان؛ واگرایی = fail).
-- CI هرگز parity زنده/smoke_service را اجرا نمی‌کند (اینترنت لازم دارند) —
-  آن‌ها وظیفهٔ اجرای محلیِ قبل از push‌اند.
+- `build-release.yml` روی push به `main`، PRهای مقصد `main`، تگ‌های `v*`
+  و اجرای دستی، تست‌های Python و JavaScript آفلاین را اجرا می‌کند؛ از جمله
+  `tests/test_data_quality.py`، `tests/test_data_fallback.py` و
+  `tests/test_calendar_quality.py`.
+- `build-android.yml` روی push به `main`، PRهای مقصد `main`، تگ‌های `v*`
+  و اجرای دستی، APK می‌سازد. در PR/push ممکن است فقط artifact آزمایشیِ unsigned
+  بسازد؛ انتشار روی Release فقط روی تگ و پس از امضای کلید رسمی و تطبیق اثر انگشت
+  انجام می‌شود. نبود Secrets به معنی انتشار نیست.
+- `main` برنچ فعال اصلی است؛ نام‌های `ANDROID` و `android` تاریخی‌اند و
+  تنها در صورت وجود واقعی‌شان در گارد تگ بررسی می‌شوند.
+- CI parity زنده و `smoke_service.js` را اجرا نمی‌کند (این‌ها به اینترنت/
+  دادهٔ زنده نیاز دارند)؛ برایشان اجرای محلی لازم است.
 
 ## ۸) بدهی‌های ثبت‌شده (کارهای آینده — گم‌شان نکنید)
 
