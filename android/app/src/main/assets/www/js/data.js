@@ -94,6 +94,51 @@
     }).catch(function () { return null; });
   }
 
+  // اعتبارسنجی کندل‌ها پیش از ورود به تحلیل؛ مستقل از ظاهر شدن خطا در UI.
+  O.validateMarketData = function (md, nowMs) {
+    var errors = [];
+    if (!md) return ['داده‌ای دریافت نشد'];
+    var now = (typeof nowMs === 'number') ? nowMs : Date.now();
+    var d = new Date(now);
+    var weekday = d.getUTCDay(); // Sunday=0
+    var minute = d.getUTCHours() * 60 + d.getUTCMinutes();
+    var marketOpen = !(weekday === 6 || (weekday === 5 && minute >= 1260) ||
+      (weekday === 0 && minute < 1260));
+    var frames = [
+      { name: 'M15', key: 'm15', min: 50, interval: 15 * 60000, maxAge: 45 * 60000 },
+      { name: 'H1', key: 'h1', min: 250, interval: 60 * 60000, maxAge: 90 * 60000 },
+      { name: 'H4', key: 'h4', min: 210, interval: 4 * 60 * 60000, maxAge: null }
+    ];
+    frames.forEach(function (spec) {
+      var rows = md[spec.key];
+      if (!Array.isArray(rows) || rows.length < spec.min) {
+        errors.push(spec.name + ': تاریخچه ناکافی یا ناموجود');
+        return;
+      }
+      var previous = -Infinity;
+      rows.forEach(function (x) {
+        var t = Number(x && x.t), o = Number(x && x.o), h = Number(x && x.h);
+        var l = Number(x && x.l), c = Number(x && x.c);
+        if (!Number.isFinite(t) || !Number.isFinite(o) || !Number.isFinite(h) ||
+            !Number.isFinite(l) || !Number.isFinite(c) || o <= 0 || h <= 0 || l <= 0 || c <= 0) {
+          errors.push(spec.name + ': مقدار زمان یا OHLC نامعتبر است');
+          return;
+        }
+        if (t <= previous) errors.push(spec.name + ': ترتیب زمانی تکراری یا نامعتبر است');
+        previous = t;
+        if (h < Math.max(o, c, l) || l > Math.min(o, c, h))
+          errors.push(spec.name + ': رابطه OHLC ناسازگار است');
+      });
+      if (spec.maxAge && marketOpen && rows.length) {
+        var lastT = Number(rows[rows.length - 1].t);
+        var age = now - (lastT + spec.interval);
+        if (lastT > now + 5 * 60000) errors.push(spec.name + ': زمان آخرین کندل در آینده است');
+        else if (age > spec.maxAge) errors.push(spec.name + ': آخرین کندل کهنه است');
+      }
+    });
+    return errors.filter(function (e, i, all) { return all.indexOf(e) === i; };
+  };
+
   // H1 → H4 (دقیقاً مثل pandas resample("4h") روی ایندکس UTC:
   // سطل‌ها از نیمه‌شب UTC هر ۴ ساعت؛ Open=first, High=max, Low=min, Close=last)
   O.resample4h = function (h1) {
@@ -138,7 +183,14 @@
           if (!a || !b || a.length < 250) return null;
           var h4 = O.resample4h(a);
           if (h4.length < 210) return null;
-          return { symbol: symCfg.name, m15: b, h1: a, h4: h4 };
+          var md = { symbol: symCfg.name, m15: b, h1: a, h4: h4 };
+          var problems = O.validateMarketData(md);
+          if (problems.length) {
+            if (typeof console !== 'undefined' && console.warn)
+              console.warn('[ODIN] دادهٔ ' + symCfg.name + ' رد شد: ' + problems.slice(0, 3).join('؛ '));
+            return null;
+          }
+          return md;
         }
         if (h1 && m15) return finish(h1, m15);
         return new Promise(function (res) {
