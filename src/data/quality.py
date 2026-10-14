@@ -81,9 +81,10 @@ def validate_market_data(md: MarketData, now: datetime | None = None) -> list[st
             errors.append(f"{name}: مقادیر OHLC قابل‌خواندن نیست")
             continue
 
-        # زمان آخرین کندل فقط برای تایم‌فریم‌هایی کنترل می‌شود که منبع مستقیم
-        # است؛ H4 در این پروژه از H1 بازنمونه‌گیری می‌شود.
-        if name in ("M15", "H1") and market_open:
+        # زمان آینده حتی هنگام بسته‌بودن بازار نامعتبر است؛ فقط سن داده
+        # در ساعات بازار کنترل می‌شود تا تعطیلی آخر هفته false positive نسازد.
+        # H4 در این پروژه از H1 بازنمونه‌گیری می‌شود.
+        if name in ("M15", "H1"):
             try:
                 last = pd.Timestamp(idx[-1])
                 if last.tzinfo is not None:
@@ -91,7 +92,7 @@ def validate_market_data(md: MarketData, now: datetime | None = None) -> list[st
                 now_naive = now_utc.replace(tzinfo=None)
                 if last.to_pydatetime() > now_naive + timedelta(minutes=5):
                     errors.append(f"{name}: زمان آخرین کندل در آینده است")
-                else:
+                elif market_open:
                     age = now_naive - (last.to_pydatetime() + _INTERVAL[key])
                     if age > _MAX_AGE[key]:
                         errors.append(
