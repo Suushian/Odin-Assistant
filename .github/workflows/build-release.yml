@@ -70,7 +70,9 @@ jobs:
         run: python tests/check_config.py
 
       - name: Market data quality guards
-        run: python tests/test_data_quality.py
+        run: |
+          python tests/test_data_quality.py
+          python tests/test_data_fallback.py
 
 
       # فاز ۱ معماری پلاگین: تست واحد هستهٔ src/core/ — آفلاین و سریع (<۱s).
