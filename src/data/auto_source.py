@@ -43,7 +43,12 @@ class AutoSource(DataSource):
 
     def fetch(self, sym_cfg: dict) -> MarketData | None:
         for i, s in enumerate(self._connected):
-            md = s.fetch(sym_cfg)
+            try:
+                md = s.fetch(sym_cfg)
+            except Exception as e:
+                # A provider failure must not prevent trying the next source.
+                print(f"[auto] منبع {s.name} برای {sym_cfg['name']} خطا داد: {str(e)[:120]}")
+                continue
             if md is not None:
                 if i > 0:
                     print(f"[auto] {sym_cfg['name']} از زاپاس ({s.name}) دریافت شد")
