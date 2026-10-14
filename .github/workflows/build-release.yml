@@ -73,6 +73,7 @@ jobs:
         run: |
           python tests/test_data_quality.py
           python tests/test_data_fallback.py
+          python tests/test_calendar_quality.py
 
 
       # فاز ۱ معماری پلاگین: تست واحد هستهٔ src/core/ — آفلاین و سریع (<۱s).
