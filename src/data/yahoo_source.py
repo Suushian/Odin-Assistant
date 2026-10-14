@@ -43,7 +43,13 @@ class YahooSource(DataSource):
         if h4 is None or len(h4) < 210:
             print(f"[!] داده H4 (بازنمونه‌شده) برای {sym_cfg['name']} کافی نیست — رد شد")
             return None
-        return MarketData(symbol=sym_cfg["name"], m15=m15, h1=h1, h4=h4)
+        md = MarketData(symbol=sym_cfg["name"], m15=m15, h1=h1, h4=h4)
+        from .quality import validate_market_data
+        problems = validate_market_data(md)
+        if problems:
+            print(f"[!] داده Yahoo برای {sym_cfg['name']} از اعتبارسنجی کیفیت رد شد: {'؛ '.join(problems[:3])}")
+            return None
+        return md
 
     # ── داخلی ─────────────────────────────────────────────────
     def _download(self, ticker: str, interval: str, period: str) -> pd.DataFrame | None:
@@ -65,7 +71,16 @@ class YahooSource(DataSource):
         return df
 
     @staticmethod
-    def _to_h4(h1: pd.DataFrame) -> pd.DataFrame:
-        return (h1.resample("4h")
-                  .agg({"Open": "first", "High": "max", "Low": "min", "Close": "last"})
-                  .dropna())
+    def _to_h4(h1: pd.DataFrame, now: pd.Timestamp | None = None) -> pd.DataFrame:
+        h4 = (h1.resample("4h")
+                .agg({"Open": "first", "High": "max", "Low": "min", "Close": "last"})
+                .dropna())
+        # H1 candles may be closed while their containing H4 bucket is not.
+        # Keep only fully completed H4 candles (indices are normalized to UTC-naive).
+        if not h4.empty:
+            now_utc = pd.Timestamp.now(tz="UTC").tz_localize(None) if now is None else pd.Timestamp(now)
+            if now_utc.tzinfo is not None:
+                now_utc = now_utc.tz_convert("UTC").tz_localize(None)
+            if h4.index[-1] + pd.Timedelta(hours=4) > now_utc:
+                h4 = h4.iloc[:-1]
+        return h4

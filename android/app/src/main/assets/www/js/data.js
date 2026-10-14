@@ -94,6 +94,60 @@
     }).catch(function () { return null; });
   }
 
+  // اعتبارسنجی کندل‌ها پیش از ورود به تحلیل؛ مستقل از ظاهر شدن خطا در UI.
+  O.validateMarketData = function (md, nowMs) {
+    var errors = [];
+    if (!md) return ['داده‌ای دریافت نشد'];
+    var now = (typeof nowMs === 'number') ? nowMs : Date.now();
+    var d = new Date(now);
+    var weekday = d.getUTCDay(); // Sunday=0
+    var minute = d.getUTCHours() * 60 + d.getUTCMinutes();
+    var marketOpen = !(weekday === 6 || (weekday === 5 && minute >= 1260) ||
+      (weekday === 0 && minute < 1260));
+    var frames = [
+      { name: 'M15', key: 'm15', min: 50, interval: 15 * 60000, maxAge: 45 * 60000, maxGap: 60 * 60000 },
+      { name: 'H1', key: 'h1', min: 250, interval: 60 * 60000, maxAge: 90 * 60000, maxGap: 3 * 60 * 60000 },
+      { name: 'H4', key: 'h4', min: 210, interval: 4 * 60 * 60000, maxAge: null }
+    ];
+    frames.forEach(function (spec) {
+      var rows = md[spec.key];
+      if (!Array.isArray(rows) || rows.length < spec.min) {
+        errors.push(spec.name + ': تاریخچه ناکافی یا ناموجود');
+        return;
+      }
+      var previous = -Infinity;
+      rows.forEach(function (x) {
+        var t = Number(x && x.t), o = Number(x && x.o), h = Number(x && x.h);
+        var l = Number(x && x.l), c = Number(x && x.c);
+        if (!Number.isFinite(t) || !Number.isFinite(o) || !Number.isFinite(h) ||
+            !Number.isFinite(l) || !Number.isFinite(c) || o <= 0 || h <= 0 || l <= 0 || c <= 0) {
+          errors.push(spec.name + ': مقدار زمان یا OHLC نامعتبر است');
+          return;
+        }
+        if (t <= previous) errors.push(spec.name + ': ترتیب زمانی تکراری یا نامعتبر است');
+        else if (spec.maxGap && previous > -Infinity &&
+            Math.floor(t / 86400000) === Math.floor(previous / 86400000) &&
+            t - previous > spec.maxGap) {
+          // Ignore UTC date/session boundaries (weekends, holidays and FX rollover).
+          errors.push(spec.name + ': شکاف زمانی غیرعادی در دادهٔ کندل‌ها');
+        }
+        previous = t;
+        if (h < Math.max(o, c, l) || l > Math.min(o, c, h))
+          errors.push(spec.name + ': رابطه OHLC ناسازگار است');
+      });
+      if (spec.maxAge && rows.length) {
+        var lastT = Number(rows[rows.length - 1].t);
+        if (lastT > now + 5 * 60000) {
+          errors.push(spec.name + ': زمان آخرین کندل در آینده است');
+        } else if (marketOpen) {
+          var age = now - (lastT + spec.interval);
+          if (age > spec.maxAge) errors.push(spec.name + ': آخرین کندل کهنه است');
+        }
+      }
+    });
+    return errors.filter(function (e, i, all) { return all.indexOf(e) === i; });
+  };
+
   // H1 → H4 (دقیقاً مثل pandas resample("4h") روی ایندکس UTC:
   // سطل‌ها از نیمه‌شب UTC هر ۴ ساعت؛ Open=first, High=max, Low=min, Close=last)
   O.resample4h = function (h1) {
@@ -109,6 +163,13 @@
       }
     });
     return Array.from(buckets.values()).sort(function (a, b) { return a.t - b.t; });
+  };
+
+  O.keepCompleted4h = function (h4, nowMs) {
+    if (!Array.isArray(h4) || !h4.length) return [];
+    var now = (typeof nowMs === 'number') ? nowMs : Date.now();
+    var last = h4[h4.length - 1];
+    return Number(last.t) + 4 * 60 * 60000 > now ? h4.slice(0, -1) : h4.slice();
   };
 
   O.fetchYahooSymbol = function (symCfg, hcfg) {
@@ -136,13 +197,24 @@
         }
         function finish(a, b) {
           if (!a || !b || a.length < 250) return null;
-          var h4 = O.resample4h(a);
+          var h4 = dropForming ? O.keepCompleted4h(O.resample4h(a)) : O.resample4h(a);
           if (h4.length < 210) return null;
-          return { symbol: symCfg.name, m15: b, h1: a, h4: h4 };
+          var md = { symbol: symCfg.name, m15: b, h1: a, h4: h4 };
+          var problems = O.validateMarketData(md);
+          if (problems.length) {
+            if (typeof console !== 'undefined' && console.warn)
+              console.warn('[ODIN] دادهٔ ' + symCfg.name + ' رد شد: ' + problems.slice(0, 3).join('؛ '));
+            return null;
+          }
+          return md;
         }
-        if (h1 && m15) return finish(h1, m15);
+        var primary = finish(h1, m15);
+        if (primary) return primary;
+        // Retry the alternate ticker when primary data is present but fails
+        // quality checks too; null-only fallback misses stale/malformed data.
+        if (!symCfg.yahoo_alt) return null;
         return new Promise(function (res) {
-          alt(function (a2, b2) { res(finish(a2 || h1, b2 || m15)); });
+          alt(function (a2, b2) { res(finish(a2, b2)); });
         });
       });
     }).catch(function () { return null; });
@@ -234,7 +306,9 @@
       var dates = events.map(function (e) { return new Date(e.when).toISOString().slice(0, 10); }).sort();
       return {
         events: events, fetchedAt: fetchedAt, fromCache: fromCache, stale: stale,
-        fetched: fetched, error: '', ok: events.length > 0, source: O.CAL_SOURCE_NAME,
+        fetched: fetched,
+        error: events.length ? '' : 'تقویم خالی یا فاقد رویداد معتبر است',
+        ok: events.length > 0, source: O.CAL_SOURCE_NAME,
         weekRange: dates.length ? [dates[0], dates[dates.length - 1]] : ['', '']
       };
     }
@@ -425,7 +499,14 @@
         stale: false, fromCache: false, weekRange: ['', '']
       })).then(function (s) {
         mkt.calSnap = s;
-        if (s && s.ok) log('🏦 تقویم اقتصادی: ' + O.faNum(s.events.length) + ' رویداد' + (s.fromCache ? ' (از کش)' : ''));
+        if (s && s.stale) {
+          var ageMin = (typeof s.fetchedAt === 'number' && Number.isFinite(s.fetchedAt))
+            ? Math.max(0, Math.floor((Date.now() - s.fetchedAt) / 60000)) : null;
+          log('[!] تقویم اقتصادی کهنه است' + (ageMin !== null ? ' (' + O.faNum(ageMin) + ' دقیقه از آخرین دریافت)' : '') +
+            ' — رویدادهای ذخیره‌شده فقط برای احتیاط استفاده می‌شوند؛ نبود رویداد را تأییدشده فرض نکنید');
+        }
+        if (s && s.ok) log('🏦 تقویم اقتصادی: ' + O.faNum(s.events.length) + ' رویداد' +
+          (s.stale ? ' (کش کهنه)' : (s.fromCache ? ' (از کش تازه)' : '')));
         else log('[!] تقویم اقتصادی در دسترس نیست: ' + String((s && s.error) || '').slice(0, 80));
       });
 
