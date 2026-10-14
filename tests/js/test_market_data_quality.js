@@ -90,3 +90,62 @@ O.collectFundamental(
   console.error(err);
   process.exitCode = 1;
 });
+
+
+// Exercise the real fetchCalendar cache/fallback path, not only a fabricated
+// snapshot passed to collectFundamental.
+async function testCalendarCacheLifecycle() {
+  O.CAL_SOURCE_NAME = 'test-calendar';
+  O.parseEvents = raw => raw.map(x => ({ when: x.when, title_fa: x.title || 'test' }));
+  const savedNow = Date.now;
+  const fixedNow = Date.UTC(2026, 9, 14, 14, 30);
+  Date.now = () => fixedNow;
+  try {
+    function store(ts) {
+      const mem = { 'cache.calendar': JSON.stringify({
+        fetched_at: new Date(ts).toISOString(),
+        events: [{ when: new Date(fixedNow + 60 * 60000).toISOString(), title: 'event' }]
+      }) };
+      return {
+        get: k => mem[k] || '',
+        set: (k, v) => { mem[k] = String(v); },
+        del: k => { delete mem[k]; }
+      };
+    }
+    const cfg = { fundamental: { enabled: true, cache_ttl_minutes: 30, source_url: 'https://calendar.invalid' } };
+
+    let requests = 0;
+    O.http = () => { requests++; return Promise.resolve({ status: -1, text: 'offline' }); };
+    const fresh = await O.fetchCalendar(cfg, store(fixedNow - 10 * 60000));
+    assert.strictEqual(fresh.ok, true);
+    assert.strictEqual(fresh.stale, false);
+    assert.strictEqual(fresh.fromCache, true);
+    assert.strictEqual(fresh.fetchedAt, fixedNow - 10 * 60000);
+    assert.strictEqual(requests, 0, 'fresh cache must avoid network requests');
+
+    const stale = await O.fetchCalendar(cfg, store(fixedNow - 95 * 60000));
+    assert.strictEqual(stale.ok, true);
+    assert.strictEqual(stale.stale, true);
+    assert.strictEqual(stale.fromCache, true);
+    assert.strictEqual(stale.fetchedAt, fixedNow - 95 * 60000);
+    assert.strictEqual(stale.error, 'HTTP -1');
+    assert.strictEqual(requests, 1, 'stale cache should attempt one refresh');
+
+    const unavailable = await O.fetchCalendar(cfg, {
+      get: () => '', set: () => {}, del: () => {}
+    });
+    assert.strictEqual(unavailable.ok, false);
+    assert.strictEqual(unavailable.stale, false);
+    assert.strictEqual(unavailable.fromCache, false);
+    assert.strictEqual(unavailable.fetched, false);
+    assert.strictEqual(unavailable.error, 'HTTP -1');
+    assert.strictEqual(requests, 2);
+    console.log('calendar cache lifecycle passed (3 real fetchCalendar paths).');
+  } finally {
+    Date.now = savedNow;
+  }
+}
+testCalendarCacheLifecycle().catch(err => {
+  console.error(err);
+  process.exitCode = 1;
+});
