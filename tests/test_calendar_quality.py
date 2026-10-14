@@ -53,7 +53,11 @@ def main() -> None:
     ctx.cal_snap = CalendarSnapshot(events=[], stale=True, error="network unavailable")
     veto = veto_event(analysis, {}, None, ctx)
     assert veto is not None and veto.key == "CALENDAR_UNAVAILABLE", veto
-    ctx.cal_snap = None  # feature explicitly disabled by configuration
+    ctx.cal_snap = None
+    ctx.calendar_enabled = True  # enabled feature but plugin/snapshot unavailable
+    veto = veto_event(analysis, {}, None, ctx)
+    assert veto is not None and veto.key == "CALENDAR_UNAVAILABLE", veto
+    ctx.calendar_enabled = False  # feature explicitly disabled by configuration
     assert veto_event(analysis, {}, None, ctx) is None
 
     print("calendar quality tests passed (empty/invalid payloads + fail-closed veto).")
