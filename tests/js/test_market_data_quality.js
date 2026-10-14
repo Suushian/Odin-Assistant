@@ -7,7 +7,7 @@ const assert = require('assert');
 
 const root = path.resolve(__dirname, '..', '..');
 const source = path.join(root, 'android', 'app', 'src', 'main', 'assets', 'www', 'js', 'data.js');
-const O = { CONFIG: {}, BUS: { emit: function () {} } };
+const O = { CONFIG: {}, BUS: { emit: function () {} }, core: { EVENTS: { FUNDAMENTAL_COLLECTED: 'fundamental.collected' } } };
 const ctx = { console, Date, Map, Promise, URL, Uint8Array, TextDecoder, ODIN: O, fetch: () => Promise.reject(new Error('offline')) };
 ctx.globalThis = ctx;
 vm.createContext(ctx);
@@ -63,4 +63,30 @@ weekendData.m15 = weekendData.m15.map(x => ({ ...x, t: x.t - 2 * 60 * 60000 }));
 weekendData.h1 = weekendData.h1.map(x => ({ ...x, t: x.t - 5 * 60 * 60000 }));
 assert(!Array.from(O.validateMarketData(weekendData, weekend)).some(x => x.includes('کهنه است')));
 
-console.log('market data quality tests passed (7 scenarios).');
+const calendarLogs = [];
+const staleCalendar = {
+  events: [{ title: 'test event' }],
+  ok: true,
+  stale: true,
+  fromCache: true,
+  fetchedAt: Date.now() - 95 * 60000,
+  error: 'HTTP -1'
+};
+O.collectFundamental(
+  { tradingview: { enabled: false }, fundamental: { enabled: true }, news: { enabled: false }, symbols: [] },
+  {},
+  {},
+  line => calendarLogs.push(line),
+  {
+    tv: null,
+    calendar: { fetchCalendar: () => Promise.resolve(staleCalendar) },
+    news: null
+  }
+).then(() => {
+  assert(calendarLogs.some(line => line.includes('تقویم اقتصادی کهنه است')), calendarLogs);
+  assert(calendarLogs.some(line => line.includes('95 دقیقه')), calendarLogs);
+  console.log('market data quality tests passed (8 scenarios, including stale calendar warning).');
+}).catch(err => {
+  console.error(err);
+  process.exitCode = 1;
+});
