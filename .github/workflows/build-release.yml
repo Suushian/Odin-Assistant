@@ -69,6 +69,9 @@ jobs:
       - name: Config validation
         run: python tests/check_config.py
 
+      - name: Market data quality guards
+        run: python tests/test_data_quality.py
+
 
       # فاز ۱ معماری پلاگین: تست واحد هستهٔ src/core/ — آفلاین و سریع (<۱s).
       # هسته در این فاز به engine وصل نیست؛ این step از همان روز اول جلوی
