@@ -94,6 +94,11 @@
 
   O.vetoEvent = function (a, symCfg, md, ctx) {
     var vc = ctx.jcfg.veto;
+    if (vc.high_impact_event !== false && ctx.calSnap &&
+        ctx.calSnap.error !== 'غیرفعال در تنظیمات' && !ctx.calSnap.ok) {
+      return Veto('CALENDAR_UNAVAILABLE', '📅 تقویم اقتصادی در دسترس نیست',
+        'رویدادهای پراثر قابل تأیید نیستند؛ برای جلوگیری از معامله بدون بررسی ریسک خبری، سیگنال صادر نمی‌شود');
+    }
     if (vc.high_impact_event !== false && ctx.calSnap && ctx.calSnap.events && ctx.calSnap.events.length) {
       var evs = O.vetoForSymbol(ctx.calSnap.events, a.base, a.quote, ctx.nowMs, +ctx.eventVetoMinutes);
       if (evs.length) {
