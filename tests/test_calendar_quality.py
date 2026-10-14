@@ -3,13 +3,17 @@
 from __future__ import annotations
 
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
+from types import SimpleNamespace
 from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from src.fundamental import calendar
+from src.fundamental.calendar import CalendarSnapshot
+from src.judge.scoring import veto_event
 
 
 class Response:
@@ -35,7 +39,21 @@ def main() -> None:
         assert "فاقد رویداد معتبر" in snap.error, snap.error
         assert any("نبود رویداد تأییدشده نیست" in line for line in logs), logs
 
-    print("calendar quality tests passed (empty and invalid payloads).")
+    # When event veto is enabled, an unavailable calendar must not be treated
+    # as proof that no high-impact event exists. Explicitly disabled remains opt-out.
+    analysis = SimpleNamespace(base="EUR", quote="USD")
+    ctx = SimpleNamespace(
+        jcfg={"veto": {"high_impact_event": True}},
+        cal_snap=CalendarSnapshot(events=[], error="network unavailable"),
+        now=datetime(2026, 10, 14, 14, 30, tzinfo=timezone.utc),
+        event_veto_minutes=30,
+    )
+    veto = veto_event(analysis, {}, None, ctx)
+    assert veto is not None and veto.key == "CALENDAR_UNAVAILABLE", veto
+    ctx.cal_snap = None  # feature explicitly disabled by configuration
+    assert veto_event(analysis, {}, None, ctx) is None
+
+    print("calendar quality tests passed (empty/invalid payloads + fail-closed veto).")
 
 
 if __name__ == "__main__":
