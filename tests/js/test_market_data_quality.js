@@ -98,7 +98,7 @@ async function testCalendarCacheLifecycle() {
   O.CAL_SOURCE_NAME = 'test-calendar';
   O.parseEvents = raw => raw.map(x => ({ when: x.when, title_fa: x.title || 'test' }));
   const savedNow = Date.now;
-  const fixedNow = Date.UTC(2026, 9, 14, 14, 30);
+  const fixedNow = Date.now();
   Date.now = () => fixedNow;
   try {
     function store(ts) {
