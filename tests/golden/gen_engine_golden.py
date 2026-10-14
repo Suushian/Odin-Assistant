@@ -143,6 +143,9 @@ def make_tv_map(symbol_names):
 def make_cfg():
     from src.config import load_config
     cfg = copy.deepcopy(load_config())
+    # این fixture طلایی، قرارداد تاریخیِ چرخهٔ ۷ نمادی را پین می‌کند؛
+    # پوشش نمادهای واقعی در tests/test_symbol_coverage.py جداگانه سنجیده می‌شود.
+    cfg["symbols"] = [s for s in cfg["symbols"] if s["name"] != "NZDUSD"]
     # چرخهٔ طلایی رفتار پیشین را پین می‌کند؛ مسیر فعال اسکالپ در تست داور جداگانه است.
     (cfg.get("strategies") or {}).setdefault("scalping", {})["enabled"] = False
     cfg["data_source"] = "yahoo"                  # seam مستقیم YahooSource (هر دو نسخه)
