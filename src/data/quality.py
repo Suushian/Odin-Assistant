@@ -93,7 +93,7 @@ def validate_market_data(md: MarketData, now: datetime | None = None) -> list[st
         # زمان آینده حتی هنگام بسته‌بودن بازار نامعتبر است؛ فقط سن داده
         # در ساعات بازار کنترل می‌شود تا تعطیلی آخر هفته false positive نسازد.
         # H4 در این پروژه از H1 بازنمونه‌گیری می‌شود.
-        if name in ("M15", "H1"):
+        if name in ("M15", "H1", "H4"):
             try:
                 last = pd.Timestamp(idx[-1])
                 if last.tzinfo is not None:
@@ -101,7 +101,7 @@ def validate_market_data(md: MarketData, now: datetime | None = None) -> list[st
                 now_naive = now_utc.replace(tzinfo=None)
                 if last.to_pydatetime() > now_naive + timedelta(minutes=5):
                     errors.append(f"{name}: زمان آخرین کندل در آینده است")
-                elif market_open:
+                elif name in ("M15", "H1") and market_open:
                     age = now_naive - (last.to_pydatetime() + _INTERVAL[key])
                     if age > _MAX_AGE[key]:
                         errors.append(
