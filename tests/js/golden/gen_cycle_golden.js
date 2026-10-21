@@ -176,6 +176,8 @@ function createApp(opts) {
     vm.runInContext(fs.readFileSync(path.join(WWW, f), 'utf8'), ctx, { filename: f });
   }
   const O = ctx.ODIN;
+  // The cycle golden fixture pins historical seven-symbol behavior; production symbol coverage is tested separately.
+  O.CONFIG.symbols = O.CONFIG.symbols.filter((s) => s.name !== 'NZDUSD');
 
   // ── پچ seamها (فقط لایهٔ شبکه؛ پارس/تحلیل/داور/ژورنال واقعی‌اند) ──
   O.fetchYahooSymbol = function (symCfg) {
