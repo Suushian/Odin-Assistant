@@ -88,6 +88,9 @@ def resolve_open_signals(journal: Journal, datasets: dict,
     resolved: list[Entry] = []
     for entry in journal.open_entries():
         md = datasets.get(entry.symbol)
+        # Outcome scanning and expiry pricing must stop at the signal's expiry deadline.
+        expiry_deadline = entry.ts + timedelta(hours=expiry_h)
+        scan_until = min(now, expiry_deadline)
         hit = None
         last_close = None
         last_close_ts = None
@@ -100,13 +103,13 @@ def resolve_open_signals(journal: Journal, datasets: dict,
                 # زمانی؛ بدون هم‌جنس‌کردن، مقایسه TypeError می‌دهد.
                 if ts.tzinfo is None:
                     ts = ts.replace(tzinfo=timezone.utc)
-                if ts > now:
+                if ts > scan_until:
                     continue
                 bars.append((ts, float(row["High"]), float(row["Low"])))
                 if last_close_ts is None or ts >= last_close_ts:
                     last_close_ts = ts
                     last_close = float(row["Close"])
-            hit = _scan_bars(entry, bars, conservative, now)
+            hit = _scan_bars(entry, bars, conservative, scan_until)
 
         r_override = None
         if hit is None and (now - entry.ts) > timedelta(hours=expiry_h):
