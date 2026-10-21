@@ -103,7 +103,9 @@ def resolve_open_signals(journal: Journal, datasets: dict,
                 # زمانی؛ بدون هم‌جنس‌کردن، مقایسه TypeError می‌دهد.
                 if ts.tzinfo is None:
                     ts = ts.replace(tzinfo=timezone.utc)
-                if ts > scan_until:
+                # M15 timestamps mark candle open; never use OHLC from a candle
+                # that had not fully closed by evaluation/expiry time.
+                if ts + timedelta(minutes=15) > scan_until:
                     continue
                 bars.append((ts, float(row["High"]), float(row["Low"])))
                 if last_close_ts is None or ts >= last_close_ts:
