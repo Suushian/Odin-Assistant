@@ -490,7 +490,9 @@ def run_cycle(cfg: Optional[dict] = None, on_log: LogFn = _noop,
                 ctx = JudgeContext(
                     jcfg=jcfg, acfg=cfg["analysis"], symbols_cfg=cfg["symbols"],
                     ranking=C["mkt"]["ranking"], tv_map=C["mkt"]["tv_map"],
-                    cal_snap=C["cal_snap"], news_snap=C["news_snap"], now=C["now"],
+                    cal_snap=C["cal_snap"],
+                    calendar_enabled=bool((cfg.get("fundamental") or {}).get("enabled", True)),
+                    news_snap=C["news_snap"], now=C["now"],
                     status=caps.session.market_status(C["now"]),
                     # منبع حقیقتِ پنجرهٔ وتو همان تنظیم مرحلهٔ ۲ است، نه یک عدد دوم
                     event_veto_minutes=float((cfg.get("fundamental") or {})

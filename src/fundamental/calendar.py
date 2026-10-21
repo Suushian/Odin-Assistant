@@ -372,8 +372,12 @@ def fetch_calendar(cfg: dict | None = None,
     if use_cache:
         raw, ts, stale = _read_cache(ttl)
         if raw is not None and not stale:
-            log(f"🏦 تقویم اقتصادی از کش محلی خوانده شد ({len(raw)} رویداد)")
-            return _build(raw, fetched_at=ts, from_cache=True, stale=False)
+            snap = _build(raw, fetched_at=ts, from_cache=True, stale=False)
+            if snap.ok:
+                log(f"🏦 تقویم اقتصادی از کش محلی خوانده شد ({len(raw)} رویداد)")
+            else:
+                log("[!] کش تقویم خالی یا فاقد رویداد معتبر است — نبود رویداد تأییدشده نیست")
+            return snap
 
     try:
         r = requests.get(url, headers={"User-Agent": _UA, "Accept": "application/json"},
@@ -383,8 +387,12 @@ def fetch_calendar(cfg: dict | None = None,
         if not isinstance(raw, list):
             raise ValueError("ساختار پاسخ تقویم نامعتبر است")
         _write_cache(raw)
-        log(f"🏦 تقویم اقتصادی دریافت شد: {len(raw)} رویداد ({SOURCE_NAME})")
-        return _build(raw, fetched_at=datetime.now(timezone.utc), from_cache=False, stale=False)
+        snap = _build(raw, fetched_at=datetime.now(timezone.utc), from_cache=False, stale=False)
+        if snap.ok:
+            log(f"🏦 تقویم اقتصادی دریافت شد: {len(raw)} رویداد ({SOURCE_NAME})")
+        else:
+            log("[!] پاسخ تقویم خالی یا فاقد رویداد معتبر است — نبود رویداد تأییدشده نیست")
+        return snap
     except Exception as e:
         msg = f"{type(e).__name__}: {str(e)[:90]}"
         raw, ts, _ = _read_cache(ttl_min=10 ** 9)   # هر کشی، حتی کهنه، بهتر از هیچی است
@@ -405,7 +413,8 @@ def _build(raw: list[dict], fetched_at, from_cache: bool, stale: bool,
     dates = sorted({e.when.date() for e in events})
     rng = (f"{dates[0]:%Y-%m-%d}", f"{dates[-1]:%Y-%m-%d}") if dates else ("", "")
     return CalendarSnapshot(events=events, fetched_at=fetched_at, from_cache=from_cache,
-                            stale=stale, week_range=rng, fetched=fetched)
+                            stale=stale, week_range=rng, fetched=fetched,
+                            error="" if events else "تقویم خالی یا فاقد رویداد معتبر است")
 
 
 # ── پرس‌وجو ────────────────────────────────────────────────────

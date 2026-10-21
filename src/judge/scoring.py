@@ -266,6 +266,9 @@ class JudgeContext:
     # خوانده می‌شود (scfg هر استراتژی در adapter خودش bind شده، مثل فاز ۴).
     # پیش‌فرض خالی = min_agree ۱ (همان config.yaml).
     strategies_cfg: dict = field(default_factory=dict)
+    # Set by the engine from fundamental.enabled. Missing snapshot while enabled
+    # must fail closed; None while explicitly disabled remains an opt-out.
+    calendar_enabled: bool = False
 
 
 # ══════════════════════════════════════════════════════════════
@@ -353,7 +356,15 @@ def veto_event(a: SymbolAnalysis, sym_cfg: dict, md: Optional[MarketData],
     """📅 رویداد پراثر تقویم در پنجرهٔ وتو (fundamental.veto_minutes_before)."""
     vc = ctx.jcfg["veto"]
     base, quote = a.base, a.quote
-    if vc.get("high_impact_event", True) and ctx.cal_snap is not None:
+    calendar_enabled = bool(getattr(ctx, "calendar_enabled", False))
+    if vc.get("high_impact_event", True) and (ctx.cal_snap is not None or calendar_enabled):
+        # A missing plugin/snapshot, empty calendar, or stale cache is not
+        # evidence that no high-impact event exists. Explicit opt-out remains safe.
+        if ctx.cal_snap is None or not ctx.cal_snap.ok or ctx.cal_snap.stale:
+            return Veto(
+                "CALENDAR_UNAVAILABLE", "📅 تقویم اقتصادی در دسترس نیست",
+                "رویدادهای پراثر قابل تأیید نیستند؛ برای جلوگیری از معامله بدون بررسی ریسک خبری، سیگنال صادر نمی‌شود"
+            )
         evs = veto_for_symbol(ctx.cal_snap, base, quote, ctx.now,
                               minutes=float(ctx.event_veto_minutes))
         if evs:

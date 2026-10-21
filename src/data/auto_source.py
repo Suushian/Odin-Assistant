@@ -42,8 +42,20 @@ class AutoSource(DataSource):
                 pass
 
     def fetch(self, sym_cfg: dict) -> MarketData | None:
-        for i, s in enumerate(self._connected):
-            md = s.fetch(sym_cfg)
+        # XAUUSD is Yahoo COMEX futures (GC=F), while Twelve Data's XAU/USD
+        # is spot. Never silently switch instrument definitions on fallback.
+        is_gold = str(sym_cfg.get("name", "")).upper() == "XAUUSD"
+        sources = [s for s in self._connected
+                   if not (is_gold and s.name == "twelvedata")]
+        if is_gold and len(sources) < len(self._connected):
+            print("[auto] XAUUSD: زاپاس Twelve Data (اسپات) رد شد؛ منبع Yahoo (فیوچرز GC=F) هم‌تعریف نیست")
+        for i, s in enumerate(sources):
+            try:
+                md = s.fetch(sym_cfg)
+            except Exception as e:
+                # A provider failure must not prevent trying the next source.
+                print(f"[auto] منبع {s.name} برای {sym_cfg['name']} خطا داد: {str(e)[:120]}")
+                continue
             if md is not None:
                 if i > 0:
                     print(f"[auto] {sym_cfg['name']} از زاپاس ({s.name}) دریافت شد")

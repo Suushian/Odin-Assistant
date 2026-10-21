@@ -69,6 +69,12 @@ jobs:
       - name: Config validation
         run: python tests/check_config.py
 
+      - name: Market data quality guards
+        run: |
+          python tests/test_data_quality.py
+          python tests/test_data_fallback.py
+          python tests/test_calendar_quality.py
+
 
       # فاز ۱ معماری پلاگین: تست واحد هستهٔ src/core/ — آفلاین و سریع (<۱s).
       # هسته در این فاز به engine وصل نیست؛ این step از همان روز اول جلوی
@@ -121,6 +127,7 @@ jobs:
           node tests/js/test_external_url.js
           node tests/js/test_news_render_xss.js
           node tests/js/test_source_freshness.js
+          node tests/js/test_market_data_quality.js
 
       # فاز ۶ معماری پلاگین: میخ‌های رفتاری موتور JS (svcTick/cycleCore/
       # runPipeline) — قبل از سوییچ به پلاگین‌ها نوشته و سبز شده‌اند؛ بعد از

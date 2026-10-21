@@ -63,7 +63,13 @@ class TwelveDataSource(DataSource):
             print(f"[!] تاریخچه Twelve Data برای {sym_cfg['name']} کافی نیست "
                   f"(h1={len(h1)}, h4={len(h4)})")
             return None
-        return MarketData(symbol=sym_cfg["name"], m15=m15, h1=h1, h4=h4)
+        md = MarketData(symbol=sym_cfg["name"], m15=m15, h1=h1, h4=h4)
+        from .quality import validate_market_data
+        problems = validate_market_data(md)
+        if problems:
+            print(f"[!] داده Twelve Data برای {sym_cfg['name']} از اعتبارسنجی کیفیت رد شد: {'؛ '.join(problems[:3])}")
+            return None
+        return md
 
     # ── داخلی ─────────────────────────────────────────────────
     def _series(self, td_sym: str, interval: str) -> pd.DataFrame | None:

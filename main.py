@@ -254,13 +254,20 @@ def _selftest() -> int:
         assert r.reject_reason == "VETO", f"reject_reason برای {key} = {r.reject_reason}"
         assert key in [v.key for v in r.vetoes], f"{key} در فهرست وتوها نیست: {[v.key for v in r.vetoes]}"
 
+    # تقویم ناموجود نباید به‌معنای «هیچ رویداد پراثری نیست» تفسیر شود.
+    unavailable_calendar = _ctx(cal=cal.CalendarSnapshot(error="timeout"), news=supportive)
+    r = judge_symbol(_ana(), {}, None, unavailable_calendar)
+    assert r.signal is None and r.reject_reason == "VETO", "تقویم ناموجود باید سیگنال را متوقف کند"
+    assert "CALENDAR_UNAVAILABLE" in [v.key for v in r.vetoes], "وتوی تقویم ناموجود ثبت نشد"
+
     # وتوها باید از config قابل خاموش‌کردن باشند
     r = judge_symbol(_ana(), {}, None, _ctx(now=sat, cal=clean, news=supportive,
                                             veto={**jcfg["veto"], "weekend": False}))
     assert "WEEKEND" not in [v.key for v in r.vetoes], "وتو باید تنظیم‌پذیر باشد"
 
     # پ) امتیاز ناکافی → رد با دلیل روشن، بدون بادکردن امتیاز
-    weak = JudgeContext(jcfg=jcfg, acfg=acfg, symbols_cfg=syms,
+    weak_jcfg = {**jcfg, "veto": {**jcfg["veto"], "high_impact_event": False}}
+    weak = JudgeContext(jcfg=weak_jcfg, acfg=acfg, symbols_cfg=syms,
                         ranking=[("USD", 0.4), ("JPY", 0.2), ("GBP", 0.0), ("EUR", -0.3)],
                         tv_map={"EURUSD": TVSnapshot("EURUSD", 1.149, 62.0, 32.0, "SELL", 3, 14, 9)},
                         cal_snap=cal.CalendarSnapshot(error="timeout"),
