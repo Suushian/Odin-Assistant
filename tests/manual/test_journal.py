@@ -101,6 +101,18 @@ check(by_id["c"].outcome == SL and by_id["c"].r == -1.0, f"ج) حد ضرر R=-1 
 check(by_id["d"].outcome == SL, f"د) برخورد دوگانه → محتاطانه ضرر ({by_id['d'].outcome})")
 check("محتاطانه" in (by_id["d"].note or ""), "د) یادداشت صادقانهٔ برخورد دوگانه ثبت شد")
 
+# رگرسیون: کندل زمان‌دارِ آینده نباید نتیجهٔ سیگنال را زودتر از موعد ببندد.
+jr_future = Journal(os.path.join(tmp.name, "future-candle.jsonl"))
+future_signal_ts = NOW - timedelta(minutes=30)
+jr_future.append(sig_rec("future-candle", "NZDUSD", "BUY", 0.6500, 0.6480, 0.6540, future_signal_ts))
+future_md = md_for("NZDUSD", NOW + timedelta(minutes=15), [
+    (0.6550, 0.6490, 0.6545),  # timestamp بعد از زمان ارزیابی؛ برخورد TP نباید لحاظ شود
+])
+resolve_open_signals(jr_future, {"NZDUSD": future_md}, now=NOW, cfg=cfg,
+                     on_log=lambda m: None)
+check(jr_future.load()[0].is_open,
+      "کندل با timestamp آینده نباید سیگنال را پیش از موعد ببندد")
+
 # رگرسیون: برخورد دوگانهٔ کندلِ پیش از ورود نباید به‌عنوان علت خروج ثبت شود.
 jr_guard = Journal(os.path.join(tmp.name, "guard.jsonl"))
 jr_guard.append(sig_rec("hist", "NZDUSD", "BUY", 0.6500, 0.6480, 0.6540, T1))
