@@ -1,8 +1,15 @@
+<div align="center">
+
+<img src="android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png" alt="آیکون برنامه ODIN Assistant" width="128" />
+
 # ODIN Assistant
 
-**دستیار تحلیل فارکس و طلا برای اندروید**
+### دستیار هوشمند تحلیل فارکس و طلا برای اندروید
 
-تحلیل چندمنبعی، سیگنال مستدل و کارنامهٔ شفاف؛ تصمیم نهایی همیشه با کاربر است.
+تحلیل چندمنبعی بازار، ارزیابی شواهد و ارائهٔ سیگنال‌های قابل‌ردیابی؛
+**تصمیم نهایی همیشه با کاربر است.**
+
+تحلیل تکنیکال · فاندامنتال · اخبار اقتصادی · تأییدیهٔ TradingView · ژورنال عملکرد
 
 [![Version](https://img.shields.io/badge/version-1.0.0-30343b?style=flat-square)](CHANGELOG.md)
 [![Android](https://img.shields.io/badge/Android-7.0%2B-3DDC84?style=flat-square&logo=android&logoColor=white)](https://github.com/Suushian/Odin-Assistant/releases/latest)
@@ -11,6 +18,7 @@
 
 [**دریافت آخرین APK**](https://github.com/Suushian/Odin-Assistant/releases/latest) · [تاریخچهٔ نسخه‌ها](CHANGELOG.md) · [تلگرام رسمی](https://t.me/Khode_Sushian)
 
+</div>
 ---
 
 > **نکتهٔ مهم:** ODIN ربات معامله‌گر نیست. به بروکر وصل نمی‌شود و معاملهٔ خودکار انجام نمی‌دهد. برنامه داده‌ها را تحلیل می‌کند، دلیل صدور یا رد سیگنال را نمایش می‌دهد و تصمیم را به کاربر می‌سپارد. هیچ سود یا نرخ بردی تضمین نمی‌شود.
