@@ -147,6 +147,21 @@ check(late_entry.outcome == EXPIRED and late_entry.close_price == 0.6510
       and abs(late_entry.r - 0.5) < 1e-6,
       "برخورد پس از مهلت نباید نتیجه را عوض کند؛ قیمت انقضا باید آخرین Close معتبر پیش از deadline باشد")
 
+# رگرسیون: اگر تنها کندل‌ها قبل از ورود باشند، از قیمت پیش از ورود R انقضا نساز.
+jr_pre_entry = Journal(os.path.join(tmp.name, "pre-entry-only.jsonl"))
+pre_entry_signal_ts = NOW - timedelta(hours=60)
+jr_pre_entry.append(sig_rec("pre-entry-only", "NZDUSD", "BUY", 0.6500, 0.6480, 0.6540, pre_entry_signal_ts))
+pre_entry_idx = pd.DatetimeIndex([pre_entry_signal_ts - timedelta(minutes=15)])
+pre_entry_frame = pd.DataFrame({
+    "Open": [0.6540], "High": [0.6560], "Low": [0.6530], "Close": [0.6550],
+}, index=pre_entry_idx)
+pre_entry_md = MarketData(symbol="NZDUSD", m15=pre_entry_frame, h1=pre_entry_frame, h4=pre_entry_frame)
+resolve_open_signals(jr_pre_entry, {"NZDUSD": pre_entry_md}, now=NOW, cfg=cfg,
+                     on_log=lambda m: None)
+pre_entry = jr_pre_entry.load()[0]
+check(pre_entry.outcome == EXPIRED and pre_entry.close_price is None and pre_entry.r == 0.0,
+      "قیمت کندل پیش از ورود نباید به‌عنوان قیمت انقضای سیگنال استفاده شود")
+
 # رگرسیون: برخورد دوگانهٔ کندلِ پیش از ورود نباید به‌عنوان علت خروج ثبت شود.
 jr_guard = Journal(os.path.join(tmp.name, "guard.jsonl"))
 jr_guard.append(sig_rec("hist", "NZDUSD", "BUY", 0.6500, 0.6480, 0.6540, T1))
