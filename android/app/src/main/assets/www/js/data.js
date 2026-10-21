@@ -135,11 +135,14 @@
         if (h < Math.max(o, c, l) || l > Math.min(o, c, h))
           errors.push(spec.name + ': رابطه OHLC ناسازگار است');
       });
-      if (spec.maxAge && rows.length) {
+      if (rows.length) {
         var lastT = Number(rows[rows.length - 1].t);
+        // Future timestamps are invalid for every timeframe, including H4.
+        // maxAge is intentionally intraday-only because H4 freshness is handled
+        // differently, but that must not disable the future-data guard.
         if (lastT > now + 5 * 60000) {
           errors.push(spec.name + ': زمان آخرین کندل در آینده است');
-        } else if (marketOpen) {
+        } else if (spec.maxAge && marketOpen) {
           var age = now - (lastT + spec.interval);
           if (age > spec.maxAge) errors.push(spec.name + ': آخرین کندل کهنه است');
         }
