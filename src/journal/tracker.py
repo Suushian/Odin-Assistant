@@ -47,7 +47,9 @@ def _r_for(entry: Entry, outcome: str, close_price: float) -> float:
 def _scan_bars(entry: Entry, bars, conservative: bool):
     """بررسی ترتیبی کندل‌ها؛ نتیجه، قیمت بسته‌شدن و برخورد هم‌زمان را برمی‌گرداند."""
     for ts, high, low in bars:
-        if ts <= entry.ts:
+        # Never resolve a signal from a candle timestamped after the evaluation time.
+        # Provider freshness checks are defense in depth; the tracker must enforce this invariant too.
+        if ts <= entry.ts or ts > now:
             continue
         if entry.direction == "BUY":
             hit_tp = high >= entry.tp
