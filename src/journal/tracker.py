@@ -89,6 +89,8 @@ def resolve_open_signals(journal: Journal, datasets: dict,
     for entry in journal.open_entries():
         md = datasets.get(entry.symbol)
         hit = None
+        last_close = None
+        last_close_ts = None
         if md is not None and md.m15 is not None and len(md.m15):
             bars = []
             for idx, row in md.m15.iterrows():
@@ -98,15 +100,20 @@ def resolve_open_signals(journal: Journal, datasets: dict,
                 # زمانی؛ بدون هم‌جنس‌کردن، مقایسه TypeError می‌دهد.
                 if ts.tzinfo is None:
                     ts = ts.replace(tzinfo=timezone.utc)
+                if ts > now:
+                    continue
                 bars.append((ts, float(row["High"]), float(row["Low"])))
+                if last_close_ts is None or ts >= last_close_ts:
+                    last_close_ts = ts
+                    last_close = float(row["Close"])
             hit = _scan_bars(entry, bars, conservative, now)
 
         r_override = None
         if hit is None and (now - entry.ts) > timedelta(hours=expiry_h):
             # منقضی: R واقعی از آخرین قیمت موجود
             close = None
-            if md is not None and md.m15 is not None and len(md.m15):
-                close = float(md.m15["Close"].iloc[-1])
+            if last_close is not None:
+                close = last_close
             outcome, close_price = EXPIRED, close
             if close is None:
                 # قیمتی در دسترس نیست ولی سیگنال قطعاً منقضی شده؛ نگه‌داشتنِ
