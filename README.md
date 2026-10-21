@@ -1,11 +1,9 @@
-<div align="center" dir="ltr">
-
-<img src="assets/icon.png" alt="ODIN Assistant" width="112" height="112">
-
-# ODIN Assistant
+<div dir="ltr" align="left">
+<img src="assets/icon.png" alt="ODIN Assistant" width="72" height="72">
+<h1 dir="ltr" align="left">ODIN Assistant</h1>
 </div>
 
-<p dir="rtl" align="right"><strong>دستیار تحلیل فارکس و طلا برای اندروید</strong></p>
+<h2 dir="rtl" align="right">دستیار تحلیل فارکس و طلا برای اندروید</h2>
 <p dir="rtl" align="right">تحلیل چندمنبعی · سیگنال مستدل · کارنامهٔ شفاف</p>
 
 <div align="center" dir="ltr">
@@ -34,14 +32,14 @@
 
 <div dir="rtl" align="right">
 
-## نمای کلی
+<h2 dir="rtl" align="right">نمای کلی</h2>
 
-<table>
+<table dir="rtl" align="right">
 <tr>
-<td align="center" width="25%"><h3>4</h3><sub>منظر تحلیلی</sub><br>تکنیکال، فاندامنتال، خبر، TradingView</td>
-<td align="center" width="25%"><h3>7</h3><sub>دروازهٔ وتو</sub><br>مستقل از امتیاز</td>
-<td align="center" width="25%"><h3>11</h3><sub>حداکثر امتیاز</sub><br>آستانهٔ پیش‌فرض: 7</td>
-<td align="center" width="25%"><h3>15 دقیقه</h3><sub>چرخهٔ پیش‌فرض</sub><br>قابل تنظیم</td>
+<td align="right" width="25%"><h3>4</h3><sub>منظر تحلیلی</sub><br>تکنیکال، فاندامنتال، خبر، <span dir="ltr">TradingView</span></td>
+<td align="right" width="25%"><h3>7</h3><sub>دروازهٔ وتو</sub><br>مستقل از امتیاز</td>
+<td align="right" width="25%"><h3>11</h3><sub>حداکثر امتیاز</sub><br>آستانهٔ پیش‌فرض: 7</td>
+<td align="right" width="25%"><h3>15 دقیقه</h3><sub>چرخهٔ پیش‌فرض</sub><br>قابل تنظیم</td>
 </tr>
 </table>
 
@@ -49,7 +47,7 @@
 
 <div dir="rtl" align="right">
 
-## مسیر تحلیل در یک نگاه
+<h2 dir="rtl" align="right">مسیر تحلیل در یک نگاه</h2>
 
 <div dir="ltr" align="left">
 
@@ -75,35 +73,37 @@ flowchart TD
 
 <div dir="rtl" align="right">
 
-## قابلیت‌ها
+<h2 dir="rtl" align="right">قابلیت‌ها</h2>
 
-| حوزه | آنچه در برنامه وجود دارد |
-|---|---|
-| **تحلیل بازار** | روند و مومنتوم در H4/H1، کندل‌های M15 برای پیگیری نتیجه، سطوح حمایت/مقاومت و قدرت نسبی ارزها |
-| **داور سیگنال** | ۷ وتوی مستقل، ۸ شاهد با مجموع ۱۱ امتیاز، آستانهٔ پیش‌فرض ۷ و سقف ۳ سیگنال در هر چرخه |
-| **استراتژی‌ها** | روند + پولبک، شکست لندن و کری؛ کری فقط تأییدکننده است و به‌تنهایی سیگنال نمی‌سازد |
-| **رصد پس‌زمینه** | تحلیل دوره‌ای، اعلان سیگنال، خبر فوری، هشدار قیمت و اعلان وضعیت سرویس |
-| **ژورنال و کارنامه** | ثبت append-only، ارزیابی خودکار نتیجه، نرخ برد و میانگین R هفتگی با تفکیک استراتژی و مدرک |
-| **نمودار و اشتراک** | نمودار H1/H4، سطوح کلیدی، نمایش سیگنال و کارت تصویری با تاریخ جلالی و ساعت تهران |
-| **رابط فارسی** | ارقام فارسی، تقویم جلالی، ساعت تهران، آیکون‌های SVG و تم Aurora Glass 2.0 |
-| **کیفیت شواهد** | دادهٔ ناموجود امتیاز مثبت نمی‌گیرد؛ شواهد غایب نباید به‌جای تأیید استفاده شوند |
-| **کنترل پلاگین‌ها** | نمایش وضعیت پلاگین‌ها و خطاهای ثبت‌شده برای عیب‌یابی |
-| **لایسنس** | تریال ۷ روزه، لایسنس متصل به کد دستگاه و کنترل دستکاری ساعت |
+<table dir="rtl" align="right">
+<thead><tr><th align="right">حوزه</th><th align="right">آنچه در برنامه وجود دارد</th></tr></thead>
+<tbody>
+<tr><td align="right"><strong>تحلیل بازار</strong></td><td align="right">روند و مومنتوم در <span dir="ltr">H4/H1</span>، کندل‌های <span dir="ltr">M15</span> برای پیگیری نتیجه، سطوح حمایت/مقاومت و قدرت نسبی ارزها</td></tr>
+<tr><td align="right"><strong>داور سیگنال</strong></td><td align="right">۷ وتوی مستقل، ۸ شاهد با مجموع ۱۱ امتیاز، آستانهٔ پیش‌فرض ۷ و سقف ۳ سیگنال در هر چرخه</td></tr>
+<tr><td align="right"><strong>استراتژی‌ها</strong></td><td align="right">روند + پولبک، شکست لندن و کری؛ کری فقط تأییدکننده است و به‌تنهایی سیگنال نمی‌سازد</td></tr>
+<tr><td align="right"><strong>رصد پس‌زمینه</strong></td><td align="right">تحلیل دوره‌ای، اعلان سیگنال، خبر فوری، هشدار قیمت و اعلان وضعیت سرویس</td></tr>
+<tr><td align="right"><strong>ژورنال و کارنامه</strong></td><td align="right">ثبت <code dir="ltr">append-only</code>، ارزیابی خودکار نتیجه، نرخ برد و میانگین <code dir="ltr">R</code> هفتگی با تفکیک استراتژی و مدرک</td></tr>
+<tr><td align="right"><strong>نمودار و اشتراک</strong></td><td align="right">نمودار <span dir="ltr">H1/H4</span>، سطوح کلیدی، نمایش سیگنال و کارت تصویری با تاریخ جلالی و ساعت تهران</td></tr>
+<tr><td align="right"><strong>رابط فارسی</strong></td><td align="right">ارقام فارسی، تقویم جلالی، ساعت تهران، آیکون‌های <span dir="ltr">SVG</span> و تم <span dir="ltr">Aurora Glass 2.0</span></td></tr>
+<tr><td align="right"><strong>کیفیت شواهد</strong></td><td align="right">دادهٔ ناموجود امتیاز مثبت نمی‌گیرد؛ شواهد غایب نباید به‌جای تأیید استفاده شوند</td></tr>
+<tr><td align="right"><strong>کنترل پلاگین‌ها</strong></td><td align="right">نمایش وضعیت پلاگین‌ها و خطاهای ثبت‌شده برای عیب‌یابی</td></tr>
+<tr><td align="right"><strong>لایسنس</strong></td><td align="right">تریال ۷ روزه، لایسنس متصل به کد دستگاه و کنترل دستکاری ساعت</td></tr>
+</tbody>
+</table>
 
 </div>
 
 <div dir="rtl" align="right">
 
-## استراتژی‌ها و دروازهٔ توافق
+<h2 dir="rtl" align="right">استراتژی‌ها و دروازهٔ توافق</h2>
 
-<div align="center">
-
-| 📈 روند + پولبک | 🌍 شکست لندن | 🏦 کری |
-|:---:|:---:|:---:|
-| روند H4/H1، ADX و برگشت RSI | شکست محدودهٔ آسیا با فیلتر ATR | اختلاف نرخ بهره، قدرت ارز و اخبار |
-| **پیشنهاددهنده** | **پیشنهاددهنده** | **فقط تأیید** |
-
-</div>
+<table dir="rtl" align="right">
+<thead><tr><th align="right">روند + پولبک</th><th align="right">شکست لندن</th><th align="right">کری</th></tr></thead>
+<tbody>
+<tr><td align="right">روند <span dir="ltr">H4/H1</span>، <span dir="ltr">ADX</span> و برگشت <span dir="ltr">RSI</span></td><td align="right">شکست محدودهٔ آسیا با فیلتر <span dir="ltr">ATR</span></td><td align="right">اختلاف نرخ بهره، قدرت ارز و اخبار</td></tr>
+<tr><td align="right"><strong>پیشنهاددهنده</strong></td><td align="right"><strong>پیشنهاددهنده</strong></td><td align="right"><strong>فقط تأیید</strong></td></tr>
+</tbody>
+</table>
 
 سیگنال باید از داور امتیازدهی عبور کند و پشتوانهٔ استراتژی داشته باشد. استراتژی‌ها از تنظیمات قابل فعال/غیرفعال شدن‌اند؛ اگر هیچ استراتژی پیشنهاددهنده‌ای موافق نباشد، سیگنال صادر نمی‌شود.
 
@@ -123,19 +123,18 @@ flowchart TD
 
 <div dir="rtl" align="right">
 
-## منابع داده
+<h2 dir="rtl" align="right">منابع داده</h2>
 
-<div align="center">
-
-| منبع | کاربرد |
-|:---:|---|
-| [Yahoo Finance](https://finance.yahoo.com/) | قیمت و کندل؛ منبع پیش‌فرض |
-| [Twelve Data](https://twelvedata.com/) | منبع جایگزین اختیاری؛ برای استفاده به کلید نیاز دارد |
-| [ForexFactory](https://www.forexfactory.com/) | تقویم اقتصادی |
-| RSS | خبرهای فارکس و اقتصاد |
-| TradingView | تأییدیهٔ تکنیکال از API غیررسمی |
-
-</div>
+<table dir="rtl" align="right">
+<thead><tr><th align="right">منبع</th><th align="right">کاربرد</th></tr></thead>
+<tbody>
+<tr><td align="left"><span dir="ltr">Yahoo Finance</span></td><td align="right">قیمت و کندل؛ منبع پیش‌فرض</td></tr>
+<tr><td align="left"><span dir="ltr">Twelve Data</span></td><td align="right">منبع جایگزین اختیاری؛ برای استفاده به کلید نیاز دارد</td></tr>
+<tr><td align="left"><span dir="ltr">ForexFactory</span></td><td align="right">تقویم اقتصادی</td></tr>
+<tr><td align="left"><span dir="ltr">RSS</span></td><td align="right">خبرهای فارکس و اقتصاد</td></tr>
+<tr><td align="left"><span dir="ltr">TradingView</span></td><td align="right">تأییدیهٔ تکنیکال از API غیررسمی</td></tr>
+</tbody>
+</table>
 
 منابع عمومی به معنی تضمین دسترس‌پذیری نیستند. در صورت دادهٔ ناقص یا منبع ناموفق، تحلیل باید محدود یا رد شود. برنامه سرور اختصاصی پروژه ندارد؛ برای دریافت داده با منابع بیرونی ارتباط برقرار می‌کند.
 
@@ -143,7 +142,7 @@ flowchart TD
 
 <div dir="rtl" align="right">
 
-## ژورنال: از سیگنال تا نتیجه
+<h2 dir="rtl" align="right">ژورنال: از سیگنال تا نتیجه</h2>
 
 <div dir="ltr" align="left">
 
@@ -172,7 +171,7 @@ flowchart LR
 
 <div dir="rtl" align="right">
 
-## تازه‌ترین تغییرات
+<h2 dir="rtl" align="right">تازه‌ترین تغییرات</h2>
 
 **نسخهٔ برنامه: 1.0.0** — جزئیات نسخه‌ها در [CHANGELOG.md](CHANGELOG.md) نگهداری می‌شود.
 
@@ -185,7 +184,7 @@ flowchart LR
 
 <div dir="rtl" align="right">
 
-## نصب
+<h2 dir="rtl" align="right">نصب</h2>
 
 1. آخرین APK را از [صفحهٔ Releases](https://github.com/Suushian/Odin-Assistant/releases/latest) دریافت کنید.
 2. روی **Android 7.0 یا جدیدتر** نصب کنید.
@@ -207,26 +206,18 @@ flowchart LR
 
 <div dir="rtl" align="right">
 
-## معماری
+<h2 dir="rtl" align="right">معماری</h2>
 
 <div dir="ltr" align="left">
 
 ```mermaid
-flowchart LR
-    subgraph AndroidApp["Android app (active platform)"]
-        direction TB
-        UI["WebView UI"]
-        JS["JavaScript engine (ES5)"]
-        PIPE["Analysis pipeline"]
-        PLUG["Plugin registry"]
-        JUDGE["Signal judge and strategies"]
-        JOURNAL["Journal and notifications"]
-        UI --> JS --> PIPE
-        PIPE --> PLUG
-        PIPE --> JUDGE --> JOURNAL
-    end
-    PY["Python reference (desktop frozen at v0.21)"]
-    PY -. "Golden and parity tests" .-> JS
+flowchart TB
+    UI["Android WebView UI"] --> JS["Android JavaScript engine (ES5)"]
+    JS --> PIPE["Analysis pipeline"]
+    PIPE --> PLUG["Plugin registry"]
+    PIPE --> JUDGE["Signal judge and strategies"]
+    JUDGE --> JOURNAL["Journal and notifications"]
+    PY["Python reference (frozen desktop)"] -.->|"Golden and parity tests"| JS
 ```
 
 </div>
@@ -270,7 +261,7 @@ for s in tests/js/smoke_*.js tests/js/test_*.js; do node "$s"; done
 
 <div dir="rtl" align="right">
 
-## محدودیت‌های شناخته‌شده
+<h2 dir="rtl" align="right">محدودیت‌های شناخته‌شده</h2>
 
 - سیگنال‌ها پیشنهاد تحلیلی‌اند، نه توصیهٔ مالی؛ سودآوری تضمین نمی‌شود.
 - دسترس‌پذیری Yahoo، تقویم، RSS و API غیررسمی TradingView می‌تواند تغییر کند.
@@ -283,7 +274,7 @@ for s in tests/js/smoke_*.js tests/js/test_*.js; do node "$s"; done
 
 <div dir="rtl" align="right">
 
-## پیوندها
+<h2 dir="rtl" align="right">پیوندها</h2>
 
 <div align="center" dir="ltr">
 
@@ -295,7 +286,7 @@ for s in tests/js/smoke_*.js tests/js/test_*.js; do node "$s"; done
 
 <div align="center">
 
-### تحلیل صادقانه. پیشنهاد شفاف. تصمیم با تو.
+<h3 dir="rtl" align="right">تحلیل صادقانه. پیشنهاد شفاف. تصمیم با تو.</h3>
 
 ساخته‌شده توسط **Sushian Khoshkhani** · مدیریت پروژه: **Reza Khoshkhani** · اسپانسر: **Karen Khoshkhani**
 
