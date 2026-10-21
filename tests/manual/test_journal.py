@@ -114,6 +114,19 @@ resolve_open_signals(jr_guard, {"NZDUSD": guard_md}, now=NOW, cfg=cfg,
 guard_entry = jr_guard.load()[0]
 check(guard_entry.outcome == SL and "محتاطانه" not in guard_entry.note,
       "کندل قبل از ورود نباید یادداشت برخورد دوگانه بسازد")
+
+# رگرسیون: بعد از اولین خروج، کندل‌های بعدی نباید یادداشت برخورد دوگانه بسازند.
+jr_first_exit = Journal(os.path.join(tmp.name, "first-exit.jsonl"))
+jr_first_exit.append(sig_rec("first-exit", "NZDUSD", "BUY", 0.6500, 0.6480, 0.6540, T1))
+first_exit_md = md_for("NZDUSD", T1 + timedelta(minutes=15), [
+    (0.6520, 0.6475, 0.6480),  # اولین خروج: فقط SL
+    (0.6550, 0.6470, 0.6500),  # کندل بعدی هر دو سطح را می‌زند؛ دیگر مهم نیست
+])
+resolve_open_signals(jr_first_exit, {"NZDUSD": first_exit_md}, now=NOW, cfg=cfg,
+                     on_log=lambda m: None)
+first_exit_entry = jr_first_exit.load()[0]
+check(first_exit_entry.outcome == SL and "محتاطانه" not in first_exit_entry.note,
+      "کندل پس از اولین خروج نباید نتیجه را به برخورد دوگانه تبدیل کند")
 check(by_id["e"].outcome == EXPIRED, f"ه) انقضا ({by_id['e'].outcome})")
 check(abs(by_id["e"].r - 0.5) < 1e-6, f"ه) R انقضا از قیمت واقعی (=+0.5): {by_id['e'].r}")
 check(by_id["f"].is_open, "و) سیگنال بدون برخورد و داخل پنجره → باز می‌ماند")
