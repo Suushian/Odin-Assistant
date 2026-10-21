@@ -217,7 +217,7 @@ flowchart TB
     PIPE --> PLUG["Plugin registry"]
     PIPE --> JUDGE["Signal judge and strategies"]
     JUDGE --> JOURNAL["Journal and notifications"]
-    PY["Python reference (frozen desktop)"] -.->|"Golden and parity tests"| JS
+    PY["Python reference (frozen desktop)"] -. "Golden and parity tests" .-> JS
 ```
 
 </div>
