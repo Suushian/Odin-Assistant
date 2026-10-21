@@ -128,12 +128,16 @@ check(expired_future_entry.outcome == EXPIRED and expired_future_entry.close_pri
 jr_late_hit = Journal(os.path.join(tmp.name, "late-hit.jsonl"))
 late_signal_ts = NOW - timedelta(hours=60)  # مهلت 48 ساعته در NOW-12h تمام شده
 jr_late_hit.append(sig_rec("late-hit", "NZDUSD", "BUY", 0.6500, 0.6480, 0.6540, late_signal_ts))
-late_idx = pd.DatetimeIndex([NOW - timedelta(hours=13), NOW - timedelta(hours=1)])
+late_idx = pd.DatetimeIndex([
+    NOW - timedelta(hours=13),
+    NOW - timedelta(hours=12, minutes=5),  # کندل ۱۵ دقیقه‌ای پس از deadline بسته می‌شود
+    NOW - timedelta(hours=1),
+])
 late_frame = pd.DataFrame({
-    "Open": [0.6505, 0.6535],
-    "High": [0.6520, 0.6550],  # TP فقط بعد از مهلت انقضا لمس می‌شود
-    "Low": [0.6490, 0.6490],
-    "Close": [0.6510, 0.6545],
+    "Open": [0.6505, 0.6535, 0.6535],
+    "High": [0.6520, 0.6550, 0.6550],  # کندل هم‌پوشان و کندل دیرتر TP را می‌زنند
+    "Low": [0.6490, 0.6490, 0.6490],
+    "Close": [0.6510, 0.6545, 0.6545],
 }, index=late_idx)
 late_md = MarketData(symbol="NZDUSD", m15=late_frame, h1=late_frame, h4=late_frame)
 resolve_open_signals(jr_late_hit, {"NZDUSD": late_md}, now=NOW, cfg=cfg,
