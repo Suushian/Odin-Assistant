@@ -5,13 +5,8 @@
 # ODIN Assistant
 </div>
 
-<div dir="rtl" align="right">
-
-### دستیار تحلیل فارکس و طلا برای اندروید
-
-**تحلیل چندمنبعی · سیگنال مستدل · کارنامهٔ شفاف**
-
-</div>
+<p dir="rtl" align="right"><strong>دستیار تحلیل فارکس و طلا برای اندروید</strong></p>
+<p dir="rtl" align="right">تحلیل چندمنبعی · سیگنال مستدل · کارنامهٔ شفاف</p>
 
 <div align="center" dir="ltr">
 
@@ -60,18 +55,18 @@
 
 ```mermaid
 flowchart TD
-    A["داده‌های بازار و منابع بیرونی"] --> B["اعتبارسنجی کیفیت و تازگی"]
-    B --> C["تحلیل تکنیکال + فاندامنتال + خبر"]
-    C --> D{"۷ دروازهٔ وتو"}
-    D -- "وتو فعال" --> X["رد با دلیل مشخص"]
-    D -- "بدون وتو" --> E["امتیازدهی از ۱۱"]
-    E --> F{"امتیاز ≥ ۷؟"}
-    F -- "خیر" --> Y["رد: امتیاز ناکافی"]
-    F -- "بله" --> G["توافق استراتژی‌ها"]
-    G --> H{"استراتژی پیشنهاددهنده موافق است؟"}
-    H -- "خیر" --> Z["رد: نبود پشتوانهٔ استراتژی"]
-    H -- "بله" --> I["سیگنال + ثبت ژورنال + اعلان"]
-    I --> J["پیگیری نتیجه و گزارش عملکرد"]
+    A["Market data and external sources"] --> B["Validate quality and freshness"]
+    B --> C["Technical + fundamental + news analysis"]
+    C --> D{"7 veto gates"}
+    D -- "Veto active" --> X["Reject with reason"]
+    D -- "No veto" --> E["Score out of 11"]
+    E --> F{"Score >= 7?"}
+    F -- "No" --> Y["Reject: insufficient score"]
+    F -- "Yes" --> G["Strategy agreement"]
+    G --> H{"Entry strategy agrees?"}
+    H -- "No" --> Z["Reject: no strategy support"]
+    H -- "Yes" --> I["Signal + journal + notification"]
+    I --> J["Outcome tracking and performance report"]
 ```
 
 </div>
@@ -154,12 +149,12 @@ flowchart TD
 
 ```mermaid
 flowchart LR
-    A["سیگنال ثبت‌شده"] --> B["پیگیری کندل‌های M15"]
-    B --> C{"اولین خروج"}
-    C -->|هدف| D["برد"]
-    C -->|حد ضرر| E["باخت"]
-    C -->|۴۸ ساعت| F["انقضا"]
-    D --> G["گزارش هفتگی"]
+    A["Recorded signal"] --> B["Track M15 candles"]
+    B --> C{"First exit"}
+    C -->|Take profit| D["Win"]
+    C -->|Stop loss| E["Loss"]
+    C -->|48 hours| F["Expired"]
+    D --> G["Weekly report"]
     E --> G
     F --> G
 ```
@@ -217,21 +212,21 @@ flowchart LR
 <div dir="ltr" align="left">
 
 ```mermaid
-flowchart TB
-    subgraph ANDROID["Android — پلتفرم فعال"]
+flowchart LR
+    subgraph AndroidApp["Android app (active platform)"]
         direction TB
-        UI["WebView / رابط کاربری"]
-        JS["JavaScript Engine (ES5)"]
-        PIPE["Pipeline تحلیل"]
-        PLUG["Plugin Registry"]
-        JUDGE["داور و استراتژی‌ها"]
-        JOURNAL["ژورنال و اعلان"]
+        UI["WebView UI"]
+        JS["JavaScript engine (ES5)"]
+        PIPE["Analysis pipeline"]
+        PLUG["Plugin registry"]
+        JUDGE["Signal judge and strategies"]
+        JOURNAL["Journal and notifications"]
         UI --> JS --> PIPE
         PIPE --> PLUG
         PIPE --> JUDGE --> JOURNAL
     end
-    PY["Python Reference — parity tests"]
-    PY -->|"Golden / parity comparison"| JS
+    PY["Python reference (desktop frozen at v0.21)"]
+    PY -. "Golden and parity tests" .-> JS
 ```
 
 </div>
