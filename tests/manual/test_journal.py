@@ -124,6 +124,21 @@ check(expired_future_entry.outcome == EXPIRED and expired_future_entry.close_pri
       and expired_future_entry.r == 0.0,
       "انقضا بدون کندل معتبر نباید از قیمت آینده R بسازد")
 
+# رگرسیون: سیگنال دقیقاً در لحظهٔ deadline باید منقضی شود، نه در چرخهٔ بعدی.
+jr_exact_deadline = Journal(os.path.join(tmp.name, "exact-deadline.jsonl"))
+exact_deadline_ts = NOW - timedelta(hours=48)
+jr_exact_deadline.append(sig_rec("exact-deadline", "NZDUSD", "BUY", 0.6500, 0.6480, 0.6540, exact_deadline_ts))
+exact_idx = pd.DatetimeIndex([NOW - timedelta(minutes=15)])
+exact_frame = pd.DataFrame({
+    "Open": [0.6505], "High": [0.6520], "Low": [0.6490], "Close": [0.6510],
+}, index=exact_idx)
+exact_md = MarketData(symbol="NZDUSD", m15=exact_frame, h1=exact_frame, h4=exact_frame)
+resolve_open_signals(jr_exact_deadline, {"NZDUSD": exact_md}, now=NOW, cfg=cfg,
+                     on_log=lambda m: None)
+exact_entry = jr_exact_deadline.load()[0]
+check(exact_entry.outcome == EXPIRED and exact_entry.close_price == 0.6510,
+      "در لحظهٔ دقیق deadline باید انقضا با آخرین قیمت معتبر ثبت شود")
+
 # رگرسیون: برخورد TP پس از مهلت انقضا نباید سیگنال را به برد تبدیل کند.
 jr_late_hit = Journal(os.path.join(tmp.name, "late-hit.jsonl"))
 late_signal_ts = NOW - timedelta(hours=60)  # مهلت 48 ساعته در NOW-12h تمام شده
