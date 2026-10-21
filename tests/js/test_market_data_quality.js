@@ -77,6 +77,12 @@ assert(Array.from(O.validateMarketData(futureWeekend, weekend)).some(
   x => x.startsWith('H1') && x.includes('آینده')
 ), 'future-dated H1 data must be rejected even when FX is closed');
 
+const futureH4 = sample(now);
+futureH4.h4 = futureH4.h4.map(x => ({ ...x, t: x.t + 2 * 24 * 60 * 60000 }));
+assert(Array.from(O.validateMarketData(futureH4, now)).some(
+  x => x.startsWith('H4') && x.includes('آینده')
+), 'future-dated H4 data must be rejected just like Python validation');
+
 const calendarLogs = [];
 const staleCalendar = {
   events: [{ title: 'test event' }],
