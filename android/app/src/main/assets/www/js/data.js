@@ -361,9 +361,9 @@
       items: [], fetchedAt: nowMs, feedsOk: 0, feedsFailed: 0,
       staleFeeds: [], failedNames: [], rawCount: 0, error: ''
     };
-    var seen = {};
-    var itemsAll = [];
 
+    // Fetch concurrently, but do not deduplicate or mutate shared snapshot state
+    // inside individual callbacks: response timing must not decide which source wins.
     return Promise.all(feeds.map(function (f) {
       var name = f.name || f.url || 'feed';
       return O.http(f.url).then(function (r) {
@@ -372,28 +372,38 @@
         if (!entries.length) throw new Error('فید خالی یا بدون ورودی بود');
         var items = O.parseEntries(entries, name, f.weight | 0 || 1, nowMs, age, minScore);
         items.sort(function (a, b) { return (b.published || nowMs) - (a.published || nowMs); });
-        items = items.slice(0, perFeed);
-        var fresh = items.filter(function (it) {
+        return { name: name, rawCount: entries.length, items: items.slice(0, perFeed) };
+      }).catch(function (e) {
+        return { name: name, error: String(e && e.message || e).slice(0, 70) };
+      });
+    })).then(function (results) {
+      var seen = {};
+      var itemsAll = [];
+      // Promise.all preserves input order, so this matches the desktop Python
+      // implementation's configured-feed priority even when responses race.
+      results.forEach(function (result) {
+        if (result.error) {
+          snap.feedsFailed += 1;
+          snap.failedNames.push(result.name);
+          if (onLog) onLog('[!] فید ' + result.name + ' ناموفق: ' + result.error);
+          return;
+        }
+        snap.feedsOk += 1;
+        snap.rawCount += result.rawCount;
+        var fresh = result.items.filter(function (it) {
           var k = O.dedupeKey(it.title);
           if (seen[k]) return false;
           seen[k] = true;
           return true;
         });
-        snap.feedsOk += 1;
-        snap.rawCount += entries.length;
-        if (!fresh.length && entries.length) {
-          snap.staleFeeds.push(name);
-          if (onLog) onLog('[i] ' + name + ': همهٔ ' + O.faNum(entries.length) + ' ورودی کهنه یا تکراری بودند — رد شد');
+        if (!fresh.length && result.rawCount) {
+          snap.staleFeeds.push(result.name);
+          if (onLog) onLog('[i] ' + result.name + ': همهٔ ' + O.faNum(result.rawCount) + ' ورودی کهنه یا تکراری بودند — رد شد');
         } else {
-          if (onLog) onLog('📰 ' + name + ': ' + O.faNum(fresh.length) + ' خبر تازه (از ' + O.faNum(entries.length) + ' ورودی)');
+          if (onLog) onLog('📰 ' + result.name + ': ' + O.faNum(fresh.length) + ' خبر تازه (از ' + O.faNum(result.rawCount) + ' ورودی)');
         }
         itemsAll = itemsAll.concat(fresh);
-      }).catch(function (e) {
-        snap.feedsFailed += 1;
-        snap.failedNames.push(name);
-        if (onLog) onLog('[!] فید ' + name + ' ناموفق: ' + String(e && e.message || e).slice(0, 70));
       });
-    })).then(function () {
       itemsAll.sort(function (a, b) { return (b.score - a.score) || (a.age_minutes - b.age_minutes); });
       snap.items = itemsAll.slice(0, totalMax);
       snap.ok = snap.items.length > 0;
