@@ -44,7 +44,7 @@ def _r_for(entry: Entry, outcome: str, close_price: float) -> float:
     return diff / risk
 
 
-def _scan_bars(entry: Entry, bars, conservative: bool):
+def _scan_bars(entry: Entry, bars, conservative: bool, now: datetime):
     """بررسی ترتیبی کندل‌ها؛ نتیجه، قیمت بسته‌شدن و برخورد هم‌زمان را برمی‌گرداند."""
     for ts, high, low in bars:
         # Never resolve a signal from a candle timestamped after the evaluation time.
@@ -99,7 +99,7 @@ def resolve_open_signals(journal: Journal, datasets: dict,
                 if ts.tzinfo is None:
                     ts = ts.replace(tzinfo=timezone.utc)
                 bars.append((ts, float(row["High"]), float(row["Low"])))
-            hit = _scan_bars(entry, bars, conservative)
+            hit = _scan_bars(entry, bars, conservative, now)
 
         r_override = None
         if hit is None and (now - entry.ts) > timedelta(hours=expiry_h):
