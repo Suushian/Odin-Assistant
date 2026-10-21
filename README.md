@@ -1,28 +1,43 @@
-<div align="center">
+<div align="center" dir="ltr">
 
 <img src="assets/icon.png" alt="ODIN Assistant" width="112" height="112">
 
 # ODIN Assistant
+</div>
+
+<div dir="rtl" align="right">
+
 ### دستیار تحلیل فارکس و طلا برای اندروید
 
 **تحلیل چندمنبعی · سیگنال مستدل · کارنامهٔ شفاف**
 
-[![نسخه](https://img.shields.io/badge/نسخه-1.0.0-16181d?style=for-the-badge&labelColor=30343b)](CHANGELOG.md)
-[![Android](https://img.shields.io/badge/Android-7.0%2B-3DDC84?style=for-the-badge&logo=android&logoColor=white)](https://github.com/Suushian/Odin-Assistant/releases/latest)
-[![ساخت APK](https://img.shields.io/github/actions/workflow/status/Suushian/Odin-Assistant/build-android.yml?branch=main&style=for-the-badge&label=APK%20BUILD)](https://github.com/Suushian/Odin-Assistant/actions/workflows/build-android.yml)
-[![تست‌ها](https://img.shields.io/github/actions/workflow/status/Suushian/Odin-Assistant/build-release.yml?branch=main&style=for-the-badge&label=TESTS)](https://github.com/Suushian/Odin-Assistant/actions/workflows/build-release.yml)
-![داده](https://img.shields.io/badge/هزینهٔ%20داده-صفر-16181d?style=for-the-badge)
+</div>
 
-[![دانلود آخرین APK](https://img.shields.io/badge/⬇%20دانلود%20آخرین%20APK-146c43?style=for-the-badge)](https://github.com/Suushian/Odin-Assistant/releases/latest)
-[![تغییرات نسخه](https://img.shields.io/badge/یادداشت‌های%20نسخه-CHANGELOG-43536b?style=for-the-badge)](CHANGELOG.md)
-[![ارتباط](https://img.shields.io/badge/کانال%20رسمی-Telegram-229ED9?style=for-the-badge&logo=telegram&logoColor=white)](https://t.me/Khode_Sushian)
+<div align="center" dir="ltr">
+
+[![VERSION](https://img.shields.io/badge/VERSION-1.0.0-16181d?style=for-the-badge&labelColor=30343b)](CHANGELOG.md)
+[![Android](https://img.shields.io/badge/Android-7.0%2B-3DDC84?style=for-the-badge&logo=android&logoColor=white)](https://github.com/Suushian/Odin-Assistant/releases/latest)
+[![APK BUILD](https://img.shields.io/github/actions/workflow/status/Suushian/Odin-Assistant/build-android.yml?branch=main&style=for-the-badge&label=APK%20BUILD)](https://github.com/Suushian/Odin-Assistant/actions/workflows/build-android.yml)
+[![TESTS](https://img.shields.io/github/actions/workflow/status/Suushian/Odin-Assistant/build-release.yml?branch=main&style=for-the-badge&label=TESTS)](https://github.com/Suushian/Odin-Assistant/actions/workflows/build-release.yml)
+![DATA COST](https://img.shields.io/badge/DATA%20COST-ZERO-16181d?style=for-the-badge)
+
+[![DOWNLOAD APK](https://img.shields.io/badge/DOWNLOAD-LATEST%20APK-146c43?style=for-the-badge)](https://github.com/Suushian/Odin-Assistant/releases/latest)
+[![CHANGELOG](https://img.shields.io/badge/RELEASE-NOTES-CHANGELOG-43536b?style=for-the-badge)](CHANGELOG.md)
+[![TELEGRAM](https://img.shields.io/badge/COMMUNITY-TELEGRAM-229ED9?style=for-the-badge&logo=telegram&logoColor=white)](https://t.me/Khode_Sushian)
 
 </div>
 
 ---
 
+<div dir="rtl" align="right">
+
 > [!IMPORTANT]
 > **ODIN ربات معامله‌گر نیست.** به بروکر وصل نمی‌شود و معاملهٔ خودکار انجام نمی‌دهد؛ داده‌ها را تحلیل می‌کند، دلیل صدور یا رد سیگنال را نشان می‌دهد و تصمیم نهایی را به کاربر می‌سپارد. هیچ سود یا نرخ بردی تضمین نمی‌شود.
+
+</div>
+
+
+<div dir="rtl" align="right">
 
 ## نمای کلی
 
@@ -35,7 +50,13 @@
 </tr>
 </table>
 
+</div>
+
+<div dir="rtl" align="right">
+
 ## مسیر تحلیل در یک نگاه
+
+<div dir="ltr" align="left">
 
 ```mermaid
 flowchart TD
@@ -53,6 +74,12 @@ flowchart TD
     I --> J["پیگیری نتیجه و گزارش عملکرد"]
 ```
 
+</div>
+
+</div>
+
+<div dir="rtl" align="right">
+
 ## قابلیت‌ها
 
 | حوزه | آنچه در برنامه وجود دارد |
@@ -67,6 +94,10 @@ flowchart TD
 | **کیفیت شواهد** | دادهٔ ناموجود امتیاز مثبت نمی‌گیرد؛ شواهد غایب نباید به‌جای تأیید استفاده شوند |
 | **کنترل پلاگین‌ها** | نمایش وضعیت پلاگین‌ها و خطاهای ثبت‌شده برای عیب‌یابی |
 | **لایسنس** | تریال ۷ روزه، لایسنس متصل به کد دستگاه و کنترل دستکاری ساعت |
+
+</div>
+
+<div dir="rtl" align="right">
 
 ## استراتژی‌ها و دروازهٔ توافق
 
@@ -93,6 +124,10 @@ flowchart TD
 
 </details>
 
+</div>
+
+<div dir="rtl" align="right">
+
 ## منابع داده
 
 <div align="center">
@@ -109,7 +144,13 @@ flowchart TD
 
 منابع عمومی به معنی تضمین دسترس‌پذیری نیستند. در صورت دادهٔ ناقص یا منبع ناموفق، تحلیل باید محدود یا رد شود. برنامه سرور اختصاصی پروژه ندارد؛ برای دریافت داده با منابع بیرونی ارتباط برقرار می‌کند.
 
+</div>
+
+<div dir="rtl" align="right">
+
 ## ژورنال: از سیگنال تا نتیجه
+
+<div dir="ltr" align="left">
 
 ```mermaid
 flowchart LR
@@ -123,12 +164,18 @@ flowchart LR
     F --> G
 ```
 
+</div>
+
 - نتیجه بر اساس هدف، حد ضرر یا انقضای ۴۸ ساعته ارزیابی می‌شود.
 - اگر یک کندل هم هدف و هم حد ضرر را لمس کند، محاسبه محتاطانه است و نتیجه «ضرر» شمرده می‌شود.
 - آمار هفتگی شامل نرخ برد، میانگین R و مقایسهٔ هفته‌ها با تفکیک نماد، جهت، امتیاز، استراتژی و مدرک است.
 - اصلاحات اخیر ژورنال، دسته‌بندی هفتگی را بر اساس زمان بسته‌شدن نتیجه هماهنگ کرده و منطق گزارش اولین کندل خروج را در اندروید با موتور مرجع هم‌راستا کرده‌اند.
 
 > **کارنامه، گذشته را توصیف می‌کند؛ پیش‌بینی یا تضمین عملکرد آینده نیست.**
+
+</div>
+
+<div dir="rtl" align="right">
 
 ## تازه‌ترین تغییرات
 
@@ -138,6 +185,10 @@ flowchart LR
 - **گزارش ژورنال دقیق‌تر شد:** برچسب‌های هفته و گروه‌بندی نتیجه‌ها هم‌راستا شدند و گزارش برخورد هم‌زمان با هدف/حد ضرر فقط به اولین کندل خروج مرتبط است.
 - **گارد انتشار Android سخت‌گیرانه‌تر شد:** بررسی دسترسی‌پذیری تگ پیش از انتشار محافظه‌کارانه‌تر شده است.
 - **برند نسخهٔ ۱.۰:** نام نمایشی اندروید «Odin Assistant» و نام ناشر «Sushian» است.
+
+</div>
+
+<div dir="rtl" align="right">
 
 ## نصب
 
@@ -157,19 +208,33 @@ flowchart LR
 
 </details>
 
+</div>
+
+<div dir="rtl" align="right">
+
 ## معماری
+
+<div dir="ltr" align="left">
 
 ```mermaid
 flowchart TB
-    subgraph Android["اپ اندروید — پلتفرم فعال"]
-      UI["WebView / رابط فارسی"] --> JS["موتور JavaScript (ES5)"]
-      JS --> PIPE["Pipeline یازده‌مرحله‌ای"]
-      PIPE --> PLUG["Registry و پلاگین‌ها"]
-      PIPE --> JUDGE["داور و استراتژی‌ها"]
-      JUDGE --> JOURNAL["ژورنال، گزارش و اعلان"]
+    subgraph ANDROID["Android — پلتفرم فعال"]
+        direction TB
+        UI["WebView / رابط کاربری"]
+        JS["JavaScript Engine (ES5)"]
+        PIPE["Pipeline تحلیل"]
+        PLUG["Plugin Registry"]
+        JUDGE["داور و استراتژی‌ها"]
+        JOURNAL["ژورنال و اعلان"]
+        UI --> JS --> PIPE
+        PIPE --> PLUG
+        PIPE --> JUDGE --> JOURNAL
     end
-    PY["Python — مرجع parity و دسکتاپ منجمد"] -. "تست‌های طلایی و مقایسه" .-> JS
+    PY["Python Reference — parity tests"]
+    PY -->|"Golden / parity comparison"| JS
 ```
+
+</div>
 
 - **پلاگین‌محور:** قابلیت‌ها از طریق قرارداد، مانیفست و registry مدیریت می‌شوند.
 - **جداسازی خطا:** خرابی پلاگین باید به وضعیت خطای قابل مشاهده منجر شود، نه دادهٔ ساختگی.
@@ -184,12 +249,16 @@ flowchart TB
 
 تست‌های آفلاین در محیط توسعه:
 
+<div dir="ltr" align="left">
+
 ```bash
 python main.py --selftest
 python tests/check_config.py
 for t in tests/test_*.py; do python "$t"; done
 for s in tests/js/smoke_*.js tests/js/test_*.js; do node "$s"; done
 ```
+
+</div>
 
 تست‌های parity زنده و سرویس پس‌زمینه به اینترنت نیاز دارند و در همهٔ اجراهای CI اجرا نمی‌شوند. اجرای این فرمان‌ها در این تغییر مستنداتی انجام نشده است.
 
@@ -202,6 +271,10 @@ for s in tests/js/smoke_*.js tests/js/test_*.js; do node "$s"; done
 
 </details>
 
+</div>
+
+<div dir="rtl" align="right">
+
 ## محدودیت‌های شناخته‌شده
 
 - سیگنال‌ها پیشنهاد تحلیلی‌اند، نه توصیهٔ مالی؛ سودآوری تضمین نمی‌شود.
@@ -211,11 +284,15 @@ for s in tests/js/smoke_*.js tests/js/test_*.js; do node "$s"; done
 - آزمون‌های خودکار، جایگزین بررسی رصد پس‌زمینه روی دستگاه‌ها و نسخه‌های واقعی Android/OEM نیستند.
 - اسکرین‌شات واقعی از دستگاه اندروید در مستندات فعلی ثبت نشده است.
 
+</div>
+
+<div dir="rtl" align="right">
+
 ## پیوندها
 
-<div align="center">
+<div align="center" dir="ltr">
 
-[**دانلود APK**](https://github.com/Suushian/Odin-Assistant/releases/latest) · [تاریخچهٔ نسخه‌ها](CHANGELOG.md) · [معماری پلاگین‌ها](docs/plugin-architecture-fa.md) · [راهنمای اندروید](docs/android-fa.md) · [راهنمای لایسنس](LICENSE_GUIDE.md) · [کانال رسمی](https://t.me/Khode_Sushian)
+[**DOWNLOAD APK**](https://github.com/Suushian/Odin-Assistant/releases/latest) · [تاریخچهٔ نسخه‌ها](CHANGELOG.md) · [معماری پلاگین‌ها](docs/plugin-architecture-fa.md) · [راهنمای اندروید](docs/android-fa.md) · [راهنمای لایسنس](LICENSE_GUIDE.md) · [کانال رسمی](https://t.me/Khode_Sushian)
 
 </div>
 
@@ -228,5 +305,7 @@ for s in tests/js/smoke_*.js tests/js/test_*.js; do node "$s"; done
 ساخته‌شده توسط **Sushian Khoshkhani** · مدیریت پروژه: **Reza Khoshkhani** · اسپانسر: **Karen Khoshkhani**
 
 <sub>© 2026 Sushian Khoshkhani — All rights reserved. ابزار آموزشی و تحلیلی است؛ معامله در فارکس پرریسک است.</sub>
+
+</div>
 
 </div>
