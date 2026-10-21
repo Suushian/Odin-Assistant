@@ -4,16 +4,12 @@
 
 تحلیل چندمنبعی، سیگنال مستدل و کارنامهٔ شفاف؛ تصمیم نهایی همیشه با کاربر است.
 
-<p align="left">
-
 [![Version](https://img.shields.io/badge/version-1.0.0-30343b?style=flat-square)](CHANGELOG.md)
 [![Android](https://img.shields.io/badge/Android-7.0%2B-3DDC84?style=flat-square&logo=android&logoColor=white)](https://github.com/Suushian/Odin-Assistant/releases/latest)
 [![APK Build](https://img.shields.io/github/actions/workflow/status/Suushian/Odin-Assistant/build-android.yml?branch=main&style=flat-square&label=APK%20build)](https://github.com/Suushian/Odin-Assistant/actions/workflows/build-android.yml)
 [![Tests](https://img.shields.io/github/actions/workflow/status/Suushian/Odin-Assistant/build-release.yml?branch=main&style=flat-square&label=tests)](https://github.com/Suushian/Odin-Assistant/actions/workflows/build-release.yml)
 
 [**دریافت آخرین APK**](https://github.com/Suushian/Odin-Assistant/releases/latest) · [تاریخچهٔ نسخه‌ها](CHANGELOG.md) · [تلگرام رسمی](https://t.me/Khode_Sushian)
-
-</p>
 
 ---
 
