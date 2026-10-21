@@ -276,21 +276,24 @@ for s in tests/js/smoke_*.js tests/js/test_*.js; do node "$s"; done
 
 <h2 dir="rtl" align="right">پیوندها</h2>
 
-<div align="center" dir="ltr">
+<div dir="ltr" align="left">
 
-[**DOWNLOAD APK**](https://github.com/Suushian/Odin-Assistant/releases/latest) · [تاریخچهٔ نسخه‌ها](CHANGELOG.md) · [معماری پلاگین‌ها](docs/plugin-architecture-fa.md) · [راهنمای اندروید](docs/android-fa.md) · [راهنمای لایسنس](LICENSE_GUIDE.md) · [کانال رسمی](https://t.me/Khode_Sushian)
+[**DOWNLOAD APK**](https://github.com/Suushian/Odin-Assistant/releases/latest)
 
 </div>
 
+<p dir="rtl" align="right">[تاریخچهٔ نسخه‌ها](CHANGELOG.md) · [معماری پلاگین‌ها](docs/plugin-architecture-fa.md) · [راهنمای اندروید](docs/android-fa.md) · [راهنمای لایسنس](LICENSE_GUIDE.md) · [کانال رسمی](https://t.me/Khode_Sushian)</p>
+
 ---
 
-<div align="center">
+<div dir="rtl" align="right">
 
 <h3 dir="rtl" align="right">تحلیل صادقانه. پیشنهاد شفاف. تصمیم با تو.</h3>
 
-ساخته‌شده توسط **Sushian Khoshkhani** · مدیریت پروژه: **Reza Khoshkhani** · اسپانسر: **Karen Khoshkhani**
+<p dir="rtl" align="right">ساخته‌شده توسط <span dir="ltr">Sushian Khoshkhani</span> · مدیریت پروژه: <span dir="ltr">Reza Khoshkhani</span> · اسپانسر: <span dir="ltr">Karen Khoshkhani</span></p>
 
-<sub>© 2026 Sushian Khoshkhani — All rights reserved. ابزار آموزشی و تحلیلی است؛ معامله در فارکس پرریسک است.</sub>
+<p dir="ltr" align="left"><sub>© 2026 Sushian Khoshkhani — All rights reserved.</sub></p>
+<p dir="rtl" align="right">ابزار آموزشی و تحلیلی است؛ معامله در فارکس پرریسک است.</p>
 
 </div>
 
