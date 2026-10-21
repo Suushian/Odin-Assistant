@@ -113,6 +113,17 @@ resolve_open_signals(jr_future, {"NZDUSD": future_md}, now=NOW, cfg=cfg,
 check(jr_future.load()[0].is_open,
       "کندل با timestamp آینده نباید سیگنال را پیش از موعد ببندد")
 
+# رگرسیون: در انقضا هم نباید قیمت بسته‌شدنِ آینده به‌عنوان R واقعی ثبت شود.
+jr_expired_future = Journal(os.path.join(tmp.name, "expired-future-candle.jsonl"))
+expired_signal_ts = NOW - timedelta(hours=60)
+jr_expired_future.append(sig_rec("expired-future", "NZDUSD", "BUY", 0.6500, 0.6480, 0.6540, expired_signal_ts))
+resolve_open_signals(jr_expired_future, {"NZDUSD": future_md}, now=NOW, cfg=cfg,
+                     on_log=lambda m: None)
+expired_future_entry = jr_expired_future.load()[0]
+check(expired_future_entry.outcome == EXPIRED and expired_future_entry.close_price is None
+      and expired_future_entry.r == 0.0,
+      "انقضا بدون کندل معتبر نباید از قیمت آینده R بسازد")
+
 # رگرسیون: برخورد دوگانهٔ کندلِ پیش از ورود نباید به‌عنوان علت خروج ثبت شود.
 jr_guard = Journal(os.path.join(tmp.name, "guard.jsonl"))
 jr_guard.append(sig_rec("hist", "NZDUSD", "BUY", 0.6500, 0.6480, 0.6540, T1))
