@@ -132,14 +132,6 @@
       '<button class="btn primary" data-action="analyze" id="btn-analyze">' + O.ico('refresh', 16) + ' تحلیل تازه</button>' +
       '<button class="btn ghost" data-action="briefing">' + O.ico('sunrise', 16) + ' بریفینگ</button>' +
       '</div>';
-    if (S.settings && S.settings.auto_refresh_enabled) {
-      var bgOn = O.native && O.native.bgRunning && O.native.bgRunning();
-      html += '<div class="card-sub" style="margin:-4px 2px 10px">' + O.ico('refresh', 12) +
-        ' تازه‌سازی خودکار هر ' + O.faNum(S.settings.auto_refresh_min || 15) + ' دقیقه — ' +
-        (bgOn ? 'رصد پس‌زمینه فعال است (بدون باز کردن اپ هم سیگنال می‌رسد)' : 'فقط وقتی اپ باز و بازار فعال است') +
-        (S.settings.notify_enabled === false ? '' : ' · ' + O.ico('bell', 11) + ' اعلان سیگنال روشن') + '</div>';
-    }
-
     var nowMs = Date.now();
     var status = O.marketStatus(new Date(nowMs));
 
@@ -173,11 +165,6 @@
       html += skeletonCards(3);
       return html;
     }
-
-    // نشانگر تازگی منابع بر اساس وضعیت واقعی snapshot، نه زمان اجرای چرخه.
-    html += '<div class="card-sub" style="margin:0 2px 10px;line-height:1.8" aria-label="تازگی منابع">' +
-      'تازگی داده‌ها · تقویم: ' + esc(O.sourceFreshnessLabel('calendar', st.calSnap, nowMs)) +
-      ' · اخبار: ' + esc(O.sourceFreshnessLabel('news', st.newsSnap, nowMs)) + '</div>';
 
     // کارت نمادها
     (st.analyses || []).forEach(function (a) {
@@ -220,7 +207,6 @@
     if (st.ranking && st.ranking.length) {
       var maxAbs = Math.max.apply(null, st.ranking.map(function (x) { return Math.abs(x[1]); })) || 1;
       html += '<div class="card"><div class="card-title">' + ct('exchange', 'جریان قدرت ارزها') + '</div>' +
-        '<div class="card-sub">میانگین تغییر ۲۴ کندل یک‌ساعتهٔ اخیر — قوی‌ترین بالا</div>' +
         '<div style="margin-top:10px">';
       st.ranking.forEach(function (x) {
         var pctw = Math.min(50, Math.abs(x[1]) / maxAbs * 50);
@@ -245,8 +231,7 @@
           '<div style="text-align:left"><div class="countdown" data-cd-ts="' + nxt.when + '">' + esc(O.countdown2(O.evMinutesFrom(nxt, nowMs))) + '</div></div>' +
           '</div></div>';
       } else {
-        html += '<div class="card"><div class="card-title">' + ct('calendar', 'رویداد پراثری پیش رو نیست') + '</div>' +
-          '<div class="card-sub">تا پایان پوشش فید این هفته، رویداد پراثری باقی نمانده — پنجرهٔ معاملاتی از نظر تقویم باز است</div></div>';
+        html += '<div class="card"><div class="card-title">' + ct('calendar', 'رویداد پراثری پیش رو نیست') + '</div></div>';
       }
     }
 
@@ -281,7 +266,6 @@
     var alerts = (S.storage && O.alertsLoad) ? O.alertsLoad(S.storage) : [];
     if (alerts.length) {
       html += '<div class="card"><div class="card-title">' + ct('bell', 'هشدارهای قیمت (' + O.faNum(alerts.length) + ')') + '</div>' +
-        '<div class="card-sub">با هر چرخهٔ تحلیل بررسی می‌شوند — حتی وقتی اپ بسته است (رصد پس‌زمینه)</div>' +
         '<div style="margin-top:6px">';
       alerts.forEach(function (al) {
         var pair = String(al.symbol).length === 6 ? al.symbol.slice(0, 3) + '/' + al.symbol.slice(3) : al.symbol;
@@ -302,7 +286,6 @@
     html += '<div class="hint" style="text-align:center;padding:4px 10px 10px">' +
       'آخرین تحلیل: ' + esc(agoFa(st.ranAt)) + ' · منبع: Yahoo Finance' +
       (st.errors ? ' · ' + O.faNum(st.errors) + ' خطای دریافت داده' : '') + '<br>' +
-      O.ico('seal', 11) + ' این اپ غیرخودکار است: هیچ معامله‌ای انجام نمی‌دهد، فقط تحلیل می‌کند.' +
       '</div>';
     return html;
   };
@@ -317,8 +300,7 @@
   O.renderSignals = function (S) {
     var st = S.state;
     var minScore = S.cfg.judge.min_score | 0;
-    var html = pt('scale', 'داور امتیازدهی') +
-      '<div class="page-sub">آستانهٔ صدور: ' + O.faNum(minScore) + ' از ۱۱ امتیاز — وتوها، مدارک، و توافق استراتژی‌ها.</div>';
+    var html = pt('scale', 'داور امتیازدهی');
 
     if (S.cfg.judge.enabled === false) {
       return html + '<div class="card"><div class="empty-state"><div class="e-ico">' + O.ico('gear', 40) + '</div><div class="e-t">داور خاموش است</div><div class="e-s">از تنظیمات فعالش کن.</div></div></div>';
@@ -523,8 +505,7 @@
   O.renderCalendar = function (S) {
     var st = S.state;
     var nowMs = Date.now();
-    var html = pt('bank', 'تقویم اقتصادی') +
-      '<div class="page-sub">ForexFactory · هفتهٔ جاری · ساعت تهران — رویداد پراثر تا ۳۰ دقیقهٔ آینده = وتو.</div>';
+    var html = pt('bank', 'تقویم اقتصادی');
 
     var cal = st && st.calSnap;
     if (!cal) {
@@ -599,8 +580,7 @@
   O.renderNews = function (S) {
     var st = S.state;
     var nowMs = Date.now();
-    var html = pt('news', 'اخبار بازار') +
-      '<div class="page-sub">ForexLive · Investing.com · FXStreet — امتیاز جهت‌دار ۰ تا ۶.</div>';
+    var html = pt('news', 'اخبار بازار');
 
     var ns = st && st.newsSnap;
     if (!ns) {
@@ -641,7 +621,6 @@
     if (ns.staleFeeds && ns.staleFeeds.length) {
       html += '<div class="hint">' + O.ico('info', 11) + ' فیدهای بدون خبر تازه: ' + esc(ns.staleFeeds.slice(0, 3).join('، ')) + '</div>';
     }
-    html += '<div class="hint" style="margin-top:8px">' + O.ico('alert', 11, 'c-amber') + ' جهت‌دهی اخبار بر پایهٔ کلیدواژه است (سرنخ، نه حکم قطعی) — در داور امتیازدهی فقط ۱ امتیاز از ۱۱ وزن دارد.</div>';
     return html;
   };
 
@@ -649,8 +628,7 @@
   O.renderJournal = function (S) {
     var stats = S.stats;
     var entries = S.journal ? S.journal.load() : [];
-    var html = pt('book', 'ژورنال و کارنامهٔ دقت') +
-      '<div class="page-sub">نتیجهٔ هر سیگنال خودکار از کندل‌ها پیگیری می‌شود (برخورد هر دو سطح = ضرر).</div>';
+    var html = pt('book', 'ژورنال و کارنامهٔ دقت');
 
     if (!entries.length) {
       html += '<div class="card"><div class="empty-state"><div class="e-ico">' + O.ico('book', 40) + '</div><div class="e-t">ژورنال خالی است</div>' +
@@ -779,11 +757,10 @@
     var bgRunning = !!(nat.bgRunning && nat.bgRunning());
     var notifOn = nat.notificationsEnabled ? nat.notificationsEnabled() : true;
     var battOk = nat.isIgnoringBattery ? nat.isIgnoringBattery() : true;
-    var html = pt('gear', 'تنظیمات') +
-      '<div class="page-sub">تغییرها فوری ذخیره می‌شوند.</div>';
+    var html = pt('gear', 'تنظیمات');
 
     html += '<div class="card"><div class="section-title" style="margin-top:0">' + ct('user', 'شخصی', 13) + '</div>' +
-      '<div class="set-row"><div><div class="set-label">نام نمایشی</div><div class="set-sub">در خوش‌آمدگویی و هدر استفاده می‌شود</div></div></div>' +
+      '<div class="set-row"><div><div class="set-label">نام نمایشی</div></div></div>' +
       '<input class="text-input" data-set="user_name" value="' + esc(set.user_name) + '" maxlength="24">' +
       '</div>';
 
@@ -821,8 +798,7 @@
 
     // رصد پس‌زمینه — سیگنال بدون باز کردن اپ (v0.13.0)
     html += '<div class="card"><div class="section-title" style="margin-top:0">' + ct('activity', 'رصد پس‌زمینه', 13) + '</div>' +
-      '<div class="set-row"><div><div class="set-label">رصد بازار بدون باز کردن اپ</div>' +
-      '<div class="set-sub">سیگنال و خبر فوری حتی با اپ بسته — با اعلان ماندگار «در حال رصد».</div></div>' +
+      '<div class="set-row"><div><div class="set-label">رصد بازار بدون باز کردن اپ</div></div>' +
       switchHtml('background_enabled', set.background_enabled !== false) + '</div>' +
       (bgRunning
         ? '<div class="set-row"><div><div class="set-label">' + O.ico('activity', 12, 'c-green') + ' رصد فعال است</div><div class="set-sub">چرخه‌ها توسط سرویس پس‌زمینه اجرا می‌شوند</div></div></div>'
@@ -838,20 +814,19 @@
       '</div>';
 
     html += '<div class="card"><div class="section-title" style="margin-top:0">' + ct('scale', 'داور امتیازدهی', 13) + '</div>' +
-      '<div class="set-row"><div><div class="set-label">داور فعال است</div><div class="set-sub">خاموش = هیچ سیگنالی داوری/صادر نمی‌شود</div></div>' + switchHtml('judge_enabled', set.judge_enabled) + '</div>' +
-      '<div class="set-row"><div><div class="set-label">آستانهٔ صدور سیگنال</div><div class="set-sub">از حداکثر ۱۱ امتیاز</div></div>' +
+      '<div class="set-row"><div><div class="set-label">داور فعال است</div></div>' + switchHtml('judge_enabled', set.judge_enabled) + '</div>' +
+      '<div class="set-row"><div><div class="set-label">آستانهٔ صدور سیگنال</div></div>' +
       '<span class="stepper"><button data-step="min_score:-1">−</button><span class="val">' + O.faNum(set.min_score) + '</span><button data-step="min_score:1">+</button></span></div>' +
       '</div>';
 
     // استراتژی‌های ورود (S4 — v0.27) — کلیدها از راه buildCfg به همان
     // آبشارِ فعال/غیرفعالِ فاز ۷ می‌رسند (strategies.<key>.enabled)
     html += '<div class="card"><div class="section-title" style="margin-top:0">' + ct('target', 'استراتژی‌های ورود', 13) + '</div>' +
-      '<div class="hint" style="margin-bottom:6px">سیگنال با توافق استراتژی‌ها صادر می‌شود؛ خاموش‌کردن همه یعنی بدون سیگنال.</div>' +
       row2('strategy_tp_enabled', 'trend-up', 'روند + پولبک', 'روند H4+H1 · پولبک RSI · تأییدِ ادامهٔ حرکت', set.strategy_tp_enabled !== false) +
       row2('strategy_lb_enabled', 'clock', 'شکست لندن', 'شکستِ محدودهٔ آسیا فقط در ۰۷ تا ۱۱ UTC', set.strategy_lb_enabled !== false) +
       row2('strategy_carry_enabled', 'coins', 'کری (نرخ بهره)', 'فقط «توافق» می‌آورد — به‌تنهایی سیگنال نمی‌سازد', set.strategy_carry_enabled !== false) +
       row2('strategy_scalping_enabled', 'activity', 'اسکالپ M15', 'مومنتوم M15 با فیلتر جهت H1 · حد ضرر/هدف اختصاصی', set.strategy_scalping_enabled !== false) +
-      '<div class="set-row"><div><div class="set-label">حداقل توافقِ استراتژی‌ها</div><div class="set-sub">۰ = دروازه خاموش · ۳ = هر سه هم‌جهت (بسیار سخت‌گیرانه)</div></div>' +
+      '<div class="set-row"><div><div class="set-label">حداقل توافقِ استراتژی‌ها</div></div>' +
       '<span class="stepper"><button data-step="strategy_min_agree:-1">−</button><span class="val">' + O.faNum(set.strategy_min_agree | 0) + '</span><button data-step="strategy_min_agree:1">+</button></span></div>' +
       '</div>';
 
@@ -899,7 +874,7 @@
     });
     html += '</div></div>';
 
-    html += '<div class="card"><div class="section-title" style="margin-top:0">' + ct('ban', 'دروازه‌های وتو', 13) + '</div><div class="hint" style="margin-bottom:6px">وتو بدون استثناست — حتی با امتیاز کامل.</div>' +
+    html += '<div class="card"><div class="section-title" style="margin-top:0">' + ct('ban', 'دروازه‌های وتو', 13) + '</div>' +
       row('weekend', 'lock', 'بازار بسته', 'شنبه/یکشنبه و جمعه از ۰۰:۳۰ بامداد شنبه (تهران)', v.weekend) +
       row('high_impact_event', 'calendar', 'رویداد پراثر تقویم', 'رویداد پراثر تا ۳۰ دقیقهٔ آینده', v.high_impact_event) +
       row('timeframe_conflict', 'shuffle', 'تضاد تایم‌فریم', 'H4 و H1 هم‌جهت نباشند', v.timeframe_conflict) +
@@ -915,17 +890,17 @@
       '</div>';
 
     html += '<div class="card"><div class="section-title" style="margin-top:0">' + ct('refresh', 'تازه‌سازی و اعلان‌ها', 13) + '</div>' +
-      '<div class="set-row"><div><div class="set-label">تازه‌سازی خودکار تحلیل</div><div class="set-sub">چرخه‌های تحلیل خودکار — معامله اجرا نمی‌شود.</div></div>' + switchHtml('auto_refresh_enabled', set.auto_refresh_enabled !== false) + '</div>' +
-      '<div class="set-row"><div><div class="set-label">فاصلهٔ تازه‌سازی</div><div class="set-sub">فاصلهٔ تکرار تحلیل (پس‌زمینه هم همین)</div></div>' +
+      '<div class="set-row"><div><div class="set-label">تازه‌سازی خودکار تحلیل</div></div>' + switchHtml('auto_refresh_enabled', set.auto_refresh_enabled !== false) + '</div>' +
+      '<div class="set-row"><div><div class="set-label">فاصلهٔ تازه‌سازی</div></div>' +
       '<span class="stepper"><button data-step="auto_refresh_min:-1">−</button><span class="val">' + O.faNum(set.auto_refresh_min || 15) + ' دقیقه</span><button data-step="auto_refresh_min:1">+</button></span></div>' +
-      '<div class="set-row"><div><div class="set-label">اعلان سیگنال جدید و خبر فوری ' + O.ico('bell', 12) + '</div><div class="set-sub">اعلان + لرزش برای سیگنال و خبر فوری</div></div>' + switchHtml('notify_enabled', set.notify_enabled !== false) + '</div>' +
-      '<div class="set-row"><div><div class="set-label">انیمیشن‌ها ' + O.ico('wave', 12) + '</div><div class="set-sub">شفق متحرک و حرکت کارت‌ها — خاموش = همه‌چیز آنی (باتری).</div></div>' + switchHtml('animations_enabled', set.animations_enabled !== false) + '</div>' +
+      '<div class="set-row"><div><div class="set-label">اعلان سیگنال جدید و خبر فوری ' + O.ico('bell', 12) + '</div></div>' + switchHtml('notify_enabled', set.notify_enabled !== false) + '</div>' +
+      '<div class="set-row"><div><div class="set-label">انیمیشن‌ها ' + O.ico('wave', 12) + '</div></div>' + switchHtml('animations_enabled', set.animations_enabled !== false) + '</div>' +
       '</div>';
 
     html += '<div class="card"><div class="section-title" style="margin-top:0">' + ct('archive', 'داده‌ها', 13) + '</div>' +
-      '<div class="set-row"><div><div class="set-label">پاک‌کردن کش تقویم و تحلیل</div><div class="set-sub">دادهٔ بازار دفعهٔ بعد تازه دریافت می‌شود</div></div>' +
+      '<div class="set-row"><div><div class="set-label">پاک‌کردن کش تقویم و تحلیل</div></div>' +
       '<button class="btn ghost sm" data-action="clear-cache">پاک‌کردن</button></div>' +
-      '<div class="set-row"><div><div class="set-label">بازنشانی تنظیمات</div><div class="set-sub">ژورنال پاک نمی‌شود</div></div>' +
+      '<div class="set-row"><div><div class="set-label">بازنشانی تنظیمات</div></div>' +
       '<button class="btn ghost sm" data-action="reset-settings">بازنشانی</button></div>' +
       '</div>';
 
@@ -953,8 +928,7 @@
   O.renderAbout = function (S) {
     var ver = S.version || 'dev';
     var html = '<div class="action-row"><button class="btn ghost" data-tab="settings">' + O.ico('chevron-right', 14) + ' بازگشت</button></div>' +
-      pt('info', 'دربارهٔ ما') +
-      '<div class="page-sub">سازنده، حق نشر و راهِ تشخیص نسخهٔ اصلی</div>';
+      pt('info', 'دربارهٔ ما');
 
     // کارت اصلی: لوگو + نام برنامه + سازنده
     html += '<div class="card ink" style="text-align:center;padding:22px 16px">' +
@@ -1065,9 +1039,6 @@
     }
 
     var html = back + pt('chart-line', pair + ' — ' + tf);
-    html += '<div class="page-sub">' + (a ? esc(a.fa_name) + ' · ' : '') +
-      'کندل‌های یک‌ساعتهٔ Yahoo Finance' + (S.state && S.state.ranAt ? ' · آخرین تحلیل ' + esc(agoFa(S.state.ranAt)) : '') +
-      ' · ساعت‌ها تهران</div>';
 
     // قرص‌های تایم‌فریم و تعداد کندل
     var tfPills = ['H1', 'H4'].map(function (t) {
@@ -1092,7 +1063,6 @@
         '<div class="level-box tp"><div class="l-cap">' + O.ico('target', 11, 'c-green') + ' هدف</div><div class="l-val">' + esc(O.fmtPrice(sig.tp, sig.pip)) + '</div></div>' +
         '</div></div>';
     } else if (a && (a.support || a.resistance)) {
-      html += '<div class="hint" style="text-align:center">خط‌های خاکستری: حمایت/مقاومت کلیدی — از «سیگنال‌ها» می‌توانی ورود/SL/TP را هم روی نمودار بیاوری</div>';
     }
     return html;
   };
