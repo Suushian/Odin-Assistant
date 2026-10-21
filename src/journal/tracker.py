@@ -114,7 +114,7 @@ def resolve_open_signals(journal: Journal, datasets: dict,
             hit = _scan_bars(entry, bars, conservative, scan_until)
 
         r_override = None
-        if hit is None and (now - entry.ts) > timedelta(hours=expiry_h):
+        if hit is None and (now - entry.ts) >= timedelta(hours=expiry_h):
             # منقضی: R واقعی از آخرین قیمت موجود
             close = None
             if last_close is not None:
