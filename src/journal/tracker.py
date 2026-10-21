@@ -44,10 +44,12 @@ def _r_for(entry: Entry, outcome: str, close_price: float) -> float:
     return diff / risk
 
 
-def _scan_bars(entry: Entry, bars, conservative: bool):
+def _scan_bars(entry: Entry, bars, conservative: bool, now: datetime):
     """بررسی ترتیبی کندل‌ها؛ نتیجه، قیمت بسته‌شدن و برخورد هم‌زمان را برمی‌گرداند."""
     for ts, high, low in bars:
-        if ts <= entry.ts:
+        # Never resolve a signal from a candle timestamped after the evaluation time.
+        # Provider freshness checks are defense in depth; the tracker must enforce this invariant too.
+        if ts <= entry.ts or ts > now:
             continue
         if entry.direction == "BUY":
             hit_tp = high >= entry.tp
@@ -86,7 +88,12 @@ def resolve_open_signals(journal: Journal, datasets: dict,
     resolved: list[Entry] = []
     for entry in journal.open_entries():
         md = datasets.get(entry.symbol)
+        # Outcome scanning and expiry pricing must stop at the signal's expiry deadline.
+        expiry_deadline = entry.ts + timedelta(hours=expiry_h)
+        scan_until = min(now, expiry_deadline)
         hit = None
+        last_close = None
+        last_close_ts = None
         if md is not None and md.m15 is not None and len(md.m15):
             bars = []
             for idx, row in md.m15.iterrows():
@@ -96,15 +103,22 @@ def resolve_open_signals(journal: Journal, datasets: dict,
                 # زمانی؛ بدون هم‌جنس‌کردن، مقایسه TypeError می‌دهد.
                 if ts.tzinfo is None:
                     ts = ts.replace(tzinfo=timezone.utc)
+                # M15 timestamps mark candle open; never use OHLC from a candle
+                # that had not fully closed by evaluation/expiry time.
+                if ts <= entry.ts or ts + timedelta(minutes=15) > scan_until:
+                    continue
                 bars.append((ts, float(row["High"]), float(row["Low"])))
-            hit = _scan_bars(entry, bars, conservative)
+                if last_close_ts is None or ts >= last_close_ts:
+                    last_close_ts = ts
+                    last_close = float(row["Close"])
+            hit = _scan_bars(entry, bars, conservative, scan_until)
 
         r_override = None
-        if hit is None and (now - entry.ts) > timedelta(hours=expiry_h):
+        if hit is None and (now - entry.ts) >= timedelta(hours=expiry_h):
             # منقضی: R واقعی از آخرین قیمت موجود
             close = None
-            if md is not None and md.m15 is not None and len(md.m15):
-                close = float(md.m15["Close"].iloc[-1])
+            if last_close is not None:
+                close = last_close
             outcome, close_price = EXPIRED, close
             if close is None:
                 # قیمتی در دسترس نیست ولی سیگنال قطعاً منقضی شده؛ نگه‌داشتنِ

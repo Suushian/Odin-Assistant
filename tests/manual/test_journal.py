@@ -101,6 +101,82 @@ check(by_id["c"].outcome == SL and by_id["c"].r == -1.0, f"ج) حد ضرر R=-1 
 check(by_id["d"].outcome == SL, f"د) برخورد دوگانه → محتاطانه ضرر ({by_id['d'].outcome})")
 check("محتاطانه" in (by_id["d"].note or ""), "د) یادداشت صادقانهٔ برخورد دوگانه ثبت شد")
 
+# رگرسیون: کندل زمان‌دارِ آینده نباید نتیجهٔ سیگنال را زودتر از موعد ببندد.
+jr_future = Journal(os.path.join(tmp.name, "future-candle.jsonl"))
+future_signal_ts = NOW - timedelta(minutes=30)
+jr_future.append(sig_rec("future-candle", "NZDUSD", "BUY", 0.6500, 0.6480, 0.6540, future_signal_ts))
+future_md = md_for("NZDUSD", NOW + timedelta(minutes=15), [
+    (0.6550, 0.6490, 0.6545),  # timestamp بعد از زمان ارزیابی؛ برخورد TP نباید لحاظ شود
+])
+resolve_open_signals(jr_future, {"NZDUSD": future_md}, now=NOW, cfg=cfg,
+                     on_log=lambda m: None)
+check(jr_future.load()[0].is_open,
+      "کندل با timestamp آینده نباید سیگنال را پیش از موعد ببندد")
+
+# رگرسیون: در انقضا هم نباید قیمت بسته‌شدنِ آینده به‌عنوان R واقعی ثبت شود.
+jr_expired_future = Journal(os.path.join(tmp.name, "expired-future-candle.jsonl"))
+expired_signal_ts = NOW - timedelta(hours=60)
+jr_expired_future.append(sig_rec("expired-future", "NZDUSD", "BUY", 0.6500, 0.6480, 0.6540, expired_signal_ts))
+resolve_open_signals(jr_expired_future, {"NZDUSD": future_md}, now=NOW, cfg=cfg,
+                     on_log=lambda m: None)
+expired_future_entry = jr_expired_future.load()[0]
+check(expired_future_entry.outcome == EXPIRED and expired_future_entry.close_price is None
+      and expired_future_entry.r == 0.0,
+      "انقضا بدون کندل معتبر نباید از قیمت آینده R بسازد")
+
+# رگرسیون: سیگنال دقیقاً در لحظهٔ deadline باید منقضی شود، نه در چرخهٔ بعدی.
+jr_exact_deadline = Journal(os.path.join(tmp.name, "exact-deadline.jsonl"))
+exact_deadline_ts = NOW - timedelta(hours=48)
+jr_exact_deadline.append(sig_rec("exact-deadline", "NZDUSD", "BUY", 0.6500, 0.6480, 0.6540, exact_deadline_ts))
+exact_idx = pd.DatetimeIndex([NOW - timedelta(minutes=15)])
+exact_frame = pd.DataFrame({
+    "Open": [0.6505], "High": [0.6520], "Low": [0.6490], "Close": [0.6510],
+}, index=exact_idx)
+exact_md = MarketData(symbol="NZDUSD", m15=exact_frame, h1=exact_frame, h4=exact_frame)
+resolve_open_signals(jr_exact_deadline, {"NZDUSD": exact_md}, now=NOW, cfg=cfg,
+                     on_log=lambda m: None)
+exact_entry = jr_exact_deadline.load()[0]
+check(exact_entry.outcome == EXPIRED and exact_entry.close_price == 0.6510,
+      "در لحظهٔ دقیق deadline باید انقضا با آخرین قیمت معتبر ثبت شود")
+
+# رگرسیون: برخورد TP پس از مهلت انقضا نباید سیگنال را به برد تبدیل کند.
+jr_late_hit = Journal(os.path.join(tmp.name, "late-hit.jsonl"))
+late_signal_ts = NOW - timedelta(hours=60)  # مهلت 48 ساعته در NOW-12h تمام شده
+jr_late_hit.append(sig_rec("late-hit", "NZDUSD", "BUY", 0.6500, 0.6480, 0.6540, late_signal_ts))
+late_idx = pd.DatetimeIndex([
+    NOW - timedelta(hours=13),
+    NOW - timedelta(hours=12, minutes=5),  # کندل ۱۵ دقیقه‌ای پس از deadline بسته می‌شود
+    NOW - timedelta(hours=1),
+])
+late_frame = pd.DataFrame({
+    "Open": [0.6505, 0.6535, 0.6535],
+    "High": [0.6520, 0.6550, 0.6550],  # کندل هم‌پوشان و کندل دیرتر TP را می‌زنند
+    "Low": [0.6490, 0.6490, 0.6490],
+    "Close": [0.6510, 0.6545, 0.6545],
+}, index=late_idx)
+late_md = MarketData(symbol="NZDUSD", m15=late_frame, h1=late_frame, h4=late_frame)
+resolve_open_signals(jr_late_hit, {"NZDUSD": late_md}, now=NOW, cfg=cfg,
+                     on_log=lambda m: None)
+late_entry = jr_late_hit.load()[0]
+check(late_entry.outcome == EXPIRED and late_entry.close_price == 0.6510
+      and abs(late_entry.r - 0.5) < 1e-6,
+      "برخورد پس از مهلت نباید نتیجه را عوض کند؛ قیمت انقضا باید آخرین Close معتبر پیش از deadline باشد")
+
+# رگرسیون: اگر تنها کندل‌ها قبل از ورود باشند، از قیمت پیش از ورود R انقضا نساز.
+jr_pre_entry = Journal(os.path.join(tmp.name, "pre-entry-only.jsonl"))
+pre_entry_signal_ts = NOW - timedelta(hours=60)
+jr_pre_entry.append(sig_rec("pre-entry-only", "NZDUSD", "BUY", 0.6500, 0.6480, 0.6540, pre_entry_signal_ts))
+pre_entry_idx = pd.DatetimeIndex([pre_entry_signal_ts - timedelta(minutes=15)])
+pre_entry_frame = pd.DataFrame({
+    "Open": [0.6540], "High": [0.6560], "Low": [0.6530], "Close": [0.6550],
+}, index=pre_entry_idx)
+pre_entry_md = MarketData(symbol="NZDUSD", m15=pre_entry_frame, h1=pre_entry_frame, h4=pre_entry_frame)
+resolve_open_signals(jr_pre_entry, {"NZDUSD": pre_entry_md}, now=NOW, cfg=cfg,
+                     on_log=lambda m: None)
+pre_entry = jr_pre_entry.load()[0]
+check(pre_entry.outcome == EXPIRED and pre_entry.close_price is None and pre_entry.r == 0.0,
+      "قیمت کندل پیش از ورود نباید به‌عنوان قیمت انقضای سیگنال استفاده شود")
+
 # رگرسیون: برخورد دوگانهٔ کندلِ پیش از ورود نباید به‌عنوان علت خروج ثبت شود.
 jr_guard = Journal(os.path.join(tmp.name, "guard.jsonl"))
 jr_guard.append(sig_rec("hist", "NZDUSD", "BUY", 0.6500, 0.6480, 0.6540, T1))
