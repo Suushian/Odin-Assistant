@@ -1,0 +1,39 @@
+name: Publish Android Debug APK Release
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/publish-debug-release.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  publish:
+    if: github.event_name == 'workflow_dispatch' || github.event.head_commit.message == 'ci(release): publish debug APK v1.0.0'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download verified debug APK artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          gh run download 39773314114 \
+            --repo "$GH_REPO" \
+            --name "ODIN-Assistant-android-debug-v1.0.0-run-2" \
+            --dir artifact
+          test -s artifact/app-debug.apk
+          sha256sum artifact/app-debug.apk
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          gh release create v1.0.0 artifact/app-debug.apk \
+            --repo "$GH_REPO" \
+            --title "ODIN Assistant v1.0.0 (Debug APK)" \
+            --notes "Development and testing build for version 1.0.0. This is a debug APK, not a production-signed release. Install at your own risk and back up local app data before replacing an existing installation."
