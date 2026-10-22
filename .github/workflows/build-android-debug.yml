@@ -76,7 +76,7 @@ jobs:
           python3 - <<'PY'
           import pathlib, re, sys
           text = pathlib.Path("src/app_paths.py").read_text(encoding="utf-8")
-          match = re.search(r'APP_VERSION\\s*=\\s*"([^"]+)"', text)
+          match = re.search(r'APP_VERSION\s*=\s*"([^"]+)"', text)
           if not match:
               print("::error::APP_VERSION missing or unparseable")
               sys.exit(1)
