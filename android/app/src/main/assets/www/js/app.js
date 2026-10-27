@@ -574,7 +574,7 @@
       if (!mkt.analyses.length) {
         if (silent) O.toast('تازه‌سازی خودکار: داده‌ای نرسید — اتصال اینترنت را بررسی کن');
         else O.modal(O.ico('x-circle', 17, 'c-red') + ' داده‌ی نرسید',
-          'هیچ نمادی تحلیل نشد — اتصال اینترنت را بررسی کن و دوباره تلاش کن.<br><br>منابع لازم: Yahoo Finance (قیمت‌ها)، ForexFactory (تقویم)، فیدهای خبری RSS.',
+          'هیچ نمادی تحلیل نشد — اتصال اینترنت و کلید API را بررسی کن و دوباره تلاش کن.<br><br>منابع لازم: Twelve Data (قیمت‌ها؛ کلید API)، ForexFactory (تقویم)، فیدهای خبری RSS.',
           [{ label: 'باشه', cls: 'primary' }]);
       } else if (!silent) {
         var msg = res.signals.length
