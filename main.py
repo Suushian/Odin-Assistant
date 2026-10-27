@@ -12,7 +12,6 @@
     python main.py --as-of "2026-09-23 14:00"   # ⚠️ شبیه‌سازی: داور را در یک
                                                 #    زمان فرضی بسنج (بازار بسته/تعطیل)
     python main.py --no-fundamental    # بدون تقویم و اخبار (فقط تکنیکال)
-    python main.py --source yahoo      # فقط Yahoo
     python main.py --selftest          # خودآزمون بدون اینترنت (برای CI)
     python main.py --config my.yaml
 
@@ -415,8 +414,6 @@ def main() -> None:
     _fix_windows_console()
     parser = argparse.ArgumentParser(description="دستیار سیگنال فارکس — حالت خط‌فرمان")
     parser.add_argument("--config", default=None, help="مسیر فایل پیکربندی YAML")
-    parser.add_argument("--source", default=None, choices=["auto", "yahoo", "twelvedata"],
-                        help="تغییر موقت منبع داده (بدون ویرایش config)")
     parser.add_argument("--briefing", action="store_true", help="فقط بریفینگ صبحگاهی 🌅")
     parser.add_argument("--alerts", action="store_true", help="فقط بررسی هشدار رویدادهای پراثر 🚨")
     parser.add_argument("--dry-run", action="store_true",
@@ -439,8 +436,6 @@ def main() -> None:
         sys.exit(_selftest())
 
     cfg = load_config(args.config)
-    if args.source:
-        cfg["data_source"] = args.source
     if args.no_fundamental:
         cfg.setdefault("fundamental", {})["enabled"] = False
         cfg.setdefault("news", {})["enabled"] = False
