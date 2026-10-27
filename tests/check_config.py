@@ -16,7 +16,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from src.config import load_config  # noqa: E402
 
-REQUIRED_SYMBOL_FIELDS = ("name", "fa", "yahoo", "base", "quote", "pip")
+REQUIRED_SYMBOL_FIELDS = ("name", "fa", "td", "base", "quote", "pip")
 errors: list[str] = []
 
 
@@ -51,8 +51,8 @@ for s in syms:
     need(float(s.get("pip", 0)) > 0, f"{s.get('name')}: pip معتبر ({s.get('pip')})")
 
 # ── منبع داده ─────────────────────────────────────────────────
-need(cfg["data_source"] in ("auto", "yahoo", "twelvedata"),
-     f"data_source معتبر: {cfg['data_source']}")
+need(cfg["data_source"] == "twelvedata",
+     f"تنها منبع قیمت بازار باید Twelve Data باشد: {cfg['data_source']}")
 
 # ── تحلیل تکنیکال ─────────────────────────────────────────────
 a = cfg["analysis"]
