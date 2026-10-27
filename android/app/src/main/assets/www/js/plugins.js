@@ -4,7 +4,7 @@
  * توابع *موجود* اپ (O.fetchYahooSymbol، O.judgeAll، ...) با مانیفست‌های
  * اعلانی — همان idها/stageها/priorityها/config-bindingهای پایتون تا دو
  * موتور یک ساختار داشته باشند (platforms اینجا ['android'] است؛ همتاهای
- * desktop-only مثل notify-telegram و data-auto/twelvedata اینجا ثبت نمی‌شوند).
+ * desktop-only مثل notify-telegram و data-auto اینجا ثبت نمی‌شوند).
  *
  * قاعدهٔ adapter: فقط delegation — منطق در همان ماژول‌های قبلی دست‌نخورده
  * است. ارجاع به O.* در *زمان فراخوانی* انجام می‌شود (نه بارگذاری)، پس
@@ -50,6 +50,24 @@
   YahooAdapter.prototype.disconnect = function () { };
   YahooAdapter.prototype.fetch = function (symCfg) {
     return O.fetchYahooSymbol(symCfg, (this._cfg && this._cfg.history) || {});
+  };
+
+  function TwelveDataAdapter(context) {
+    this._cfg = (context && context.cfg) || {};
+  }
+  TwelveDataAdapter.prototype.name = 'twelvedata';
+  TwelveDataAdapter.prototype.connect = function () {
+    var td = this._cfg.twelvedata || {};
+    if (!String(td.api_key || '').trim()) {
+      throw new Error('کلید API رایگان Twelve Data در تنظیمات وارد نشده است');
+    }
+  };
+  TwelveDataAdapter.prototype.disconnect = function () { };
+  TwelveDataAdapter.prototype.fetch = function (symCfg) {
+    return O.fetchTwelveDataSymbol(symCfg, this._cfg.twelvedata || {}, this._cfg.history || {});
+  };
+  TwelveDataAdapter.prototype.getError = function (symbol) {
+    return O.twelveDataErrorFor ? O.twelveDataErrorFor(symbol) : '';
   };
 
   function TvAdapter() { }
@@ -228,9 +246,9 @@
   // (id/stage/priority/config یکسان؛ platforms فقط android)
   var DEFS = [
     {
-      id: 'data-yahoo', provides: ['odin.data.market@1'], config: null,
+      id: 'data-twelvedata', provides: ['odin.data.market@1'], config: null,
       stage: 'collect_market', priority: 20,
-      factory: function (context) { return new YahooAdapter(context); }
+      factory: function (context) { return new TwelveDataAdapter(context); }
     },
     {
       id: 'data-tradingview', provides: ['odin.data.tv@1'],
