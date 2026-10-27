@@ -14,7 +14,7 @@
 
 ⚠️ seamهای پچ عمداً «مستقل از نسخه» انتخاب شده‌اند تا همین هارنس قبل و بعد
    از سوییچ معتبر باشد:
-     • YahooSource.connect/fetch/disconnect (پچ سطح کلاس — هر دو نسخه از
+     • TwelveDataSource.connect/fetch/disconnect (پچ سطح کلاس — هر دو نسخه از
        همان کلاس استفاده می‌کنند)
      • src.notify.telegram.send_message (engine از attribute ماژول در زمان
        فراخوانی می‌خواند)
@@ -147,7 +147,7 @@ def make_cfg():
     cfg["symbols"] = [s for s in cfg["symbols"] if s["name"] != "NZDUSD"]
     # چرخهٔ طلایی رفتار پیشین را پین می‌کند؛ مسیر فعال اسکالپ در تست داور جداگانه است.
     (cfg.get("strategies") or {}).setdefault("scalping", {})["enabled"] = False
-    cfg["data_source"] = "yahoo"                  # seam مستقیم YahooSource (هر دو نسخه)
+    cfg["data_source"] = "twelvedata"          # تنها منبع بازار (هر دو نسخه)
     cfg["telegram"] = {"send_reports": True, "bot_token": "123:fake-token",
                        "chat_id": "42"}
     return cfg
@@ -211,7 +211,7 @@ def run_mock_cycle(tmpdir, cfg=None):
 
     import src.app_paths as app_paths
     from src import engine
-    from src.data import yahoo_source
+    from src.data import twelvedata_source
 
     tmp = Path(tmpdir)
     data_dir, logs_dir, cache_dir = tmp / "data", tmp / "logs", tmp / "cache"
@@ -236,11 +236,11 @@ def run_mock_cycle(tmpdir, cfg=None):
 
     with contextlib.ExitStack() as st:
         # ── seamهای مستقل از نسخه ──
-        st.enter_context(mock.patch.object(yahoo_source.YahooSource, "connect",
+        st.enter_context(mock.patch.object(twelvedata_source.TwelveDataSource, "connect",
                                            lambda self: None))
-        st.enter_context(mock.patch.object(yahoo_source.YahooSource, "disconnect",
+        st.enter_context(mock.patch.object(twelvedata_source.TwelveDataSource, "disconnect",
                                            lambda self: None))
-        st.enter_context(mock.patch.object(yahoo_source.YahooSource, "fetch", fake_fetch))
+        st.enter_context(mock.patch.object(twelvedata_source.TwelveDataSource, "fetch", fake_fetch))
         st.enter_context(mock.patch("src.notify.telegram.send_message", fake_send_message))
         st.enter_context(mock.patch.object(app_paths, "data_dir", return_value=data_dir))
         st.enter_context(mock.patch.object(app_paths, "logs_dir", return_value=logs_dir))
