@@ -39,7 +39,9 @@ def main() -> None:
     ):
         assert field in row, f"Android NZDUSD metadata mismatch: missing {field}"
 
-    assert "yahoo:" not in row and "fetchYahooSymbol" not in js
+    assert "yahoo:" not in row
+    data_js = (ROOT / "android/app/src/main/assets/www/js/data.js").read_text(encoding="utf-8")
+    assert "fetchYahooSymbol" not in data_js and "query1.finance.yahoo.com" not in data_js
     print("symbol coverage passed: 7 major FX pairs + gold; Twelve Data-only config parity OK")
 
 
