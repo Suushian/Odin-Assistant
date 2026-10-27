@@ -142,6 +142,12 @@ function createApp(opts) {
   const fixedNow = opts.fixedNow || FIXED_WED;
   const prefs = new Map();
   Object.keys(opts.prefs || {}).forEach((k) => prefs.set(k, String(opts.prefs[k])));
+  // Golden harness uses a fake key so the real provider adapter can be tested
+  // through the mocked fetch seam without any live network request.
+  let initialSettings = {};
+  try { initialSettings = JSON.parse(prefs.get('settings') || '{}'); } catch (_) { initialSettings = {}; }
+  if (!initialSettings.twelvedata_api_key) initialSettings.twelvedata_api_key = 'golden-test-key';
+  prefs.set('settings', JSON.stringify(initialSettings));
   const calls = { notify: [], ongoing: [], cycleDone: [], stopBg: 0 };
   const logs = [];
   const errs = [];
@@ -180,7 +186,7 @@ function createApp(opts) {
   O.CONFIG.symbols = O.CONFIG.symbols.filter((s) => s.name !== 'NZDUSD');
 
   // ── پچ seamها (فقط لایهٔ شبکه؛ پارس/تحلیل/داور/ژورنال واقعی‌اند) ──
-  O.fetchYahooSymbol = function (symCfg) {
+  O.fetchTwelveDataSymbol = function (symCfg) {
     if (stubOpts.outage) return Promise.resolve(null);
     return Promise.resolve(makeMarketData(symCfg.name));
   };
