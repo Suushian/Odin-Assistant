@@ -3,6 +3,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const vm = require('vm');
 
 const A = (condition, message) => {
   if (!condition) throw new Error(message);
@@ -11,6 +12,9 @@ const A = (condition, message) => {
 async function main() {
   const gen = require('./golden/gen_cycle_golden.js');
   const app = gen.createApp({ fixedNow: gen.FIXED_WED });
+  // The golden harness stubs the provider; reload the production data module so this test
+  // exercises the real parser/resampler with only the HTTP boundary mocked.
+  vm.runInContext(fs.readFileSync(path.join(gen.WWW, 'data.js'), 'utf8'), app.ctx, { filename: 'data.js' });
   const O = app.O;
   const fixedNow = gen.FIXED_WED;
   const interval = 15 * 60000;
@@ -39,7 +43,7 @@ async function main() {
     O.CONFIG.history
   );
 
-  A(urls.length === 1, 'برای هر نماد باید فقط یک درخواست API انجام شود');
+  A(urls.length === 1, 'برای هر نماد باید فقط یک درخواست API انجام شود؛ تعداد واقعی=' + urls.length);
   A(urls[0].indexOf('symbol=EUR%2FUSD') >= 0 && urls[0].indexOf('interval=15min') >= 0,
     'درخواست باید از نماد EUR/USD و کندل M15 استفاده کند');
   A(urls[0].indexOf('outputsize=5000') >= 0 && urls[0].indexOf('timezone=UTC') >= 0,
