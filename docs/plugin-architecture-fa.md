@@ -177,7 +177,8 @@ shape یکدست `rule(a, ctx, direction)` را با نادیده‌گرفتن �
 - `register(manifest, factory)` — id تکراری → `DuplicatePluginError` (پرسروصدا)
 - `providers(contract)` — **چند فراهم‌کننده برای یک قرارداد مشروع است**
   (Twelve Data تنها فراهم‌کنندهٔ `odin.data.market@1` است)؛ ترتیب قطعی
-  `(priority, order)` و انتخاب نهایی config-driven است (مثل `data_source` امروز)
+  `(priority, order)` برای قراردادهای چندفراهم‌کننده است؛ قرارداد قیمت بازار عمداً
+  استثناست و تنها فراهم‌کنندهٔ مجاز آن Twelve Data است. `data_source` فقط همین مقدار را می‌پذیرد.
 - `get(contract)` — بالاترین اولویت یا `None` (هرگز استثنا)
 - `enable/disable` + `status()` — پایهٔ کلید فعال/غیرفعال (فاز ۷: یکپارچه زیر
   مانیفست انجام شد؛ «نمایش در UI» به بعد از مهاجرت موکول شد — تصمیم فاز ۷

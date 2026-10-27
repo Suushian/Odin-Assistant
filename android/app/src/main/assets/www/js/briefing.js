@@ -14,7 +14,7 @@
     var parts = [];
 
     parts.push('🌅 بریفینگ صبحگاهی — ' + O.faDateTeh(new Date(nowMs)) + ' (' + O.jalaliFa(new Date(nowMs)) + ')');
-    parts.push('🕒 ' + O.faNum(O.hhmmTeh(new Date(nowMs))) + ' به وقت تهران | منبع داده: Yahoo Finance');
+    parts.push('🕒 ' + O.faNum(O.hhmmTeh(new Date(nowMs))) + ' به وقت تهران | منبع قیمت: Twelve Data');
 
     // ۱) آنچه امروز در پیش است
     parts.push('');

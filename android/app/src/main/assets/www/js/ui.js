@@ -284,7 +284,7 @@
 
     // پاصفحه
     html += '<div class="hint" style="text-align:center;padding:4px 10px 10px">' +
-      'آخرین تحلیل: ' + esc(agoFa(st.ranAt)) + ' · منبع: Yahoo Finance' +
+      'آخرین تحلیل: ' + esc(agoFa(st.ranAt)) + ' · منبع قیمت: Twelve Data' +
       (st.errors ? ' · ' + O.faNum(st.errors) + ' خطای دریافت داده' : '') + '<br>' +
       '</div>';
     return html;
