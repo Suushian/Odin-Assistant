@@ -1,10 +1,10 @@
 /* پلاگین‌های داخلی (built-in) ODIN برای اندروید — فاز ۶.
  *
  * آینهٔ JS برای src/plugins/ پایتون: adapterهای نازک (delegation خالص) دور
- * توابع *موجود* اپ (O.fetchYahooSymbol، O.judgeAll، ...) با مانیفست‌های
+ * توابع *موجود* اپ (O.fetchTwelveDataSymbol، O.judgeAll، ...) با مانیفست‌های
  * اعلانی — همان idها/stageها/priorityها/config-bindingهای پایتون تا دو
  * موتور یک ساختار داشته باشند (platforms اینجا ['android'] است؛ همتاهای
- * desktop-only مثل notify-telegram و data-auto/twelvedata اینجا ثبت نمی‌شوند).
+ * desktop-only مثل notify-telegram و data-auto اینجا ثبت نمی‌شوند).
  *
  * قاعدهٔ adapter: فقط delegation — منطق در همان ماژول‌های قبلی دست‌نخورده
  * است. ارجاع به O.* در *زمان فراخوانی* انجام می‌شود (نه بارگذاری)، پس
@@ -38,18 +38,25 @@
   // نیست*؛ validateManifest در core.js همان شکل semver را الزام می‌کند.
   var V = [1, 0, 0].join('.');
 
-  // ── adapterها (همه stateless جز data-yahoo که cfg.history را نگه می‌دارد) ──
+  // ── adapterهای دادهٔ بازار ──
+  // اندروید از Twelve Data استفاده می‌کند؛ Yahoo فقط در مسیر دسکتاپ باقی می‌ماند.
 
-  function YahooAdapter(context) {
+  function TwelveDataAdapter(context) {
     this._cfg = (context && context.cfg) || {};
   }
-  YahooAdapter.prototype.name = 'yahoo';
-  // fetch در JS بی‌حالت است (بدون session پایدار) — connect/disconnect برای
-  // حفظ shape قراردادِ مشترک با دسکتاپ صادقانه no-op هستند.
-  YahooAdapter.prototype.connect = function () { };
-  YahooAdapter.prototype.disconnect = function () { };
-  YahooAdapter.prototype.fetch = function (symCfg) {
-    return O.fetchYahooSymbol(symCfg, (this._cfg && this._cfg.history) || {});
+  TwelveDataAdapter.prototype.name = 'twelvedata';
+  TwelveDataAdapter.prototype.connect = function () {
+    var td = this._cfg.twelvedata || {};
+    if (!String(td.api_key || '').trim()) {
+      throw new Error('کلید API رایگان Twelve Data در تنظیمات وارد نشده است');
+    }
+  };
+  TwelveDataAdapter.prototype.disconnect = function () { };
+  TwelveDataAdapter.prototype.fetch = function (symCfg) {
+    return O.fetchTwelveDataSymbol(symCfg, this._cfg.twelvedata || {}, this._cfg.history || {});
+  };
+  TwelveDataAdapter.prototype.getError = function (symbol) {
+    return O.twelveDataErrorFor ? O.twelveDataErrorFor(symbol) : '';
   };
 
   function TvAdapter() { }
@@ -228,9 +235,9 @@
   // (id/stage/priority/config یکسان؛ platforms فقط android)
   var DEFS = [
     {
-      id: 'data-yahoo', provides: ['odin.data.market@1'], config: null,
+      id: 'data-twelvedata', provides: ['odin.data.market@1'], config: null,
       stage: 'collect_market', priority: 20,
-      factory: function (context) { return new YahooAdapter(context); }
+      factory: function (context) { return new TwelveDataAdapter(context); }
     },
     {
       id: 'data-tradingview', provides: ['odin.data.tv@1'],

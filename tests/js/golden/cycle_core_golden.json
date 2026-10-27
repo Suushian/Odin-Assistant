@@ -34,11 +34,11 @@
   "ongoing": [
    [
     "رصد بازار — ODIN ASSISTANT",
-    "آخرین تحلیل ۱۷:۳۰ تهران · ۱ سیگنال تازه صادر شد · چرخهٔ بعدی تا ۱۵ دقیقه"
+    "آخرین تحلیل ۱۷:۳۰ تهران · ۱ سیگنال تازه صادر شد · چرخهٔ بعدی تا ۳۰ دقیقه"
    ]
   ],
   "cycleDone": [
-   15
+   30
   ],
   "stopBg": 0,
   "trial": {
@@ -88,7 +88,7 @@
    "state.last": {
     "ranAt": 1790172000000,
     "errors": 0,
-    "sourceName": "yahoo",
+    "sourceName": "twelvedata",
     "nAnalyses": 7,
     "verdicts": [
      "EURUSD=BUY_SETUP",
@@ -278,11 +278,11 @@
   "ongoing": [
    [
     "رصد بازار — ODIN ASSISTANT",
-    "آخرین تحلیل ۱۷:۳۰ تهران · سیگنال تازه‌ای صادر نشد · چرخهٔ بعدی تا ۱۵ دقیقه"
+    "آخرین تحلیل ۱۷:۳۰ تهران · سیگنال تازه‌ای صادر نشد · چرخهٔ بعدی تا ۳۰ دقیقه"
    ]
   ],
   "cycleDone": [
-   15
+   30
   ],
   "stopBg": 0,
   "trial": {
@@ -319,7 +319,7 @@
    "state.last": {
     "ranAt": 1790172000000,
     "errors": 0,
-    "sourceName": "yahoo",
+    "sourceName": "twelvedata",
     "nAnalyses": 7,
     "verdicts": [
      "EURUSD=BUY_SETUP",
@@ -484,11 +484,11 @@
   "ongoing": [
    [
     "رصد بازار — ODIN ASSISTANT",
-    "آخرین تحلیل ۱۷:۳۰ تهران · سیگنال تازه‌ای صادر نشد · چرخهٔ بعدی تا ۱۵ دقیقه"
+    "آخرین تحلیل ۱۷:۳۰ تهران · سیگنال تازه‌ای صادر نشد · چرخهٔ بعدی تا ۳۰ دقیقه"
    ]
   ],
   "cycleDone": [
-   15
+   30
   ],
   "stopBg": 0,
   "trial": {
@@ -527,7 +527,7 @@
    "state.last": {
     "ranAt": 1790172000000,
     "errors": 0,
-    "sourceName": "yahoo",
+    "sourceName": "twelvedata",
     "nAnalyses": 7,
     "verdicts": [
      "EURUSD=BUY_SETUP",
@@ -692,11 +692,11 @@
   "ongoing": [
    [
     "رصد بازار — ODIN ASSISTANT",
-    "آخرین تحلیل ۱۷:۳۰ تهران · سیگنال تازه‌ای صادر نشد · چرخهٔ بعدی تا ۱۵ دقیقه"
+    "آخرین تحلیل ۱۷:۳۰ تهران · سیگنال تازه‌ای صادر نشد · چرخهٔ بعدی تا ۳۰ دقیقه"
    ]
   ],
   "cycleDone": [
-   15
+   30
   ],
   "stopBg": 0,
   "trial": {
@@ -733,7 +733,7 @@
    "state.last": {
     "ranAt": 1790172000000,
     "errors": 0,
-    "sourceName": "yahoo",
+    "sourceName": "twelvedata",
     "nAnalyses": 7,
     "verdicts": [
      "EURUSD=BUY_SETUP",
@@ -900,11 +900,11 @@
   "ongoing": [
    [
     "رصد بازار — ODIN ASSISTANT",
-    "آخرین تحلیل ۱۷:۳۰ تهران · سیگنال تازه‌ای صادر نشد · چرخهٔ بعدی تا ۱۵ دقیقه"
+    "آخرین تحلیل ۱۷:۳۰ تهران · سیگنال تازه‌ای صادر نشد · چرخهٔ بعدی تا ۳۰ دقیقه"
    ]
   ],
   "cycleDone": [
-   15
+   30
   ],
   "stopBg": 0,
   "trial": {
@@ -916,7 +916,7 @@
    "state.last": {
     "ranAt": 1790172000000,
     "errors": 7,
-    "sourceName": "yahoo",
+    "sourceName": "twelvedata",
     "nAnalyses": 0,
     "verdicts": [],
     "ranking": [],
@@ -995,16 +995,16 @@
   "ongoing": [
    [
     "رصد بازار — ODIN ASSISTANT",
-    "آخرین تحلیل ۱۷:۳۰ تهران · ۱ سیگنال تازه صادر شد · چرخهٔ بعدی تا ۱۵ دقیقه"
+    "آخرین تحلیل ۱۷:۳۰ تهران · ۱ سیگنال تازه صادر شد · چرخهٔ بعدی تا ۳۰ دقیقه"
    ],
    [
     "رصد بازار — ODIN ASSISTANT",
-    "آخرین تحلیل ۱۷:۳۰ تهران · سیگنال تازه‌ای صادر نشد · چرخهٔ بعدی تا ۱۵ دقیقه"
+    "آخرین تحلیل ۱۷:۳۰ تهران · سیگنال تازه‌ای صادر نشد · چرخهٔ بعدی تا ۳۰ دقیقه"
    ]
   ],
   "cycleDone": [
-   15,
-   15
+   30,
+   30
   ],
   "stopBg": 0,
   "trial": {
@@ -1063,7 +1063,7 @@
    "state.last": {
     "ranAt": 1790172000000,
     "errors": 0,
-    "sourceName": "yahoo",
+    "sourceName": "twelvedata",
     "nAnalyses": 7,
     "verdicts": [
      "EURUSD=BUY_SETUP",
@@ -1263,11 +1263,11 @@
   "ongoing": [
    [
     "رصد بازار — ODIN ASSISTANT",
-    "آخرین تحلیل ۱۷:۳۰ تهران · ۱ سیگنال تازه صادر شد · ۱ هشدار قیمت فعال شد · چرخهٔ بعدی تا ۱۵ دقیقه"
+    "آخرین تحلیل ۱۷:۳۰ تهران · ۱ سیگنال تازه صادر شد · ۱ هشدار قیمت فعال شد · چرخهٔ بعدی تا ۳۰ دقیقه"
    ]
   ],
   "cycleDone": [
-   15
+   30
   ],
   "stopBg": 0,
   "trial": {
@@ -1318,7 +1318,7 @@
    "state.last": {
     "ranAt": 1790172000000,
     "errors": 0,
-    "sourceName": "yahoo",
+    "sourceName": "twelvedata",
     "nAnalyses": 7,
     "verdicts": [
      "EURUSD=BUY_SETUP",
@@ -1538,16 +1538,16 @@
   "ongoing": [
    [
     "رصد بازار — ODIN ASSISTANT",
-    "آخرین تحلیل ۱۷:۳۰ تهران · ۱ سیگنال تازه صادر شد · چرخهٔ بعدی تا ۱۵ دقیقه"
+    "آخرین تحلیل ۱۷:۳۰ تهران · ۱ سیگنال تازه صادر شد · چرخهٔ بعدی تا ۳۰ دقیقه"
    ],
    [
     "رصد بازار — ODIN ASSISTANT",
-    "آخرین تحلیل ۱۷:۳۰ تهران · سیگنال تازه‌ای صادر نشد · چرخهٔ بعدی تا ۱۵ دقیقه"
+    "آخرین تحلیل ۱۷:۳۰ تهران · سیگنال تازه‌ای صادر نشد · چرخهٔ بعدی تا ۳۰ دقیقه"
    ]
   ],
   "cycleDone": [
-   15,
-   15
+   30,
+   30
   ],
   "stopBg": 0,
   "trial": {
@@ -1597,7 +1597,7 @@
    "state.last": {
     "ranAt": 1790172000000,
     "errors": 0,
-    "sourceName": "yahoo",
+    "sourceName": "twelvedata",
     "nAnalyses": 7,
     "verdicts": [
      "EURUSD=BUY_SETUP",
@@ -1746,7 +1746,7 @@
    ]
   ],
   "cycleDone": [
-   15
+   30
   ],
   "stopBg": 0,
   "trial": {
@@ -1795,11 +1795,11 @@
   "ongoing": [
    [
     "رصد بازار — ODIN ASSISTANT",
-    "آخرین تحلیل ۱۷:۳۰ تهران · سیگنال تازه‌ای صادر نشد · چرخهٔ بعدی تا ۱۵ دقیقه"
+    "آخرین تحلیل ۱۷:۳۰ تهران · سیگنال تازه‌ای صادر نشد · چرخهٔ بعدی تا ۳۰ دقیقه"
    ]
   ],
   "cycleDone": [
-   15
+   30
   ],
   "stopBg": 0,
   "trial": {
@@ -1838,7 +1838,7 @@
    "state.last": {
     "ranAt": 1790172000000,
     "errors": 0,
-    "sourceName": "yahoo",
+    "sourceName": "twelvedata",
     "nAnalyses": 7,
     "verdicts": [
      "EURUSD=BUY_SETUP",

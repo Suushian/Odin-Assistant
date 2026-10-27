@@ -131,6 +131,7 @@ jobs:
           node tests/js/test_news_render_xss.js
           node tests/js/test_source_freshness.js
           node tests/js/test_market_data_quality.js
+          node tests/js/test_twelvedata.js
 
       # فاز ۶ معماری پلاگین: میخ‌های رفتاری موتور JS (svcTick/cycleCore/
       # runPipeline) — قبل از سوییچ به پلاگین‌ها نوشته و سبز شده‌اند؛ بعد از

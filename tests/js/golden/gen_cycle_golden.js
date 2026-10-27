@@ -142,6 +142,7 @@ function createApp(opts) {
   const fixedNow = opts.fixedNow || FIXED_WED;
   const prefs = new Map();
   Object.keys(opts.prefs || {}).forEach((k) => prefs.set(k, String(opts.prefs[k])));
+
   const calls = { notify: [], ongoing: [], cycleDone: [], stopBg: 0 };
   const logs = [];
   const errs = [];
@@ -176,11 +177,13 @@ function createApp(opts) {
     vm.runInContext(fs.readFileSync(path.join(WWW, f), 'utf8'), ctx, { filename: f });
   }
   const O = ctx.ODIN;
+  // Test-only key lives in in-memory config, never in persisted settings or fixtures.
+  O.CONFIG.twelvedata.api_key = 'golden-test-key';
   // The cycle golden fixture pins historical seven-symbol behavior; production symbol coverage is tested separately.
   O.CONFIG.symbols = O.CONFIG.symbols.filter((s) => s.name !== 'NZDUSD');
 
   // ── پچ seamها (فقط لایهٔ شبکه؛ پارس/تحلیل/داور/ژورنال واقعی‌اند) ──
-  O.fetchYahooSymbol = function (symCfg) {
+  O.fetchTwelveDataSymbol = function (symCfg) {
     if (stubOpts.outage) return Promise.resolve(null);
     return Promise.resolve(makeMarketData(symCfg.name));
   };

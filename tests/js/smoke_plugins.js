@@ -156,7 +156,7 @@ async function main() {
        && stOv.newsSnap && stOv.newsSnap.ok === false
        && Object.keys(stOv.tvMap || {}).length === 0,
       'state.last: calSnap/newsSnap غیرفعال و tvMap خالی (صادقانه)');
-    ok(viaOverride.calls.cycleDone[0] === 15 && viaOverride.calls.stopBg === 0,
+    ok(viaOverride.calls.cycleDone[0] === 30 && viaOverride.calls.stopBg === 0,
       'چرخه با override-off سالم کامل می‌شود (زمان‌بندی عادی)');
   }
 
@@ -171,7 +171,7 @@ async function main() {
     ok(app.logs.some((l) => l.indexOf('پلاگین داور/سشن در دسترس نیست') >= 0),
       'judge-core غایب + judge.enabled روشن → لاگ صادقانهٔ unavailable');
     ok(app.calls.notify.length === 0, 'بدون پلاگین داور سیگنالی صادر/اعلان نمی‌شود');
-    ok(app.calls.cycleDone[0] === 15 && app.calls.stopBg === 0,
+    ok(app.calls.cycleDone[0] === 30 && app.calls.stopBg === 0,
       'چرخه نمی‌شکند — زمان‌بندی عادی ادامه می‌یابد');
     const st = JSON.parse(app.prefs.get('state.last') || '{}');
     ok(st && (st.judgments || []).length === 0, 'state.last بدون قضاوت ذخیره شد (صادقانه)');
@@ -185,7 +185,7 @@ async function main() {
       user_name: 'تست', judge_enabled: true, min_score: 7,
       veto: { weekend: true, high_impact_event: true, timeframe_conflict: true, range_market: true, volatility_spike: true, breaking_news: true },
       fund_enabled: true, news_enabled: true, tv_enabled: true,
-      auto_refresh_enabled: true, auto_refresh_min: 15, notify_enabled: true,
+      auto_refresh_enabled: true, auto_refresh_min: 30, notify_enabled: true,
       background_enabled: true, animations_enabled: true,
       strategy_tp_enabled: true, strategy_lb_enabled: true,
       strategy_carry_enabled: true, strategy_scalping_enabled: true, strategy_min_agree: 1
@@ -203,7 +203,7 @@ async function main() {
     ok(html.includes(O.faNum(30) + ' پلاگین · ' + O.faNum(30) + ' فعال'),
       'خلاصه: ۳۰ پلاگین · ۳۰ فعال (ارقام فارسی از registry.status())');
     ok(!html.includes('>خطا<'), 'در حالت سالم هیچ قرصِ «خطا» نیست');
-    ok(html.includes('data-yahoo') && html.includes('strategy-carry'),
+    ok(html.includes('data-twelvedata') && html.includes('strategy-carry'),
       'id پلاگین‌ها در فهرست هست');
     ok(html.includes('اسکالپ M15') && html.includes('data-set="strategy_scalping_enabled"'),
       'کلید مستقل اسکالپ M15 در تنظیمات رندر می‌شود');
@@ -227,9 +227,9 @@ async function main() {
 
     // خطاهای زندهٔ bus (S.pluginIssues) — از جمله قرنطینهٔ stage:*
     html = O.renderSettings(mkS(O.deepFill(O.CONFIG, {}),
-      { 'data-yahoo': 'boom-live', 'stage:judge': 'قرنطینهٔ مرحله' }));
+      { 'data-twelvedata': 'boom-live', 'stage:judge': 'قرنطینهٔ مرحله' }));
     ok(html.includes(O.faNum(2) + ' خطا'), 'خلاصه: ۲ خطا از pluginIssues');
-    const k = html.indexOf('data-yahoo');
+    const k = html.indexOf('data-twelvedata');
     ok(k >= 0 && html.slice(k, k + 400).includes('boom-live')
       && html.slice(k, k + 400).includes('خطا'),
       'خطای زنده با پیام و قرصِ «خطا»');
@@ -239,7 +239,7 @@ async function main() {
     // سیم‌کشی زنده: خرابیِ واقعی در چرخه → plugin.failed روی bus →
     // S.pluginIssues → کارت تنظیمات (بدون تزریق دستی)
     const app2 = gen.createApp({});
-    app2.O.fetchYahooSymbol = function () { return Promise.reject(new Error('شبکه قطع است')); };
+    app2.O.fetchTwelveDataSymbol = function () { return Promise.reject(new Error('شبکه قطع است')); };
     app2.O.trialStart(app2.pstorage);
     app2.O.svcStart();
     await waitCycle(app2.calls, 1);

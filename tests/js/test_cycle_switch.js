@@ -69,7 +69,7 @@ function hasLog(rec, substr) {
 async function testInlinePins() {
   // ۱) چرخهٔ کامل با سیگنال
   const s1 = await gen.runScenario('svc_cycle_signals');
-  A(s1.cycleDone.length === 1 && s1.cycleDone[0] === 15 && s1.stopBg === 0,
+  A(s1.cycleDone.length === 1 && s1.cycleDone[0] === 30 && s1.stopBg === 0,
     'چرخهٔ سالم: bgCycleDone(15) و بدون stopBackground');
   A(s1.notify.length === 1 && s1.notify[0][0] === 'سیگنال جدید — EURUSD (خرید)',
     'اعلان سیگنال تازه با عنوان دقیق');
@@ -142,7 +142,7 @@ async function testInlinePins() {
   const s2 = await gen.runScenario('data_outage');
   A(hasLog(s2, 'هیچ نمادی تحلیل نشد — اینترنت را بررسی کنید'),
     'early-exit با پیام دقیقِ فعلی');
-  A(s2.notify.length === 0 && s2.cycleDone[0] === 15,
+  A(s2.notify.length === 0 && s2.cycleDone[0] === 30,
     'بدون اعلان سیگنال؛ زمان‌بندی چرخه بعدی سالم');
   A(s2.storage['state.last'] && s2.storage['state.last'].nAnalyses === 0
     && s2.storage['state.last'].errors >= 1,
@@ -180,7 +180,7 @@ async function testInlinePins() {
   const s6 = await gen.runScenario('judge_disabled');
   A(s6.ongoing.some((x) => x[1] === 'داور در تنظیمات خاموش است — سیگنالی صادر نمی‌شود'),
     'گیت داور: پیام ongoing دقیق');
-  A(s6.cycleDone[0] === 15 && !hasLog(s6, 'دریافت EURUSD'),
+  A(s6.cycleDone[0] === 30 && !hasLog(s6, 'دریافت EURUSD'),
     'چرخه اصلاً اجرا نشد (بدون واکشی داده)');
 
   // ۷) فیچرها خاموش — مسیر غیرفعالِ guardهای داخلی (fallback فاز ۶)
@@ -277,7 +277,7 @@ async function testRegistryWhenPresent() {
   // (فاز ۶b: ۱۵ قاعدهٔ داور اضافه شد — فهرست ساختاری است، نه طلاییِ رفتاری)
   // (S3: چهار پلاگین strategy-* در مسیر فعال داور؛ آینهٔ src/plugins/strategies.py)
   const ids = reg.all().map((r) => r.id);
-  const expectedIds = ['data-yahoo', 'data-tradingview', 'analysis-technical',
+  const expectedIds = ['data-twelvedata', 'data-tradingview', 'analysis-technical',
     'analysis-strength', 'session', 'fundamental-calendar', 'fundamental-news',
     'judge-core', 'judge-risk', 'journal', 'alerts-price',
     'veto-data', 'veto-weekend', 'veto-tf-conflict', 'veto-range',
@@ -288,6 +288,8 @@ async function testRegistryWhenPresent() {
   A(ids.join(',') === expectedIds.join(','),
     '۳۰ پلاگین اندروید با idهای متقارن پایتون (۱۱ زیرساخت/داده + ۱۵ قاعدهٔ داور + ۴ استراتژی): ' + JSON.stringify(ids));
   A(info.disabled.length === 0, 'با config پیش‌فرض هیچ پلاگینی disabled نیست');
+  A(reg.get('odin.data.market@1').id === 'data-twelvedata',
+    'منبع بازار اندروید باید Twelve Data باشد؛ Yahoo دیگر منبع فعال اصلی نیست');
 
   // bindingها: خاموشی فیچرها → پلاگین مربوطه غیرفعال (همان کلیدهای موجود)
   const off = O.deepFill(O.CONFIG, {
