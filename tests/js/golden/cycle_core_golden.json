@@ -88,7 +88,7 @@
    "state.last": {
     "ranAt": 1790172000000,
     "errors": 0,
-    "sourceName": "yahoo",
+    "sourceName": "twelvedata",
     "nAnalyses": 7,
     "verdicts": [
      "EURUSD=BUY_SETUP",
@@ -319,7 +319,7 @@
    "state.last": {
     "ranAt": 1790172000000,
     "errors": 0,
-    "sourceName": "yahoo",
+    "sourceName": "twelvedata",
     "nAnalyses": 7,
     "verdicts": [
      "EURUSD=BUY_SETUP",
@@ -527,7 +527,7 @@
    "state.last": {
     "ranAt": 1790172000000,
     "errors": 0,
-    "sourceName": "yahoo",
+    "sourceName": "twelvedata",
     "nAnalyses": 7,
     "verdicts": [
      "EURUSD=BUY_SETUP",
@@ -733,7 +733,7 @@
    "state.last": {
     "ranAt": 1790172000000,
     "errors": 0,
-    "sourceName": "yahoo",
+    "sourceName": "twelvedata",
     "nAnalyses": 7,
     "verdicts": [
      "EURUSD=BUY_SETUP",
@@ -916,7 +916,7 @@
    "state.last": {
     "ranAt": 1790172000000,
     "errors": 7,
-    "sourceName": "yahoo",
+    "sourceName": "twelvedata",
     "nAnalyses": 0,
     "verdicts": [],
     "ranking": [],
@@ -1063,7 +1063,7 @@
    "state.last": {
     "ranAt": 1790172000000,
     "errors": 0,
-    "sourceName": "yahoo",
+    "sourceName": "twelvedata",
     "nAnalyses": 7,
     "verdicts": [
      "EURUSD=BUY_SETUP",
@@ -1318,7 +1318,7 @@
    "state.last": {
     "ranAt": 1790172000000,
     "errors": 0,
-    "sourceName": "yahoo",
+    "sourceName": "twelvedata",
     "nAnalyses": 7,
     "verdicts": [
      "EURUSD=BUY_SETUP",
@@ -1597,7 +1597,7 @@
    "state.last": {
     "ranAt": 1790172000000,
     "errors": 0,
-    "sourceName": "yahoo",
+    "sourceName": "twelvedata",
     "nAnalyses": 7,
     "verdicts": [
      "EURUSD=BUY_SETUP",
@@ -1838,7 +1838,7 @@
    "state.last": {
     "ranAt": 1790172000000,
     "errors": 0,
-    "sourceName": "yahoo",
+    "sourceName": "twelvedata",
     "nAnalyses": 7,
     "verdicts": [
      "EURUSD=BUY_SETUP",
