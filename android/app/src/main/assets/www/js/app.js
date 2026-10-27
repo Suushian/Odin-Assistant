@@ -84,7 +84,7 @@
       fundamental: { enabled: st.fund_enabled },
       news: { enabled: st.news_enabled },
       tradingview: { enabled: st.tv_enabled },
-      twelvedata: { api_key: String(st.twelvedata_api_key || '').trim() },
+      twelvedata: { api_key: String(st.twelvedata_api_key || O.CONFIG.twelvedata.api_key || '').trim() },
       // S4: deepFill بقیهٔ بخش (نرخ‌ها/پارامترها) را از O.CONFIG حفظ
       // می‌کند — تنظیمات گوشی فقط enable/disable و min_agree را می‌سازد
       strategies: {
