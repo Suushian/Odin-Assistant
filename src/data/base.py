@@ -23,7 +23,7 @@ class MarketData:
 
 
 class DataSource(ABC):
-    """رابط منبع داده (Yahoo، Twelve Data و ...)."""
+    """رابط منبع دادهٔ بازار (Twelve Data)."""
 
     name: str = "base"
 
