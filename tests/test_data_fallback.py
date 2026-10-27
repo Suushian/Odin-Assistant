@@ -16,7 +16,7 @@ def main() -> None:
     cfg = {"data_source": "twelvedata", "twelvedata": {"api_key": "test"}}
     assert isinstance(get_source(cfg), TwelveDataSource)
 
-    for legacy in ("auto", "yahoo", "mt5", "binance"):
+    for legacy in ("auto", "legacy-source", "mt5", "binance"):
         try:
             get_source({**cfg, "data_source": legacy})
         except ValueError:
