@@ -71,7 +71,33 @@ async function main() {
   A(configSource.indexOf("td: 'NZD/USD'") >= 0 && configSource.indexOf("td: 'XAU/USD'") >= 0,
     'نمادهای NZD/USD و اسپات XAU/USD باید در پیکربندی منبع وجود داشته باشند');
 
-  console.log('TWELVE DATA TESTS OK — ۱۱ بررسی');
+  // Regression: a rejected HTTP request must still consume the pacing interval.
+  // Use a controlled clock/timer so this test does not sleep for 15 real seconds.
+  const pacingApp = gen.createApp({ fixedNow: gen.FIXED_WED });
+  vm.runInContext(fs.readFileSync(path.join(gen.WWW, 'data.js'), 'utf8'), pacingApp.ctx, { filename: 'data.js-pacing' });
+  let fakeNow = gen.FIXED_WED;
+  pacingApp.ctx.Date.now = () => fakeNow;
+  pacingApp.ctx.setTimeout = (callback, ms) => {
+    fakeNow += ms;
+    callback();
+    return 1;
+  };
+  let attempts = 0;
+  pacingApp.O.http = function () {
+    attempts++;
+    if (attempts === 1) return Promise.reject(new Error('simulated network failure'));
+    return Promise.resolve({ status: 200, text: JSON.stringify({ values: rows.slice().reverse() }) });
+  };
+  const pacingCfg = { api_key: 'test-key-not-real', outputsize: 5000, min_request_gap_sec: 15 };
+  const pacingSym = { name: 'EURUSD', td: 'EUR/USD' };
+  const failed = await pacingApp.O.fetchTwelveDataSymbol(pacingSym, pacingCfg, pacingApp.O.CONFIG.history);
+  A(failed === null && attempts === 1, 'خطای شبکه باید بدون پرتاب خطا مدیریت شود');
+  const afterFailure = fakeNow;
+  await pacingApp.O.fetchTwelveDataSymbol(pacingSym, pacingCfg, pacingApp.O.CONFIG.history);
+  A(attempts === 2 && fakeNow - afterFailure >= 15000,
+    'درخواست ناموفق نیز باید فاصلهٔ ۱۵ ثانیه‌ای درخواست بعدی را اعمال کند');
+
+  console.log('TWELVE DATA TESTS OK — ۱۳ بررسی');
 }
 
 main().catch((error) => {
