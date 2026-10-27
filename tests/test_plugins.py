@@ -167,7 +167,7 @@ def test_registration() -> None:
     A(reg.by_id("fundamental-calendar").manifest.config["section"] == "fundamental",
       "تقویم باید به کلید fundamental.enabled متصل باشد")
 
-    # lifecycle روی یک پلاگین سبک (session) — بدون yfinance/نت
+    # lifecycle روی یک پلاگین سبک (session) — بدون شبکه
     rec = reg.by_id("session")
     lm = LifecycleManager(context=info["context"])
     A(lm.initialize(rec) is None and rec.state is PluginState.INITIALIZED,
