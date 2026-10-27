@@ -4,7 +4,7 @@
  * توابع *موجود* اپ (O.fetchTwelveDataSymbol، O.judgeAll، ...) با مانیفست‌های
  * اعلانی — همان idها/stageها/priorityها/config-bindingهای پایتون تا دو
  * موتور یک ساختار داشته باشند (platforms اینجا ['android'] است؛ همتاهای
- * desktop-only مثل notify-telegram و data-auto اینجا ثبت نمی‌شوند).
+ * desktop-only مثل notify-telegram اینجا ثبت نمی‌شود).
  *
  * قاعدهٔ adapter: فقط delegation — منطق در همان ماژول‌های قبلی دست‌نخورده
  * است. ارجاع به O.* در *زمان فراخوانی* انجام می‌شود (نه بارگذاری)، پس
@@ -39,7 +39,7 @@
   var V = [1, 0, 0].join('.');
 
   // ── adapterهای دادهٔ بازار ──
-  // اندروید از Twelve Data استفاده می‌کند؛ Yahoo فقط در مسیر دسکتاپ باقی می‌ماند.
+  // تنها adapter قیمت بازار در هر دو موتور، Twelve Data است.
 
   function TwelveDataAdapter(context) {
     this._cfg = (context && context.cfg) || {};
