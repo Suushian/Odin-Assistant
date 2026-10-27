@@ -3,18 +3,14 @@
 #  این فایل را می‌توانید با هر ویرایشگر متنی (مثل Notepad) تغییر دهید
 # ══════════════════════════════════════════════════════════════
 
-# منبع داده:
-#   auto        = Yahoo (اصلی) و در صورت شکست، Twelve Data (اگر کلید داشته باشد)  ← پیشنهاد
-#   yahoo       = فقط Yahoo Finance (بدون کلید)
-#   twelvedata  = فقط Twelve Data (نیاز به کلید رایگان)
-data_source: auto
+# منبع قیمت بازار: فقط Twelve Data (نیاز به کلید API شخصی)
+data_source: twelvedata
 
 # ── نمادهای تحت پوشش ──────────────────────────────────────────
-# yahoo: نماد در Yahoo Finance | td: نماد در Twelve Data | tv: نماد در تریدینگ‌ویو
+# td: نماد در Twelve Data | tv: نماد در تریدینگ‌ویو
 symbols:
   - name: EURUSD
     fa: "یورو به دلار آمریکا"
-    yahoo: "EURUSD=X"
     td: "EUR/USD"
     tv: {screener: forex, exchange: FX, symbol: EURUSD}
     base: EUR
@@ -23,7 +19,6 @@ symbols:
 
   - name: GBPUSD
     fa: "پوند به دلار آمریکا"
-    yahoo: "GBPUSD=X"
     td: "GBP/USD"
     tv: {screener: forex, exchange: FX, symbol: GBPUSD}
     base: GBP
@@ -32,7 +27,6 @@ symbols:
 
   - name: USDJPY
     fa: "دلار آمریکا به ین ژاپن"
-    yahoo: "USDJPY=X"
     td: "USD/JPY"
     tv: {screener: forex, exchange: FX, symbol: USDJPY}
     base: USD
@@ -41,7 +35,6 @@ symbols:
 
   - name: USDCAD
     fa: "دلار آمریکا به دلار کانادا"
-    yahoo: "USDCAD=X"
     td: "USD/CAD"
     tv: {screener: forex, exchange: FX, symbol: USDCAD}
     base: USD
@@ -50,7 +43,6 @@ symbols:
 
   - name: AUDUSD
     fa: "دلار استرالیا به دلار آمریکا"
-    yahoo: "AUDUSD=X"
     td: "AUD/USD"
     tv: {screener: forex, exchange: FX, symbol: AUDUSD}
     base: AUD
@@ -59,7 +51,6 @@ symbols:
 
   - name: USDCHF
     fa: "دلار آمریکا به فرانک سوئیس"
-    yahoo: "USDCHF=X"
     td: "USD/CHF"
     tv: {screener: forex, exchange: FX, symbol: USDCHF}
     base: USD
@@ -68,7 +59,6 @@ symbols:
 
   - name: NZDUSD
     fa: "دلار نیوزیلند به دلار آمریکا"
-    yahoo: "NZDUSD=X"
     td: "NZD/USD"
     tv: {screener: forex, exchange: FX, symbol: NZDUSD}
     base: NZD
@@ -77,7 +67,6 @@ symbols:
 
   - name: XAUUSD
     fa: "طلا به دلار آمریکا (انس)"
-    yahoo: "GC=F"        # فیوچرز طلا (Yahoo اسپات ندارد) — اختلاف جزئی با اسپات طبیعی است
     td: "XAU/USD"        # با کلید Twelve Data: اسپات واقعی
     tv: {screener: cfd, exchange: OANDA, symbol: XAUUSD}
     base: XAU
@@ -96,13 +85,8 @@ analysis:
   swing_window: 5         # پنجره تشخیص قله/کف (سطوح حمایت و مقاومت)
   strength_lookback_h1: 24   # بازه محاسبه قدرت ارزها (کندل یک‌ساعته ≈ ۲۴ ساعت)
 
-# ── تاریخچه مورد نیاز ─────────────────────────────────────────
+# ── تاریخچهٔ بازار: یک واکشی M15 با ۵۰۰۰ کندل؛ H1/H4 از آن ساخته می‌شوند ──
 history:
-  yahoo_h1_days: 60       # Yahoo: چند روز داده یک‌ساعته (H4 از آن ساخته می‌شود)
-  yahoo_m15_days: 5
-  td_m15_bars: 200        # Twelve Data: تعداد کندل هر تایم‌فریم
-  td_h1_bars: 300
-  td_h4_bars: 400
   drop_forming_candle: true   # کندل در حال تشکیل نادیده گرفته شود (تحلیل فقط روی کندل بسته)
 
 # ── تاییدیه تریدینگ‌ویو ────────────────────────────────────────
@@ -111,12 +95,12 @@ tradingview:
   enabled: true
   timeframe: 4h           # تایم‌فریم تاییدیه: 15m | 1h | 4h | 1D
 
-# ── Twelve Data (زاپاس اختیاری) ────────────────────────────────
-# کلید رایگان: در https://twelvedata.com ثبت‌نام کنید (فقط ایمیل) و کلید را اینجا بگذارید
-# بدون کلید، این منبع به‌صورت خودکار غیرفعال است و برنامه با Yahoo کار می‌کند
+# ── تنها منبع قیمت بازار: Twelve Data ─────────────────────────
+# کلید رایگان: در https://twelvedata.com ثبت‌نام کنید و کلید شخصی را در config.local.yaml بگذارید
+# بدون کلید معتبر، دریافت قیمت و صدور سیگنال ممکن نیست
 twelvedata:
   api_key: ""
-  min_request_gap_sec: 8  # محدودیت tier رایگان: ۸ درخواست در دقیقه
+  min_request_gap_sec: 8  # فاصلهٔ حداقل ۷٫۵ ثانیه برای محدودیت ۸ درخواست در دقیقه
 
 # ══════════════════════════════════════════════════════════════
 #  مرحله ۲ — موتور فاندامنتال و اخبار
@@ -342,7 +326,7 @@ telegram:
 #   ۲) کلید فیچریِ موجود        ← مثل news.enabled (همان معنای امروز)
 #   ۳) پیش‌فرض مانیفست پلاگین
 #   ۴) true
-# شناسهٔ پلاگین‌ها: data-yahoo · data-twelvedata · data-auto · data-tradingview
+# شناسهٔ پلاگین‌ها: data-twelvedata · data-tradingview
 #   · analysis-technical · analysis-strength · session · fundamental-calendar
 #   · fundamental-news · judge-core · judge-risk · veto-data · veto-weekend
 #   · veto-tf-conflict · veto-range · veto-event · veto-vol-spike
