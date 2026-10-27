@@ -122,6 +122,7 @@ jobs:
           node tests/js/smoke_share.js
           node tests/js/smoke_theme_parity.js
           node tests/js/smoke_layout.js
+          node tests/js/smoke_ui_polish.js
           node tests/js/smoke_onboarding.js
           node tests/js/smoke_core.js
           node tests/js/smoke_plugins.js

@@ -255,17 +255,17 @@ body {
 
 .card-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .divider { height: 1px; background: var(--divider); margin: 12px 0; }
-.hint { font-size: 10.5px; color: var(--text-3); line-height: 1.9; }
+.hint { font-size: 10.5px; color: var(--text-3); line-height: 1.8; }
 
 /* ── دکمه‌ها ─────────────────────────────────────────────────── */
 .btn {
   border: none; cursor: pointer; font-family: inherit;
-  border-radius: var(--r-pill); padding: 12px 22px;
+  border-radius: var(--r-pill); padding: 10px 16px;
   font-size: 13.5px; font-weight: 700; color: var(--text);
   background: var(--raised);
   transition: transform .12s, background .15s;
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-  min-height: 46px;
+  min-height: 44px;
 }
 .btn:active { transform: scale(.97); }
 .btn.primary {
@@ -276,11 +276,11 @@ body {
 .btn.green { background: var(--green-tint); color: var(--green-text); }
 .btn.red { background: var(--red-tint); color: var(--red-text); }
 .btn.ghost { background: transparent; color: var(--text-2); border: 1.5px solid var(--border-strong); }
-.btn.subtle { background: transparent; color: var(--text-3); padding: 8px 12px; min-height: 0; }
+.btn.subtle { background: transparent; color: var(--text-3); padding: 8px 12px; min-height: 40px; }
 .btn.block { width: 100%; }
-.btn.sm { padding: 8px 16px; font-size: 12px; min-height: 38px; }
+.btn.sm { padding: 8px 16px; font-size: 12px; min-height: 40px; }
 
-.action-row { display: flex; gap: 10px; margin-bottom: 14px; }
+.action-row { display: flex; gap: 8px; margin-bottom: 14px; }
 .action-row .btn { flex: 1; }
 .action-row .btn.primary { flex: 1.6; }
 
@@ -514,7 +514,7 @@ body {
   color: var(--text-3); font-family: inherit;
   transition: background .18s, color .18s, transform .12s;
 }
-.tab span { font-size: 10px; font-weight: 700; }
+.tab span { font-size: clamp(9px, 2.6vw, 10px); font-weight: 700; }
 .tab:active { transform: scale(.94); }
 .tab.active { background: var(--ink); color: var(--on-ink); box-shadow: 0 6px 16px rgba(16,16,19,.3); }
 .tab .badge {
@@ -1043,3 +1043,117 @@ body.no-anim .kpi-card { animation: none !important; }
       نه فراموش‌شدگی. اگر روزی صفحهٔ ورود دوباره طراحی شد، آماده‌اند.
       نگهبان: گروه ۶ smoke_theme_parity.js حضورشان را در :root چک می‌کند.
    ══════════════════════════════════════════════════════════════════════ */
+
+
+/* ══════════════════════════════════════════════════════════════════════
+   v1.0.1 — پولیش سراسری UI/UX
+   هدف: کنترل ارتفاع دکمه‌ها، جلوگیری از شکست نامناسب متن، بهبود خوانایی،
+   فوکوس صفحه‌کلید و حفظ چیدمان در نمایشگرهای کوچک؛ بدون تغییر توکن‌های تم.
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* کنترل‌های تعاملی: ارتفاع قابل پیش‌بینی و متن متوازن */
+.btn {
+  min-width: 0;
+  max-width: 100%;
+  line-height: 1.45;
+  text-wrap: balance;
+}
+
+/* ردیف عملیات به‌جای فشرده‌کردن و شکستن متن، در عرض کم بازچینی می‌شود */
+.action-row {
+  align-items: stretch;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.action-row .btn {
+  flex: 1 1 140px;
+  min-width: 0;
+  white-space: nowrap;
+  padding-inline: 12px;
+}
+.action-row .btn.primary { flex: 1 1 150px; }
+
+/* کنترل‌های چندحالته و تب‌ها باید در همهٔ عرض‌ها قابل لمس بمانند */
+.segmented { max-width: 100%; flex-wrap: wrap; }
+.segmented button {
+  min-width: 44px;
+  min-height: 40px;
+  white-space: nowrap;
+  padding-inline: clamp(8px, 2.5vw, 15px);
+}
+.tab { min-width: 0; min-height: 44px; }
+.tab span { white-space: nowrap; }
+
+/* آیتم‌های flex اجازه دارند کوچک شوند، بدون آن‌که کل ردیف را هل بدهند */
+.card-row > :first-child,
+.sym-head > :first-child,
+.ev-top > :first-child,
+.console-card .cc-titles,
+.section-header .sh-main {
+  min-width: 0;
+}
+
+/* متن‌های فرعی در صفحه‌های مختلف حداقل خوانایی یکسانی دارند */
+.page-sub,
+.card-sub,
+.hint,
+.sym-fa,
+.sym-stat,
+.ink-cap,
+.ink-tile .t-cap,
+.ev-title-en,
+.kpi-card .kv-lab,
+.console-card .cc-sub {
+  font-size: 11px;
+}
+.page-sub, .card-sub, .sym-fa, .sym-stat, .ink-cap,
+.ink-tile .t-cap, .ev-title-en, .kpi-card .kv-lab,
+.console-card .cc-sub {
+  overflow-wrap: anywhere;
+}
+
+/* فوکوس واضح برای صفحه‌کلید و سوئیچ‌های دسترس‌پذیری */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[role="button"]:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 3px;
+}
+button:disabled,
+.btn:disabled {
+  cursor: not-allowed;
+  transform: none;
+}
+button:disabled:not(.tab),
+.btn:disabled {
+  opacity: .72;
+}
+
+/* عرض‌های کوچک: دکمه‌ها تمام‌عرض می‌شوند تا متن به دو خط فشرده نشود */
+@media (max-width: 360px) {
+  .page { padding-inline: 12px; }
+  #pages .card { padding: 14px; }
+  .action-row { flex-direction: column; }
+  .action-row .btn,
+  .action-row .btn.primary {
+    flex: 1 1 auto;
+    width: 100%;
+    white-space: nowrap;
+  }
+  .sig-card .sc-tiles { gap: 6px; }
+  .sig-card .sc-tile { padding: 8px 7px; }
+  .sig-card .sc-tile-val { font-size: 13px; }
+}
+
+/* کاهش حرکت برای کاربرانی که این ترجیح را در سیستم فعال کرده‌اند */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}
