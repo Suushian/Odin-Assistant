@@ -30,7 +30,7 @@ def select_market_provider(registry: Any, cfg: dict) -> Any:
     kind = str(cfg.get("data_source", "twelvedata")).strip().lower()
     if kind != "twelvedata":
         raise ValueError(
-            f"منبع دادهٔ ناشناخته/حذف‌شده: {kind!r} (تنها مقدار مجاز: twelvedata)"
+            "منبع بازار نامعتبر است؛ تنها منبع مجاز Twelve Data است."
         )
     rec = registry.by_id("data-twelvedata")
     if rec is None or not rec.active:
