@@ -142,12 +142,7 @@ function createApp(opts) {
   const fixedNow = opts.fixedNow || FIXED_WED;
   const prefs = new Map();
   Object.keys(opts.prefs || {}).forEach((k) => prefs.set(k, String(opts.prefs[k])));
-  // Golden harness uses a fake key so the real provider adapter can be tested
-  // through the mocked fetch seam without any live network request.
-  let initialSettings = {};
-  try { initialSettings = JSON.parse(prefs.get('settings') || '{}'); } catch (_) { initialSettings = {}; }
-  if (!initialSettings.twelvedata_api_key) initialSettings.twelvedata_api_key = 'golden-test-key';
-  prefs.set('settings', JSON.stringify(initialSettings));
+
   const calls = { notify: [], ongoing: [], cycleDone: [], stopBg: 0 };
   const logs = [];
   const errs = [];
@@ -182,6 +177,8 @@ function createApp(opts) {
     vm.runInContext(fs.readFileSync(path.join(WWW, f), 'utf8'), ctx, { filename: f });
   }
   const O = ctx.ODIN;
+  // Test-only key lives in in-memory config, never in persisted settings or fixtures.
+  O.CONFIG.twelvedata.api_key = 'golden-test-key';
   // The cycle golden fixture pins historical seven-symbol behavior; production symbol coverage is tested separately.
   O.CONFIG.symbols = O.CONFIG.symbols.filter((s) => s.name !== 'NZDUSD');
 
