@@ -110,10 +110,10 @@
         else resolve();
       });
     }).then(function () {
-      return O.http(url);
-    }).then(function (r) {
+      // Count the attempt before network I/O: rejected requests must still consume
+      // the pacing interval, otherwise a transient outage can trigger a burst.
       tdLastRequestAt = Date.now();
-      return r;
+      return O.http(url);
     });
     tdQueue = task.then(function () { }, function () { });
     return task;
