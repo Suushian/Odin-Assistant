@@ -38,19 +38,8 @@
   // نیست*؛ validateManifest در core.js همان شکل semver را الزام می‌کند.
   var V = [1, 0, 0].join('.');
 
-  // ── adapterها (همه stateless جز data-yahoo که cfg.history را نگه می‌دارد) ──
-
-  function YahooAdapter(context) {
-    this._cfg = (context && context.cfg) || {};
-  }
-  YahooAdapter.prototype.name = 'yahoo';
-  // fetch در JS بی‌حالت است (بدون session پایدار) — connect/disconnect برای
-  // حفظ shape قراردادِ مشترک با دسکتاپ صادقانه no-op هستند.
-  YahooAdapter.prototype.connect = function () { };
-  YahooAdapter.prototype.disconnect = function () { };
-  YahooAdapter.prototype.fetch = function (symCfg) {
-    return O.fetchYahooSymbol(symCfg, (this._cfg && this._cfg.history) || {});
-  };
+  // ── adapterهای دادهٔ بازار ──
+  // اندروید از Twelve Data استفاده می‌کند؛ Yahoo فقط در مسیر دسکتاپ باقی می‌ماند.
 
   function TwelveDataAdapter(context) {
     this._cfg = (context && context.cfg) || {};
