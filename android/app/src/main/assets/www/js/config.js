@@ -7,15 +7,15 @@
 
   O.CONFIG = {
     symbols: [
-      { name: 'EURUSD', fa: 'یورو به دلار آمریکا', yahoo: 'EURUSD=X', tv: { screener: 'forex', exchange: 'FX', symbol: 'EURUSD' }, base: 'EUR', quote: 'USD', pip: 0.0001 },
-      { name: 'GBPUSD', fa: 'پوند به دلار آمریکا', yahoo: 'GBPUSD=X', tv: { screener: 'forex', exchange: 'FX', symbol: 'GBPUSD' }, base: 'GBP', quote: 'USD', pip: 0.0001 },
-      { name: 'USDJPY', fa: 'دلار آمریکا به ین ژاپن', yahoo: 'USDJPY=X', tv: { screener: 'forex', exchange: 'FX', symbol: 'USDJPY' }, base: 'USD', quote: 'JPY', pip: 0.01 },
-      { name: 'USDCAD', fa: 'دلار آمریکا به دلار کانادا', yahoo: 'USDCAD=X', tv: { screener: 'forex', exchange: 'FX', symbol: 'USDCAD' }, base: 'USD', quote: 'CAD', pip: 0.0001 },
-      { name: 'AUDUSD', fa: 'دلار استرالیا به دلار آمریکا', yahoo: 'AUDUSD=X', tv: { screener: 'forex', exchange: 'FX', symbol: 'AUDUSD' }, base: 'AUD', quote: 'USD', pip: 0.0001 },
-      { name: 'USDCHF', fa: 'دلار آمریکا به فرانک سوئیس', yahoo: 'USDCHF=X', tv: { screener: 'forex', exchange: 'FX', symbol: 'USDCHF' }, base: 'USD', quote: 'CHF', pip: 0.0001 },
-      { name: 'NZDUSD', fa: 'دلار نیوزیلند به دلار آمریکا', yahoo: 'NZDUSD=X', tv: { screener: 'forex', exchange: 'FX', symbol: 'NZDUSD' }, base: 'NZD', quote: 'USD', pip: 0.0001 },
-      // طلا: Yahoo اسپات ندارد و فیوچرز GC=F را می‌دهد — اختلاف جزئی طبیعی است
-      { name: 'XAUUSD', fa: 'طلا به دلار آمریکا (انس)', yahoo: 'GC=F', tv: { screener: 'cfd', exchange: 'OANDA', symbol: 'XAUUSD' }, base: 'XAU', quote: 'USD', pip: 1.0 }
+      { name: 'EURUSD', fa: 'یورو به دلار آمریکا', yahoo: 'EURUSD=X', td: 'EUR/USD', tv: { screener: 'forex', exchange: 'FX', symbol: 'EURUSD' }, base: 'EUR', quote: 'USD', pip: 0.0001 },
+      { name: 'GBPUSD', fa: 'پوند به دلار آمریکا', yahoo: 'GBPUSD=X', td: 'GBP/USD', tv: { screener: 'forex', exchange: 'FX', symbol: 'GBPUSD' }, base: 'GBP', quote: 'USD', pip: 0.0001 },
+      { name: 'USDJPY', fa: 'دلار آمریکا به ین ژاپن', yahoo: 'USDJPY=X', td: 'USD/JPY', tv: { screener: 'forex', exchange: 'FX', symbol: 'USDJPY' }, base: 'USD', quote: 'JPY', pip: 0.01 },
+      { name: 'USDCAD', fa: 'دلار آمریکا به دلار کانادا', yahoo: 'USDCAD=X', td: 'USD/CAD', tv: { screener: 'forex', exchange: 'FX', symbol: 'USDCAD' }, base: 'USD', quote: 'CAD', pip: 0.0001 },
+      { name: 'AUDUSD', fa: 'دلار استرالیا به دلار آمریکا', yahoo: 'AUDUSD=X', td: 'AUD/USD', tv: { screener: 'forex', exchange: 'FX', symbol: 'AUDUSD' }, base: 'AUD', quote: 'USD', pip: 0.0001 },
+      { name: 'USDCHF', fa: 'دلار آمریکا به فرانک سوئیس', yahoo: 'USDCHF=X', td: 'USD/CHF', tv: { screener: 'forex', exchange: 'FX', symbol: 'USDCHF' }, base: 'USD', quote: 'CHF', pip: 0.0001 },
+      { name: 'NZDUSD', fa: 'دلار نیوزیلند به دلار آمریکا', yahoo: 'NZDUSD=X', td: 'NZD/USD', tv: { screener: 'forex', exchange: 'FX', symbol: 'NZDUSD' }, base: 'NZD', quote: 'USD', pip: 0.0001 },
+      // نماد اصلی Twelve Data طلا: اسپات XAU/USD؛ GC=F فقط نگاشت قدیمی Yahoo است.
+      { name: 'XAUUSD', fa: 'طلا به دلار آمریکا (انس)', yahoo: 'GC=F', td: 'XAU/USD', tv: { screener: 'cfd', exchange: 'OANDA', symbol: 'XAUUSD' }, base: 'XAU', quote: 'USD', pip: 1.0 }
     ],
 
     analysis: {
@@ -29,6 +29,9 @@
       yahoo_h1_days: 60, yahoo_m15_days: 5,
       drop_forming_candle: true
     },
+
+    // Twelve Data Basic: یک درخواست M15 برای هر نماد؛ H1/H4 از M15 ساخته می‌شوند.
+    twelvedata: { api_key: '', outputsize: 5000, min_request_gap_sec: 15 },
 
     tradingview: { enabled: true, timeframe: '4h' },
 
