@@ -122,7 +122,7 @@
   function parseTwelveDataTime(value) {
     var s = String(value || '').trim().replace(' ', 'T');
     if (!s) return NaN;
-    if (!/(Z|[+-]\\d{2}:?\\d{2})$/i.test(s)) s += 'Z';
+    if (!/(Z|[+-]\d{2}:?\d{2})$/i.test(s)) s += 'Z';
     return Date.parse(s);
   }
 
