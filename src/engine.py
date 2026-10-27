@@ -30,7 +30,7 @@ from .plugins import build_default_registry
 from .plugins.data import select_market_provider
 
 # ── معماری پلاگین (فاز ۳) ─────────────────────────────────────
-# هستهٔ engine دیگر هیچ فیچری را مستقیم import نمی‌کند: نه RSI، نه Yahoo،
+# هستهٔ engine دیگر هیچ فیچری را مستقیم import نمی‌کند: نه RSI، نه Twelve Data،
 # نه News، نه TradingView. قابلیت‌ها از طریق registry و «قرارداد»شان مصرف
 # می‌شوند (_caps). تنها import فیچرگونهٔ باقی‌مانده JudgeContext است — نوعِ
 # دادهٔ مشترکِ قرارداد داور، نه خودِ منطق داوری.
