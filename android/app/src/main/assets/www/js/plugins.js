@@ -1,7 +1,7 @@
 /* پلاگین‌های داخلی (built-in) ODIN برای اندروید — فاز ۶.
  *
  * آینهٔ JS برای src/plugins/ پایتون: adapterهای نازک (delegation خالص) دور
- * توابع *موجود* اپ (O.fetchYahooSymbol، O.judgeAll، ...) با مانیفست‌های
+ * توابع *موجود* اپ (O.fetchTwelveDataSymbol، O.judgeAll، ...) با مانیفست‌های
  * اعلانی — همان idها/stageها/priorityها/config-bindingهای پایتون تا دو
  * موتور یک ساختار داشته باشند (platforms اینجا ['android'] است؛ همتاهای
  * desktop-only مثل notify-telegram و data-auto اینجا ثبت نمی‌شوند).
