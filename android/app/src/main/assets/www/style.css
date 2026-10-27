@@ -1143,7 +1143,6 @@ button:disabled:not(.tab),
     width: 100%;
     white-space: nowrap;
   }
-  .sym-price { font-size: 20px; }
   .sig-card .sc-tiles { gap: 6px; }
   .sig-card .sc-tile { padding: 8px 7px; }
   .sig-card .sc-tile-val { font-size: 13px; }
