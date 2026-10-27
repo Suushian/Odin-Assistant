@@ -94,6 +94,140 @@
     }).catch(function () { return null; });
   }
 
+  // ── Twelve Data: یک درخواست M15 برای هر نماد، سپس resample به H1/H4 ──
+  // سهمیهٔ Basic رایگان: حداکثر ۸ اعتبار/دقیقه؛ درخواست‌ها را صف می‌کنیم تا
+  // چرخهٔ ۸ نمادی از rate limit عبور نکند. فاصلهٔ ۱۵ ثانیه‌ای همچنین در حالتی
+  // که UI و WebView سرویس هم‌زمان فعال‌اند، ریسک burst را کاهش می‌دهد.
+  var tdQueue = Promise.resolve();
+  var tdLastRequestAt = 0;
+  var tdErrors = {};
+
+  function requestTwelveData(url, gapMs) {
+    var task = tdQueue.then(function () {
+      var wait = Math.max(0, gapMs - (Date.now() - tdLastRequestAt));
+      return new Promise(function (resolve) {
+        if (wait > 0) setTimeout(resolve, wait);
+        else resolve();
+      });
+    }).then(function () {
+      return O.http(url);
+    }).then(function (r) {
+      tdLastRequestAt = Date.now();
+      return r;
+    });
+    tdQueue = task.then(function () { }, function () { });
+    return task;
+  }
+
+  function parseTwelveDataTime(value) {
+    var s = String(value || '').trim().replace(' ', 'T');
+    if (!s) return NaN;
+    if (!/(Z|[+-]\\d{2}:?\\d{2})$/i.test(s)) s += 'Z';
+    return Date.parse(s);
+  }
+
+  function resampleM15(rows, minutes) {
+    var frameMs = minutes * 60000;
+    var countNeeded = minutes / 15;
+    var buckets = {};
+    rows.forEach(function (x) {
+      var key = Math.floor(x.t / frameMs);
+      var b = buckets[key];
+      if (!b) {
+        buckets[key] = { t: key * frameMs, o: x.o, h: x.h, l: x.l, c: x.c, n: 1, first: x.t, last: x.t };
+      } else {
+        if (x.h > b.h) b.h = x.h;
+        if (x.l < b.l) b.l = x.l;
+        b.c = x.c;
+        b.n++;
+        b.last = x.t;
+      }
+    });
+    return Object.keys(buckets).map(function (k) { return buckets[k]; })
+      .filter(function (b) {
+        // کندل ناقص را به‌عنوان H1/H4 کامل جا نزن؛ تمام بازه‌های ۱۵ دقیقه‌ای
+        // باید موجود و پیوسته باشند و از مرز UTC دقیق شروع شوند.
+        return b.n === countNeeded && b.first === b.t &&
+          b.last === b.t + frameMs - 15 * 60000;
+      })
+      .map(function (b) { return { t: b.t, o: b.o, h: b.h, l: b.l, c: b.c }; })
+      .sort(function (a, b) { return a.t - b.t; });
+  }
+
+  O.fetchTwelveDataSymbol = function (symCfg, tdCfg, hcfg) {
+    tdCfg = tdCfg || {};
+    hcfg = hcfg || {};
+    var key = String(tdCfg.api_key || '').trim();
+    var symbol = String(symCfg.td || '').trim();
+    var outputsize = Math.max(4000, Math.min(5000, (tdCfg.outputsize | 0) || 5000));
+    var gapMs = Math.max(15000, (+tdCfg.min_request_gap_sec || 15) * 1000);
+    var dropForming = hcfg.drop_forming_candle !== false;
+    tdErrors[symCfg.name] = '';
+
+    if (!key) {
+      tdErrors[symCfg.name] = 'کلید API رایگان Twelve Data را در تنظیمات وارد کنید';
+      return Promise.resolve(null);
+    }
+    if (!symbol) {
+      tdErrors[symCfg.name] = 'نماد Twelve Data در پیکربندی تعریف نشده است';
+      return Promise.resolve(null);
+    }
+
+    var url = 'https://api.twelvedata.com/time_series?symbol=' + encodeURIComponent(symbol) +
+      '&interval=15min&outputsize=' + outputsize + '&timezone=UTC&apikey=' + encodeURIComponent(key);
+
+    return requestTwelveData(url, gapMs).then(function (r) {
+      var payload;
+      try { payload = JSON.parse((r && r.text) || '{}'); }
+      catch (e) {
+        tdErrors[symCfg.name] = 'پاسخ Twelve Data قابل‌خواندن نیست';
+        return null;
+      }
+      if (!r || r.status !== 200 || !payload || !Array.isArray(payload.values)) {
+        // متن خطا را نمایش می‌دهیم، اما هرگز URL یا کلید API را وارد لاگ نمی‌کنیم.
+        tdErrors[symCfg.name] = String((payload && (payload.message || payload.status)) ||
+          ('HTTP ' + (r ? r.status : 'نامشخص'))).slice(0, 160);
+        return null;
+      }
+
+      var rows = [];
+      payload.values.slice().reverse().forEach(function (v) {
+        var t = parseTwelveDataTime(v && v.datetime);
+        var o = Number(v && v.open), h = Number(v && v.high);
+        var l = Number(v && v.low), close = Number(v && v.close);
+        if (!Number.isFinite(t) || !Number.isFinite(o) || !Number.isFinite(h) ||
+            !Number.isFinite(l) || !Number.isFinite(close)) return;
+        rows.push({ t: t, o: o, h: h, l: l, c: close });
+      });
+      var now = Date.now();
+      if (dropForming) {
+        rows = rows.filter(function (x) { return x.t + 15 * 60000 <= now; });
+      }
+      var m15 = rows;
+      var h1 = resampleM15(m15, 60);
+      var h4 = resampleM15(m15, 240);
+      if (m15.length < 50 || h1.length < 250 || h4.length < 210) {
+        tdErrors[symCfg.name] = 'تاریخچهٔ کافی نیست (M15=' + m15.length +
+          '، H1=' + h1.length + '، H4=' + h4.length + ')؛ نماد/دسترسی پلن را بررسی کنید';
+        return null;
+      }
+      var md = { symbol: symCfg.name, m15: m15, h1: h1, h4: h4 };
+      var problems = O.validateMarketData(md, now);
+      if (problems.length) {
+        tdErrors[symCfg.name] = problems.slice(0, 3).join('؛ ');
+        return null;
+      }
+      return md;
+    }).catch(function (e) {
+      tdErrors[symCfg.name] = String(e && e.message || 'خطای شبکه').slice(0, 160);
+      return null;
+    });
+  };
+
+  O.twelveDataErrorFor = function (symbol) {
+    return tdErrors[symbol] || '';
+  };
+
   // اعتبارسنجی کندل‌ها پیش از ورود به تحلیل؛ مستقل از ظاهر شدن خطا در UI.
   O.validateMarketData = function (md, nowMs) {
     var errors = [];
@@ -431,7 +565,7 @@
     caps = caps || O.makeCaps(cfg);
     var mkt = {
       analyses: [], datasets: {}, ranking: [], tvMap: {}, tvTf: '4h',
-      sourceName: 'yahoo', errors: 0
+      sourceName: 'twelvedata', errors: 0
     };
     var syms = cfg.symbols;
     var total = syms.length;
@@ -440,6 +574,7 @@
     // منبع داده — connect/disconnect در adapter جاوااسکریپت no-op صادقانه‌اند
     // (fetch بی‌حالت است) ولی shape قراردادِ مشترک با دسکتاپ حفظ می‌شود.
     var source = caps.market;
+    if (source && source.name) mkt.sourceName = source.name;
     if (!source) {
       log('❌ منبع داده در دسترس نیست — اینترنت/تنظیمات را بررسی کنید');
       mkt.errors = 1;
@@ -460,7 +595,8 @@
         done++;
         if (!md) {
           mkt.errors++;
-          log('[!] دادهٔ ' + s.name + ' ناقص است — رد شد');
+          var sourceError = source.getError ? source.getError(s.name) : '';
+          log('[!] دادهٔ ' + s.name + ' ناقص است — رد شد' + (sourceError ? ' (' + sourceError + ')' : ''));
         } else {
           mkt.datasets[s.name] = md;
           try { mkt.analyses.push(caps.technical.analyzeSymbol(s, md, cfg.analysis)); }
