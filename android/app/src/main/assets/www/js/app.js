@@ -61,7 +61,8 @@
       range_market: true, volatility_spike: true, breaking_news: true
     },
     fund_enabled: true, news_enabled: true, tv_enabled: true,
-    auto_refresh_enabled: true, auto_refresh_min: 15, notify_enabled: true,
+    auto_refresh_enabled: true, auto_refresh_min: 30, notify_enabled: true,
+    twelvedata_api_key: '',
     background_enabled: true,     // v0.13: رصد پس‌زمینه (در خوش‌آمدگویی پرسیده می‌شود)
     animations_enabled: true,     // v0.21: همتای ui.animations در config.yaml دسکتاپ
     // S4 (v0.27): استراتژی‌های ورود — کلیدهای فیچریِ strategies.<key>.enabled
@@ -83,6 +84,7 @@
       fundamental: { enabled: st.fund_enabled },
       news: { enabled: st.news_enabled },
       tradingview: { enabled: st.tv_enabled },
+      twelvedata: { api_key: String(st.twelvedata_api_key || '').trim() },
       // S4: deepFill بقیهٔ بخش (نرخ‌ها/پارامترها) را از O.CONFIG حفظ
       // می‌کند — تنظیمات گوشی فقط enable/disable و min_agree را می‌سازد
       strategies: {
@@ -100,6 +102,8 @@
       var raw = S.storage.get('settings');
       var saved = raw ? JSON.parse(raw) : {};
       S.settings = O.deepFill(DEFAULT_SETTINGS, saved);
+      // پلن رایگان Twelve Data برای ۸ نماد به چرخهٔ حداقل ۳۰ دقیقه‌ای نیاز دارد.
+      S.settings.auto_refresh_min = Math.max(30, Math.min(120, +S.settings.auto_refresh_min || 30));
     } catch (e) {
       S.settings = JSON.parse(JSON.stringify(DEFAULT_SETTINGS));
     }
@@ -319,7 +323,7 @@
     // صادقانه stop می‌کنند (نه آبشارِ TypeError)
     var mkt = {
       analyses: [], datasets: {}, ranking: [], tvMap: {}, tvTf: '4h',
-      sourceName: 'yahoo', errors: 0
+      sourceName: 'twelvedata', errors: 0
     };
     var status = null;
     var resolved = [];
@@ -664,7 +668,7 @@
         O.native.stopBackground();
         return;
       }
-      var nextMin = Math.max(5, Math.min(240, S.settings.auto_refresh_min || 15));
+      var nextMin = Math.max(30, Math.min(240, S.settings.auto_refresh_min || 30));
 
       if (S.settings.background_enabled === false) {   // از UI خاموش شده
         O.native.notifyOngoing('رصد بازار — متوقف', 'رصد پس‌زمینه در تنظیمات خاموش است');
@@ -792,7 +796,7 @@
           O.navigate('settings');
         } else if (key === 'auto_refresh_min') {
           var cur = S.settings.auto_refresh_min || 15;
-          S.settings.auto_refresh_min = Math.max(5, Math.min(120, cur + delta * 5));
+          S.settings.auto_refresh_min = Math.max(30, Math.min(120, cur + delta * 5));
           saveSettings();
           O.navigate('settings');
         } else if (key === 'strategy_min_agree') {
@@ -893,6 +897,9 @@
       } else if (key === 'user_name') {
         S.settings.user_name = String(t.value || '').trim() || 'تریدر';
         applyUserName();
+      } else if (key === 'twelvedata_api_key') {
+        S.settings.twelvedata_api_key = String(t.value || '').trim();
+        // کلید در تنظیمات خصوصی همین نصب ذخیره می‌شود؛ هرگز در مخزن/لاگ نوشته نمی‌شود.
       } else if (key === 'background_enabled') {
         // رصد پس‌زمینه: سرویس نیتیو روشن/خاموش شود (v0.13.0)
         S.settings.background_enabled = t.checked;
@@ -1138,7 +1145,7 @@
         if (O.native.bgRunning()) { syncFromStorage(); return; }
         if (S.settings.auto_refresh_enabled === false) return;
         if (!S.state || !S.state.ranAt) return;
-        var iv = Math.max(5, S.settings.auto_refresh_min || 15) * 60000;
+        var iv = Math.max(30, S.settings.auto_refresh_min || 30) * 60000;
         if (Date.now() - S.state.ranAt < iv) return;
         if (!O.marketStatus(new Date()).open) return;      // آخر هفته‌ها اینترنت مصرف نکن
         O.runAnalysis({ silent: true });
