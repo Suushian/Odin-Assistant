@@ -771,9 +771,12 @@
       '<input id="twelvedata-api-key" class="text-input" type="password" data-set="twelvedata_api_key" ' +
       'value="' + esc(set.twelvedata_api_key || '') + '" maxlength="128" autocomplete="off" spellcheck="false" ' +
       'placeholder="کلید Twelve Data را وارد کنید" dir="ltr">' +
-      '<div class="set-sub" style="margin-top:8px">کلید فقط در تنظیمات همین گوشی ذخیره می‌شود؛ در مخزن کد قرار نمی‌گیرد. ' +
-      '<a href="https://twelvedata.com/pricing" data-ext="https://twelvedata.com/pricing" style="color:var(--accent)">Twelve Data</a></div>' +
-      '<div class="set-sub" style="margin-top:6px">برای سهمیهٔ رایگان، تازه‌سازی حداقل هر ۳۰ دقیقه؛ H1/H4 از M15 ساخته می‌شوند.</div>' +
+      '<div class="set-sub" style="margin-top:8px">هر کاربر به حساب و کلید API شخصی Twelve Data نیاز دارد.</div>' +
+      '<div class="set-sub"><a href="https://twelvedata.com/register" data-ext="https://twelvedata.com/register" style="color:var(--accent)">ثبت‌نام / دریافت کلید</a> · ' +
+      '<a href="https://twelvedata.com/pricing" data-ext="https://twelvedata.com/pricing" style="color:var(--accent)">پلن‌ها و سهمیه</a></div>' +
+      '<div class="set-sub" style="margin-top:6px">کلید فقط روی همین گوشی نگهداری می‌شود؛ آن را به اشتراک نگذارید.</div>' +
+      '<div class="set-sub">هر نماد یک درخواست M15 دارد؛ H1/H4 از M15 ساخته می‌شوند.</div>' +
+      '<div class="set-sub">برای کاهش مصرف، تازه‌سازی را حداقل هر ۳۰ دقیقه بگذارید.</div>' +
       '</div>';
 
     // لایسنس و قفل دستگاه (v0.14.0) + دورهٔ آزمایشی (v0.15.0)

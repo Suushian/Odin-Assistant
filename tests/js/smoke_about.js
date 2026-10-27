@@ -58,5 +58,9 @@ assert(!settings.includes('مسئولیت هر معامله'), 'long disclaimer 
 assert(!O.EMOJI_RE.test(settings), 'emoji left in settings page');
 assert(settings.includes('background_enabled'), 'background-monitor switch missing in settings');
 assert(settings.includes('کد دستگاه'), 'license/device-code card missing in settings (v0.14.0)');
+assert(settings.includes('هر کاربر به حساب و کلید API شخصی Twelve Data نیاز دارد.'), 'Twelve Data personal-key requirement missing');
+assert(settings.includes('https://twelvedata.com/register'), 'Twelve Data signup link missing');
+assert(settings.includes('https://twelvedata.com/pricing'), 'Twelve Data pricing/quota link missing');
+assert(settings.includes('حداقل هر ۳۰ دقیقه'), 'Twelve Data quota guidance missing');
 
 console.log('SMOKE ABOUT OK — ' + about.length + ' chars rendered');
