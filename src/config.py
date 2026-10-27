@@ -18,9 +18,9 @@ import yaml
 from . import app_paths
 
 # حداقل پیکربندی اضطراری (اگر فایل بسته‌بندی‌شده هم پیدا نشد)
-_MINIMAL_DEFAULT = """data_source: auto
+_MINIMAL_DEFAULT = """data_source: twelvedata
 symbols:
-  - {name: EURUSD, fa: "یورو به دلار آمریکا", yahoo: "EURUSD=X", td: "EUR/USD",
+  - {name: EURUSD, fa: "یورو به دلار آمریکا", td: "EUR/USD",
      tv: {screener: forex, exchange: FX, symbol: EURUSD}, base: EUR, quote: USD, pip: 0.0001}
 analysis: {ema_fast: 50, ema_slow: 200, adx_period: 14, adx_min_trend: 20,
            rsi_period: 14, atr_period: 14, swing_window: 5, strength_lookback_h1: 24}
@@ -80,6 +80,17 @@ def load_config(path: str | None = None) -> dict:
     for key in ("data_source", "symbols", "analysis"):
         if key not in cfg:
             raise ValueError(f"کلید الزامی «{key}» در config.yaml وجود ندارد")
+
+    # مهاجرت تنظیمات نصب‌شدهٔ قدیمی؛ Yahoo و auto دیگر منبع قیمت نیستند.
+    source_kind = str(cfg.get("data_source", "twelvedata")).strip().lower()
+    if source_kind in ("auto", "yahoo", "twelvedata"):
+        if source_kind != "twelvedata":
+            print("[config] منبع بازار قدیمی به Twelve Data منتقل شد")
+        cfg["data_source"] = "twelvedata"
+    else:
+        raise ValueError(
+            f"منبع دادهٔ بازار «{source_kind}» پشتیبانی نمی‌شود؛ فقط twelvedata مجاز است"
+        )
     if not isinstance(cfg["symbols"], list) or not cfg["symbols"]:
         raise ValueError("«symbols» باید فهرستی غیرخالی از نمادها باشد")
     for sym in cfg["symbols"]:
