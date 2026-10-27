@@ -77,7 +77,7 @@ def load_config(path: str | None = None) -> dict:
         except Exception:
             pass  # فایل محلی خراب بود — با تنظیمات اصلی ادامه بده
 
-    # پیکربندی‌های قدیمی auto/yahoo به‌صورت خودکار به منبع واحد مهاجرت می‌کنند.
+    # هر پیکربندی قدیمی، مستقل از مقدار منبع قبلی، به سیاست منبع واحد مهاجرت می‌کند.
     cfg["data_source"] = "twelvedata"
 
     for key in ("data_source", "symbols", "analysis"):
