@@ -55,13 +55,10 @@ jobs:
       - name: Install minimal test dependencies
         # عمداً سبک: tradingview-ta و PySide6 برای خودآزمون‌ها لازم نیستند
         # (هر دو به‌صورت lazy داخل تابع ایمپورت می‌شوند).
-        # yfinance از فاز ۳ اضافه شد: میخ‌های طلاییِ سوییچ engine
-        # (tests/test_engine_switch.py) کلاس YahooSource را پچ می‌کنند — seam
-        # مشترکِ قبل/بعد از سوییچ. yfinance وابستگی واقعیِ requirements.txt
-        # است، پس CI حالا به تولید نزدیک‌تر است نه دورتر.
+        # دریافت داده در تست‌ها mock می‌شود؛ Yahoo/yfinance دیگر وابستگی اجرایی نیست.
         run: |
           python -m pip install --upgrade pip
-          pip install pandas numpy PyYAML requests feedparser yfinance
+          pip install pandas numpy PyYAML requests feedparser
 
       - name: Backend selftest (offline — تقویم، اخبار، وتو، گزارش)
         run: python main.py --selftest
@@ -76,6 +73,7 @@ jobs:
         run: |
           python tests/test_data_quality.py
           python tests/test_data_fallback.py
+          python tests/test_twelvedata_source.py
           python tests/test_calendar_quality.py
 
 
@@ -87,7 +85,7 @@ jobs:
 
       # فاز ۲ معماری پلاگین: تست‌های طلایی src/plugins/ — هر adapter باید
       # خروجی فراخوانی مستقیم را عیناً بازتولید کند. آفلاین (تست «نوع منبع
-      # داده» با yfinance کامل می‌شود و بدون آن به‌طور طراحی‌شده skip است).
+      # انتخاب منبع فقط Twelve Data است و بدون شبکه آزموده می‌شود.
       - name: Plugin golden tests (adapter == direct call — آفلاین)
         run: python tests/test_plugins.py
 

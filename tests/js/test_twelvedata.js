@@ -16,6 +16,9 @@ async function main() {
   // exercises the real parser/resampler with only the HTTP boundary mocked.
   vm.runInContext(fs.readFileSync(path.join(gen.WWW, 'data.js'), 'utf8'), app.ctx, { filename: 'data.js' });
   const O = app.O;
+  const productionData = fs.readFileSync(path.join(gen.WWW, 'data.js'), 'utf8');
+  A(!/query1\.finance\.yahoo\.com|fetchYahooSymbol/.test(productionData),
+    'کد تولیدی نباید endpoint یا adapter یاهو داشته باشد');
   const fixedNow = gen.FIXED_WED;
   const interval = 15 * 60000;
   const rows = [];
@@ -97,7 +100,7 @@ async function main() {
   A(attempts === 2 && fakeNow - afterFailure >= 15000,
     'درخواست ناموفق نیز باید فاصلهٔ ۱۵ ثانیه‌ای درخواست بعدی را اعمال کند');
 
-  console.log('TWELVE DATA TESTS OK — ۱۳ بررسی');
+  console.log('TWELVE DATA TESTS OK — ۱۴ بررسی');
 }
 
 main().catch((error) => {

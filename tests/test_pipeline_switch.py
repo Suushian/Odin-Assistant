@@ -154,7 +154,7 @@ def test_full_cycle_stage_events() -> None:
 def test_early_exit_stops_pipeline() -> None:
     """early-exit امروز = stop در journal_pre: مراحل بعد هرگز اجرا نمی‌شوند."""
     from src import engine
-    from src.data import yahoo_source
+    from src.data import twelvedata_source
     import src.app_paths as app_paths
 
     seen: list = []
@@ -170,7 +170,7 @@ def test_early_exit_stops_pipeline() -> None:
                  mock.patch.object(app_paths, "cache_dir", return_value=c), \
                  mock.patch.object(app_paths, "sent_alerts_path",
                                    return_value=c / "sent_alerts.json"), \
-                 mock.patch.object(yahoo_source.YahooSource, "connect",
+                 mock.patch.object(twelvedata_source.TwelveDataSource, "connect",
                                    lambda self: (_ for _ in ()).throw(RuntimeError("boom"))):
                 result = engine.run_cycle(gen.make_cfg(), on_log=lambda m: None,
                                           now_override=NOW)

@@ -81,16 +81,6 @@ def main() -> None:
     errors = validate_market_data(future_h4, now)
     assert any("H4" in e and "آینده" in e for e in errors), errors
 
-    # H1 candles can be complete while the containing H4 bucket is not.
-    from src.data.yahoo_source import YahooSource
-    h1_idx = pd.date_range("2026-10-14 08:00:00", periods=6, freq="1h")
-    h1 = pd.DataFrame({
-        "Open": [1.1] * 6, "High": [1.2] * 6,
-        "Low": [1.0] * 6, "Close": [1.15] * 6,
-    }, index=h1_idx)
-    h4 = YahooSource._to_h4(h1, now=pd.Timestamp("2026-10-14 14:30:00"))
-    assert list(h4.index) == [pd.Timestamp("2026-10-14 08:00:00")], h4.index
-
     print("data quality tests passed (8 scenarios).")
 
 

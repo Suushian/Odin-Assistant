@@ -1,13 +1,5 @@
 # -*- coding: utf-8 -*-
-"""منبع داده Twelve Data — زاپاس اختیاری (نیاز به کلید API رایگان).
-
-ثبت‌نام: https://twelvedata.com  (فقط ایمیل لازم است)
-tier رایگان: ۸۰۰ درخواست در روز، ۸ درخواست در دقیقه.
-مزیت‌ها: طلای اسپات واقعی (XAU/USD) + جایگزین Yahoo وقتی در دسترس نیست.
-
-اگر کلید در config.yaml خالی باشد، این منبع به‌صورت خودکار غیرفعال می‌شود
-(در حالت auto فقط Yahoo استفاده می‌شود).
-"""
+"""منبع واحد دادهٔ بازار: Twelve Data؛ هر نماد فقط یک درخواست M15 دارد."""
 from __future__ import annotations
 
 import time
@@ -26,42 +18,37 @@ class TwelveDataSource(DataSource):
         td = cfg.get("twelvedata") or {}
         h = cfg.get("history") or {}
         self.key = str(td.get("api_key") or "").strip()
-        self.min_gap = float(td.get("min_request_gap_sec", 8))
+        self.min_gap = max(0.0, float(td.get("min_request_gap_sec", 8)))
         self.drop_forming = bool(h.get("drop_forming_candle", True))
-        self.sizes = {
-            "15min": int(h.get("td_m15_bars", 200)),
-            "1h": int(h.get("td_h1_bars", 300)),
-            "4h": int(h.get("td_h4_bars", 400)),
-        }
+        self.outputsize = max(4000, min(5000, int(h.get("td_m15_bars", 5000))))
         self._last_call = 0.0
 
     def connect(self) -> None:
         if not self.key:
             raise RuntimeError(
-                "کلید Twelve Data خالی است — کلید رایگان را از twelvedata.com بگیرید و در "
-                "config.yaml (بخش twelvedata.api_key) بگذارید، یا data_source را yahoo بگذارید"
+                "کلید Twelve Data خالی است — کلید API اختصاصی خود را در تنظیمات محلی وارد کنید"
             )
 
     def disconnect(self) -> None:
         pass
 
-    # ── دریافت داده ───────────────────────────────────────────
     def fetch(self, sym_cfg: dict) -> MarketData | None:
-        td_sym = sym_cfg.get("td")
+        td_sym = str(sym_cfg.get("td") or "").strip()
         if not td_sym:
+            print(f"[!] نماد Twelve Data برای {sym_cfg.get('name', '?')} تعریف نشده است")
             return None
         try:
-            m15 = self._series(td_sym, "15min")
-            h1 = self._series(td_sym, "1h")
-            h4 = self._series(td_sym, "4h")
+            m15 = self._series(td_sym)
+            if m15 is None or m15.empty:
+                return None
+            h1 = self._resample_m15(m15, 1)
+            h4 = self._resample_m15(m15, 4)
         except Exception as e:
             print(f"[!] خطای Twelve Data برای {sym_cfg['name']}: {str(e)[:140]}")
             return None
-        if m15 is None or h1 is None or h4 is None:
-            return None
-        if len(h1) < 250 or len(h4) < 210:
+        if len(m15) < 50 or len(h1) < 250 or len(h4) < 210:
             print(f"[!] تاریخچه Twelve Data برای {sym_cfg['name']} کافی نیست "
-                  f"(h1={len(h1)}, h4={len(h4)})")
+                  f"(m15={len(m15)}, h1={len(h1)}, h4={len(h4)})")
             return None
         md = MarketData(symbol=sym_cfg["name"], m15=m15, h1=h1, h4=h4)
         from .quality import validate_market_data
@@ -71,31 +58,57 @@ class TwelveDataSource(DataSource):
             return None
         return md
 
-    # ── داخلی ─────────────────────────────────────────────────
-    def _series(self, td_sym: str, interval: str) -> pd.DataFrame | None:
-        # رعایت محدودیت نرخ (۸ درخواست در دقیقه در tier رایگان)
+    def _series(self, td_sym: str) -> pd.DataFrame | None:
         wait = self.min_gap - (time.time() - self._last_call)
         if wait > 0:
             time.sleep(wait)
         self._last_call = time.time()
 
-        r = requests.get(self.BASE_URL, params={
-            "symbol": td_sym, "interval": interval,
-            "outputsize": self.sizes[interval], "apikey": self.key,
+        response = requests.get(self.BASE_URL, params={
+            "symbol": td_sym,
+            "interval": "15min",
+            "outputsize": self.outputsize,
+            "timezone": "UTC",
+            "apikey": self.key,
         }, timeout=20)
-        d = r.json()
-        if "values" not in d:
-            raise RuntimeError(d.get("message") or d.get("status") or f"پاسخ نامعتبر (HTTP {r.status_code})")
+        payload = response.json()
+        if response.status_code != 200 or "values" not in payload:
+            raise RuntimeError(payload.get("message") or payload.get("status") or
+                               f"پاسخ نامعتبر (HTTP {response.status_code})")
 
-        df = pd.DataFrame(list(reversed(d["values"])))  # API جدیدترین را اول می‌دهد
-        df["datetime"] = pd.to_datetime(df["datetime"])
+        df = pd.DataFrame(list(reversed(payload["values"])))
+        if df.empty or not {"datetime", "open", "high", "low", "close"} <= set(df.columns):
+            return None
+        df["datetime"] = pd.to_datetime(df["datetime"], utc=True).dt.tz_localize(None)
         df = df.set_index("datetime")[["open", "high", "low", "close"]].astype(float)
         df.columns = ["Open", "High", "Low", "Close"]
-        df = df.dropna()
-        # قرارداد پایه: ایندکس UTC و naive (مثل Yahoo). اگر TD منطقهٔ زمانی
-        # برگرداند، تبدیل می‌کنیم؛ اگر naive بود همان UTC فرض می‌شود.
-        if getattr(df.index, "tz", None) is not None:
-            df.index = df.index.tz_convert("UTC").tz_localize(None)
+        df = df.sort_index().loc[~df.index.duplicated(keep="last")].dropna()
         if self.drop_forming and len(df) > 1:
             df = df.iloc[:-1]
         return df
+
+    @staticmethod
+    def _resample_m15(m15: pd.DataFrame, hours: int) -> pd.DataFrame:
+        """ساخت فقط کندل‌های H1/H4 کامل و هم‌تراز با مرزهای UTC."""
+        if m15 is None or m15.empty or hours not in (1, 4):
+            return pd.DataFrame(columns=["Open", "High", "Low", "Close"])
+        width = pd.Timedelta(hours=hours)
+        step = pd.Timedelta(minutes=15)
+        expected = hours * 4
+        out = []
+        for start, group in m15.groupby(pd.Grouper(freq=f"{hours}h", origin="epoch")):
+            if group.empty or len(group) != expected:
+                continue
+            if group.index[0] != start or group.index[-1] != start + width - step:
+                continue
+            out.append((start, {
+                "Open": float(group["Open"].iloc[0]),
+                "High": float(group["High"].max()),
+                "Low": float(group["Low"].min()),
+                "Close": float(group["Close"].iloc[-1]),
+            }))
+        if not out:
+            return pd.DataFrame(columns=["Open", "High", "Low", "Close"])
+        return pd.DataFrame([row for _, row in out],
+                            index=pd.DatetimeIndex([start for start, _ in out], name=m15.index.name),
+                            columns=["Open", "High", "Low", "Close"])

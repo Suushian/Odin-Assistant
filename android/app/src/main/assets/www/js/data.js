@@ -1,4 +1,4 @@
-/* لایهٔ داده — HTTP (پل نیتیو یا fetch)، Yahoo Finance، تریدینگ‌ویو،
+/* لایهٔ داده — HTTP (پل نیتیو یا fetch)، Twelve Data، تریدینگ‌ویو،
  * تقویم اقتصادی و اخبار + ارکستراسیون کل چرخهٔ تحلیل.
  *
  * ⚠️ همهٔ توابع «هرگز استثنا پرتاب نمی‌کنند» — در بدترین حالت دادهٔ
@@ -6,8 +6,6 @@
  */
 (function (O) {
   'use strict';
-
-  var YAHOO_CHART = 'https://query1.finance.yahoo.com/v8/finance/chart/';
 
   // ── HTTP ────────────────────────────────────────────────────
   var cbSeq = 1;
@@ -72,27 +70,6 @@
       del: function (k) { delete mem[k]; }
     };
   };
-
-  // ── Yahoo Finance (معادل yfinance.download) ─────────────────
-  function getChart(ticker, range, interval) {
-    var url = YAHOO_CHART + encodeURIComponent(ticker) + '?range=' + range + '&interval=' + interval;
-    return O.http(url).then(function (r) {
-      if (r.status !== 200) return null;
-      try {
-        var j = JSON.parse(r.text);
-        var res = j.chart && j.chart.result && j.chart.result[0];
-        if (!res || !res.timestamp) return null;
-        var q = res.indicators.quote[0];
-        var out = [];
-        for (var i = 0; i < res.timestamp.length; i++) {
-          var o = q.open[i], h = q.high[i], l = q.low[i], c = q.close[i];
-          if (o == null || h == null || l == null || c == null) continue;  // dropna
-          out.push({ t: res.timestamp[i] * 1000, o: o, h: h, l: l, c: c });
-        }
-        return out.length ? out : null;
-      } catch (e) { return null; }
-    }).catch(function () { return null; });
-  }
 
   // ── Twelve Data: یک درخواست M15 برای هر نماد، سپس resample به H1/H4 ──
   // سهمیهٔ Basic رایگان: حداکثر ۸ اعتبار/دقیقه؛ درخواست‌ها را صف می‌کنیم تا
@@ -307,54 +284,6 @@
     var now = (typeof nowMs === 'number') ? nowMs : Date.now();
     var last = h4[h4.length - 1];
     return Number(last.t) + 4 * 60 * 60000 > now ? h4.slice(0, -1) : h4.slice();
-  };
-
-  O.fetchYahooSymbol = function (symCfg, hcfg) {
-    var y = symCfg.yahoo || (symCfg.name + '=X');
-    var h1Days = (hcfg && hcfg.yahoo_h1_days) || 60;
-    var m15Days = (hcfg && hcfg.yahoo_m15_days) || 5;
-    var dropForming = !(hcfg && hcfg.drop_forming_candle === false);
-
-    function dl(ticker, interval, range) {
-      return getChart(ticker, range, interval).then(function (df) {
-        if (df && dropForming && df.length > 1) df = df.slice(0, -1);  // کندل در حال تشکیل
-        return df;
-      });
-    }
-
-    return dl(y, '1h', h1Days + 'd').then(function (h1) {
-      return dl(y, '15m', m15Days + 'd').then(function (m15) {
-        function alt(cb) {
-          if (symCfg.yahoo_alt) {
-            return dl(symCfg.yahoo_alt, '1h', h1Days + 'd').then(function (h1b) {
-              return dl(symCfg.yahoo_alt, '15m', m15Days + 'd').then(function (m15b) { cb(h1b, m15b); });
-            });
-          }
-          cb(null, null);
-        }
-        function finish(a, b) {
-          if (!a || !b || a.length < 250) return null;
-          var h4 = dropForming ? O.keepCompleted4h(O.resample4h(a)) : O.resample4h(a);
-          if (h4.length < 210) return null;
-          var md = { symbol: symCfg.name, m15: b, h1: a, h4: h4 };
-          var problems = O.validateMarketData(md);
-          if (problems.length) {
-            if (typeof console !== 'undefined' && console.warn)
-              console.warn('[ODIN] دادهٔ ' + symCfg.name + ' رد شد: ' + problems.slice(0, 3).join('؛ '));
-            return null;
-          }
-          return md;
-        }
-        var primary = finish(h1, m15);
-        if (primary) return primary;
-        // Retry the alternate ticker when primary data is present but fails
-        // quality checks too; null-only fallback misses stale/malformed data.
-        if (!symCfg.yahoo_alt) return null;
-        return new Promise(function (res) {
-          alt(function (a2, b2) { res(finish(a2, b2)); });
-        });
-      });
-    }).catch(function () { return null; });
   };
 
   // ── تاییدیه تریدینگ‌ویو (اسکنر غیررسمی، بدون لاگین) ─────────
