@@ -22,7 +22,6 @@ def main() -> None:
     assert set(names) == expected, f"symbol universe mismatch: {names}"
 
     nzd = next(s for s in symbols if s["name"] == "NZDUSD")
-    assert nzd["yahoo"] == "NZDUSD=X"
     assert nzd["td"] == "NZD/USD"
     assert nzd["tv"]["symbol"] == "NZDUSD"
     assert nzd["base"] == "NZD" and nzd["quote"] == "USD"
@@ -33,7 +32,6 @@ def main() -> None:
     assert match, "NZDUSD missing from Android config"
     row = match.group(0)
     for field in (
-        "yahoo: 'NZDUSD=X'",
         "symbol: 'NZDUSD'",
         "base: 'NZD'",
         "quote: 'USD'",
@@ -41,7 +39,8 @@ def main() -> None:
     ):
         assert field in row, f"Android NZDUSD metadata mismatch: missing {field}"
 
-    print("symbol coverage passed: 7 major FX pairs + gold; NZDUSD config parity OK")
+    assert "yahoo:" not in row and "fetchYahooSymbol" not in js
+    print("symbol coverage passed: 7 major FX pairs + gold; Twelve Data-only config parity OK")
 
 
 if __name__ == "__main__":
