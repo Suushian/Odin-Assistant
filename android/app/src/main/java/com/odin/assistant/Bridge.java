@@ -61,6 +61,23 @@ public class Bridge {
     private final ExecutorService pool = Executors.newFixedThreadPool(4);
     private final SharedPreferences prefs;
 
+    // A process-wide gate is required because the foreground Activity and the
+    // background OdinService run separate WebViews with independent JS queues.
+    private static final Object TWELVE_DATA_PACING_LOCK = new Object();
+    private static long twelveDataLastRequestAtMs = 0L;
+    private static final long TWELVE_DATA_MIN_GAP_MS = 15_000L;
+
+    private static void paceTwelveData(URL url) throws InterruptedException {
+        if (url == null || !"api.twelvedata.com".equalsIgnoreCase(url.getHost())) return;
+        synchronized (TWELVE_DATA_PACING_LOCK) {
+            long waitMs = TWELVE_DATA_MIN_GAP_MS
+                    - (System.currentTimeMillis() - twelveDataLastRequestAtMs);
+            if (waitMs > 0L) Thread.sleep(waitMs);
+            // Count attempts before network I/O, including requests that fail.
+            twelveDataLastRequestAtMs = System.currentTimeMillis();
+        }
+    }
+
     public Bridge(Context context, Activity activity, WebView webView) {
         Context app = context.getApplicationContext();
         this.ctx = app != null ? app : context;
@@ -94,6 +111,10 @@ public class Bridge {
                     if (requestBody != null && requestBody.getBytes("UTF-8").length > 1024 * 1024) {
                         throw new IllegalArgumentException("Request body too large");
                     }
+
+                    // Enforce pacing across both foreground/background WebViews, not just
+                    // within each JavaScript runtime. Failed network attempts count too.
+                    paceTwelveData(current);
 
                     final String originalHost = current.getHost().toLowerCase(java.util.Locale.ROOT);
                     final String originalProtocol = current.getProtocol().toLowerCase(java.util.Locale.ROOT);
