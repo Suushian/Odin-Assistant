@@ -15,9 +15,7 @@ delegation‌اند؛ هر اختلاف = تغییر رفتار = شکست.
 
 توابع شبکه‌ای (fetch_calendar/fetch_tv_snapshot/telegram.send_message) با
 mock sentinel تست می‌شوند: هم «چه تابعی» و هم «با چه آرگومان‌هایی» صدا زده شد.
-منابع داده (Yahoo/TD/Auto) فقط اگر yfinance نصب باشد تا سطح «نوع کلاس»
-تست می‌شوند؛ در CI (بدون yfinance) فقط نگاشت انتخاب و پیام‌های خطا سنجیده
-می‌شوند — که همان‌ها فاز ۳ مصرف می‌کند.
+منبع بازار فقط Twelve Data است؛ انتخاب منبع و نوع factory بدون شبکه آزموده می‌شود.
 """
 from __future__ import annotations
 
@@ -117,7 +115,7 @@ def _mk_snapshot():
 
 
 EXPECTED_IDS = {
-    "data-auto", "data-yahoo", "data-twelvedata", "data-tradingview",
+    "data-twelvedata", "data-tradingview",
     "analysis-technical", "analysis-strength", "session",
     "fundamental-calendar", "fundamental-news", "judge-core", "judge-risk",
     "journal", "notify-telegram", "alerts-price", "report-renderer",
@@ -168,7 +166,7 @@ def test_registration() -> None:
     A(reg.by_id("fundamental-calendar").manifest.config["section"] == "fundamental",
       "تقویم باید به کلید fundamental.enabled متصل باشد")
 
-    # lifecycle روی یک پلاگین سبک (session) — بدون yfinance/نت
+    # lifecycle روی یک پلاگین سبک (session) — بدون شبکه
     rec = reg.by_id("session")
     lm = LifecycleManager(context=info["context"])
     A(lm.initialize(rec) is None and rec.state is PluginState.INITIALIZED,
@@ -180,8 +178,8 @@ def test_registration() -> None:
     reg_a, info_a = build_default_registry(CFG, platform="android")
     ids_a = {r.id for r in reg_a.all()}
     A("notify-telegram" not in ids_a, "تلگرام desktop-only است")
-    A(not (ids_a & {"data-auto", "data-yahoo", "data-twelvedata", "data-tradingview"}),
-      "منابع دادهٔ پایتون desktop-only هستند (JS مالِ فاز ۶)")
+    A(not (ids_a & {"data-twelvedata", "data-tradingview"}),
+      "پلاگین‌های دادهٔ دسکتاپ نباید در رجیستری اندروید ثبت شوند")
     A({"judge-core", "judge-risk", "journal", "alerts-price"} <= ids_a,
       "پلاگین‌های مشترک باید باشند")
     A(set(VETO_ORDER) | set(EVIDENCE_ORDER) <= ids_a,
@@ -201,8 +199,8 @@ def test_enable_disable() -> None:
 
 def test_select_market_provider() -> None:
     reg, _ = build_default_registry(CFG)
-    rec = select_market_provider(reg, CFG)          # data_source: auto
-    A(rec.id == "data-auto", f"auto باید data-auto را انتخاب کند، {rec.id} شد")
+    rec = select_market_provider(reg, CFG)
+    A(rec.id == "data-twelvedata", f"تنها Twelve Data مجاز است، {rec.id} شد")
 
     # پیام‌های خطا باید بایت‌به‌بایت با get_source یکی باشند
     from src.data import get_source
@@ -218,13 +216,9 @@ def test_select_market_provider() -> None:
                 A(str(e_direct) == str(e_plugin),
                   f"پیام خطای منبع «{bad}» باید یکسان باشد")
 
-    # در صورت نصب yfinance: نوع نمونهٔ ساخته‌شده هم باید یکی باشد
-    if importlib.util.find_spec("yfinance") is not None:
-        ctx = {"cfg": CFG}
-        A(type(rec.factory(ctx)) is type(get_source(CFG)),
-          "factory پلاگین باید همان کلاس get_source را بسازد")
-    else:
-        A(True, "yfinance نیست — تست نوع منبع داده skip شد (CI)")
+    ctx = {"cfg": CFG}
+    A(type(rec.factory(ctx)) is type(get_source(CFG)),
+      "factory پلاگین باید همان کلاس Twelve Data را بسازد")
 
 
 def test_golden_pure() -> None:

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""تست‌های آفلاین برای ادامهٔ تلاش AutoSource پس از شکست یک منبع."""
+"""تست‌های آفلاین سیاست تک‌منبعی بازار: فقط Twelve Data مجاز است."""
 from __future__ import annotations
 
 import sys
@@ -8,45 +8,23 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from src.data.auto_source import AutoSource  # noqa: E402
-
-
-class Source:
-    def __init__(self, name, result=None, error=None):
-        self.name = name
-        self.result = result
-        self.error = error
-
-    def fetch(self, _symbol):
-        if self.error:
-            raise self.error
-        return self.result
+from src.data import get_source  # noqa: E402
+from src.data.twelvedata_source import TwelveDataSource  # noqa: E402
 
 
 def main() -> None:
-    expected = object()
-    auto = AutoSource.__new__(AutoSource)
-    auto._connected = [
-        Source("primary", error=RuntimeError("simulated provider outage")),
-        Source("fallback", result=expected),
-    ]
-    assert auto.fetch({"name": "EURUSD"}) is expected
+    cfg = {"data_source": "twelvedata", "twelvedata": {"api_key": "test"}}
+    assert isinstance(get_source(cfg), TwelveDataSource)
 
-    auto._connected = [
-        Source("primary", result=None),
-        Source("fallback", result=expected),
-    ]
-    assert auto.fetch({"name": "XAUUSD"}) is expected
+    for legacy in ("auto", "yahoo", "mt5", "binance"):
+        try:
+            get_source({**cfg, "data_source": legacy})
+        except ValueError:
+            pass
+        else:
+            raise AssertionError(f"منبع حذف‌شدهٔ {legacy!r} نباید انتخاب شود")
 
-    # Gold futures (Yahoo GC=F) must not silently fall back to spot XAU/USD.
-    auto._connected = [
-        Source("yahoo", result=None),
-        Source("twelvedata", result=expected),
-    ]
-    assert auto.fetch({"name": "XAUUSD"}) is None
-    # FX pairs can still use the Twelve Data fallback.
-    assert auto.fetch({"name": "GBPUSD"}) is expected
-    print("auto-source fallback tests passed (4 scenarios).")
+    print("single market source tests passed (5 scenarios).")
 
 
 if __name__ == "__main__":

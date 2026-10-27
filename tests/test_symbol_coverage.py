@@ -12,6 +12,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def main() -> None:
     cfg = yaml.safe_load((ROOT / "config.yaml").read_text(encoding="utf-8"))
+    assert cfg["data_source"] == "twelvedata"
     symbols = cfg["symbols"]
     names = [s["name"] for s in symbols]
     expected = {
@@ -22,7 +23,7 @@ def main() -> None:
     assert set(names) == expected, f"symbol universe mismatch: {names}"
 
     nzd = next(s for s in symbols if s["name"] == "NZDUSD")
-    assert nzd["yahoo"] == "NZDUSD=X"
+    assert "yahoo" not in nzd
     assert nzd["td"] == "NZD/USD"
     assert nzd["tv"]["symbol"] == "NZDUSD"
     assert nzd["base"] == "NZD" and nzd["quote"] == "USD"
@@ -32,8 +33,8 @@ def main() -> None:
     match = re.search(r"\{ name: 'NZDUSD'[^\n]+", js)
     assert match, "NZDUSD missing from Android config"
     row = match.group(0)
+    assert "yahoo:" not in row, "Yahoo must not remain in Android symbol config"
     for field in (
-        "yahoo: 'NZDUSD=X'",
         "symbol: 'NZDUSD'",
         "base: 'NZD'",
         "quote: 'USD'",

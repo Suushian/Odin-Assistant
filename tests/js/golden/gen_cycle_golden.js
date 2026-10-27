@@ -11,7 +11,7 @@
  *
  * seamها عمداً «مستقل از نسخه» انتخاب شده‌اند تا همین هارنس قبل و بعد از
  * سوییچ معتبر باشد:
- *   • O.fetchYahooSymbol / O.fetchTvSnapshot (پچ سطح namespace — هر دو نسخه
+ *   • O.fetchTwelveDataSymbol / O.fetchTvSnapshot (پچ سطح namespace — هر دو نسخه
  *     همان‌ها را صدا می‌زنند؛ بعد از سوییچ از راه adapter پلاگین)
  *   • O.fetchCalendar / O.fetchNews فقط در حالت «فعال» پچ می‌شوند — مسیر
  *     غیرفعال (guard داخلی data.js) عمداً واقعی می‌ماند چون خودِ مسیرِ

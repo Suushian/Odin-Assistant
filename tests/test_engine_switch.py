@@ -73,11 +73,13 @@ def test_golden_cycle() -> None:
     A(golden_path.exists(),
       "فایل طلایی وجود ندارد — اول python tests/golden/gen_engine_golden.py")
     golden = json.loads(golden_path.read_text(encoding="utf-8"))
+    golden["result"] = gen.normalize_result(golden["result"])
+    golden["sent_messages"] = gen.normalize_sent_messages(golden["sent_messages"])
     with tempfile.TemporaryDirectory() as td:
         result, logs, sent = gen.run_mock_cycle(td)
     got = {"result": gen.normalize_result(result),
            "logs": gen.normalize_logs(logs),
-           "sent_messages": sent}
+           "sent_messages": gen.normalize_sent_messages(sent)}
     if got != golden:
         # تفاوت را قابل‌تشخیص کن (کمک به دیباگ)
         diffs = []
@@ -102,13 +104,13 @@ def test_golden_cycle() -> None:
 def test_early_exit() -> None:
     """قطع منبع داده → لاگ‌های فارسیِ دقیق + errors=1 + بازگشت زودهنگام."""
     from src import engine
-    from src.data import yahoo_source
+    from src.data import twelvedata_source
     with tempfile.TemporaryDirectory() as td:
         tmp = Path(td)
         with contextlib.ExitStack() as st:
             _patch_paths(st, tmp)
             st.enter_context(mock.patch.object(
-                yahoo_source.YahooSource, "connect",
+                twelvedata_source.TwelveDataSource, "connect",
                 lambda self: (_ for _ in ()).throw(RuntimeError("boom"))))
             logs: list = []
             res = engine.run_cycle(gen.make_cfg(), on_log=logs.append, now_override=NOW)
@@ -124,11 +126,11 @@ def test_early_exit() -> None:
     with tempfile.TemporaryDirectory() as td:
         with contextlib.ExitStack() as st:
             _patch_paths(st, Path(td))
-            st.enter_context(mock.patch.object(yahoo_source.YahooSource, "connect",
+            st.enter_context(mock.patch.object(twelvedata_source.TwelveDataSource, "connect",
                                                lambda self: None))
-            st.enter_context(mock.patch.object(yahoo_source.YahooSource, "disconnect",
+            st.enter_context(mock.patch.object(twelvedata_source.TwelveDataSource, "disconnect",
                                                lambda self: None))
-            st.enter_context(mock.patch.object(yahoo_source.YahooSource, "fetch",
+            st.enter_context(mock.patch.object(twelvedata_source.TwelveDataSource, "fetch",
                                                lambda self, sym_cfg: None))
             logs2: list = []
             res2 = engine.run_cycle(gen.make_cfg(), on_log=logs2.append, now_override=NOW)
@@ -201,12 +203,12 @@ def test_check_event_alerts_dry() -> None:
 def test_briefing_and_journal_report() -> None:
     """بریفینگ با قطع داده → بازگشت زودهنگام؛ کارنامه با ژورنال خالی."""
     from src import engine
-    from src.data import yahoo_source
+    from src.data import twelvedata_source
     with tempfile.TemporaryDirectory() as td:
         with contextlib.ExitStack() as st:
             _patch_paths(st, Path(td))
             st.enter_context(mock.patch.object(
-                yahoo_source.YahooSource, "connect",
+                twelvedata_source.TwelveDataSource, "connect",
                 lambda self: (_ for _ in ()).throw(RuntimeError("boom"))))
             logs: list = []
             res = engine.run_briefing(gen.make_cfg(), on_log=logs.append)
@@ -270,7 +272,7 @@ def test_bus_events_when_present() -> None:
     if not hasattr(engine, "BUS"):
         A(True, "engine.BUS هنوز نیست (قبل از سوییچ) — skip عمدی")
         return
-    from src.data import yahoo_source
+    from src.data import twelvedata_source
     seen: list = []
     off = engine.BUS.on("cycle.start", lambda p: seen.append("cycle.start"))
     off2 = engine.BUS.on("market.collected", lambda p: seen.append("market.collected"))
@@ -281,7 +283,7 @@ def test_bus_events_when_present() -> None:
             with contextlib.ExitStack() as st:
                 _patch_paths(st, Path(td))
                 st.enter_context(mock.patch.object(
-                    yahoo_source.YahooSource, "connect",
+                    twelvedata_source.TwelveDataSource, "connect",
                     lambda self: (_ for _ in ()).throw(RuntimeError("boom"))))
                 engine.run_cycle(gen.make_cfg(), on_log=lambda m: None, now_override=NOW)
     finally:
