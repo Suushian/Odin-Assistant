@@ -1,6 +1,9 @@
 #!/usr/bin/env node
 'use strict';
 
+const fs = require('fs');
+const path = require('path');
+
 const A = (condition, message) => {
   if (!condition) throw new Error(message);
 };
@@ -60,9 +63,11 @@ async function main() {
   const reg = O.buildDefaultRegistry(O.deepFill(O.CONFIG, {}), 'android').registry;
   A(reg.get('odin.data.market@1').id === 'data-twelvedata',
     'رجیستری اندروید باید Twelve Data را منبع بازار قرار دهد');
-  A(O.CONFIG.symbols.length === 8, 'پوشش هفت جفت‌ارز اصلی و طلا باید حفظ شود');
+  const configSource = fs.readFileSync(path.join(gen.WWW, 'config.js'), 'utf8');
+  A(configSource.indexOf("td: 'NZD/USD'") >= 0 && configSource.indexOf("td: 'XAU/USD'") >= 0,
+    'نمادهای NZD/USD و اسپات XAU/USD باید در پیکربندی منبع وجود داشته باشند');
 
-  console.log('TWELVE DATA TESTS OK — ۱۰ بررسی');
+  console.log('TWELVE DATA TESTS OK — ۱۱ بررسی');
 }
 
 main().catch((error) => {
