@@ -764,6 +764,18 @@
       '<input class="text-input" data-set="user_name" value="' + esc(set.user_name) + '" maxlength="24">' +
       '</div>';
 
+    html += '<div class="card"><div class="section-title" style="margin-top:0">' + ct('activity', 'منبع دادهٔ بازار', 13) + '</div>' +
+      '<div class="set-row"><div><div class="set-label">Twelve Data — منبع اصلی</div>' +
+      '<div class="set-sub">برای دریافت کندل‌های هفت جفت‌ارز اصلی و اسپات XAU/USD</div></div></div>' +
+      '<label class="set-label" for="twelvedata-api-key">کلید API</label>' +
+      '<input id="twelvedata-api-key" class="text-input" type="password" data-set="twelvedata_api_key" ' +
+      'value="' + esc(set.twelvedata_api_key || '') + '" maxlength="128" autocomplete="off" spellcheck="false" ' +
+      'placeholder="کلید Twelve Data را وارد کنید" dir="ltr">' +
+      '<div class="set-sub" style="margin-top:8px">کلید در تنظیمات خصوصی این نصب ذخیره می‌شود و در مخزن کد قرار نمی‌گیرد. برای گرفتن کلید: ' +
+      '<a href="https://twelvedata.com/pricing" data-ext="https://twelvedata.com/pricing" style="color:var(--accent)">Twelve Data</a></div>' +
+      '<div class="set-sub" style="margin-top:6px">برای کنترل سهمیهٔ رایگان، فاصلهٔ تازه‌سازی حداقل ۳۰ دقیقه است. هر نماد با یک درخواست M15 دریافت می‌شود و H1/H4 از همان کندل‌ها ساخته می‌شوند.</div>' +
+      '</div>';
+
     // لایسنس و قفل دستگاه (v0.14.0) + دورهٔ آزمایشی (v0.15.0)
     var tr = S.trial || { exists: false, active: false, daysLeft: 0, tampered: false };
     var linfo = S.licenseInfo || null;
