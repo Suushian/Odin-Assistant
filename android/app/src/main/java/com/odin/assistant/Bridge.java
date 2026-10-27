@@ -60,6 +60,7 @@ public class Bridge {
     private final Handler ui = new Handler(Looper.getMainLooper());
     private final ExecutorService pool = Executors.newFixedThreadPool(4);
     private final SharedPreferences prefs;
+    private final SharedPreferences secretPrefs;
 
     // A process-wide gate is required because the foreground Activity and the
     // background OdinService run separate WebViews with independent JS queues.
@@ -84,6 +85,7 @@ public class Bridge {
         this.act = activity;
         this.web = webView;
         this.prefs = this.ctx.getSharedPreferences("odin", Context.MODE_PRIVATE);
+        this.secretPrefs = this.ctx.getSharedPreferences("odin_secrets", Context.MODE_PRIVATE);
     }
 
     /** درخواست HTTP روی thread پس‌زمینه؛ ریدایرکت‌ها به‌صورت دستی و امن دنبال می‌شوند. */
@@ -245,6 +247,23 @@ public class Bridge {
     @JavascriptInterface
     public void removePref(String key) {
         prefs.edit().remove(key).apply();
+    }
+
+    // API credentials live in a separate preferences file so Android backup
+    // rules can exclude secrets without disabling backup for all app settings.
+    @JavascriptInterface
+    public String getSecretPref(String key) {
+        return secretPrefs.getString(key, "");
+    }
+
+    @JavascriptInterface
+    public void setSecretPref(String key, String val) {
+        secretPrefs.edit().putString(key, val == null ? "" : val).apply();
+    }
+
+    @JavascriptInterface
+    public void removeSecretPref(String key) {
+        secretPrefs.edit().remove(key).apply();
     }
 
     // ── متفرقه ─────────────────────────────────────────────────────
