@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""تست‌های آفلاین برای ادامهٔ تلاش AutoSource پس از شکست یک منبع."""
+"""نگهبان سیاست: منبع بازار جایگزین و fallback نباید فعال باشند."""
 from __future__ import annotations
 
 import sys
@@ -8,46 +8,37 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from src.data.auto_source import AutoSource  # noqa: E402
-
-
-class Source:
-    def __init__(self, name, result=None, error=None):
-        self.name = name
-        self.result = result
-        self.error = error
-
-    def fetch(self, _symbol):
-        if self.error:
-            raise self.error
-        return self.result
-
 
 def main() -> None:
-    expected = object()
-    auto = AutoSource.__new__(AutoSource)
-    auto._connected = [
-        Source("primary", error=RuntimeError("simulated provider outage")),
-        Source("fallback", result=expected),
-    ]
-    assert auto.fetch({"name": "EURUSD"}) is expected
+    from src.config import load_config
+    from src.data import get_source
+    from src.data.twelvedata_source import TwelveDataSource
+    from src.plugins import build_default_registry
+    from src.plugins.data import select_market_provider
 
-    auto._connected = [
-        Source("primary", result=None),
-        Source("fallback", result=expected),
-    ]
-    assert auto.fetch({"name": "XAUUSD"}) is expected
+    cfg = load_config()
+    assert cfg["data_source"] == "twelvedata"
+    source = get_source(cfg)
+    assert isinstance(source, TwelveDataSource)
 
-    # Gold futures (Yahoo GC=F) must not silently fall back to spot XAU/USD.
-    auto._connected = [
-        Source("yahoo", result=None),
-        Source("twelvedata", result=expected),
-    ]
-    assert auto.fetch({"name": "XAUUSD"}) is None
-    # FX pairs can still use the Twelve Data fallback.
-    assert auto.fetch({"name": "GBPUSD"}) is expected
-    print("auto-source fallback tests passed (4 scenarios).")
+    registry, _ = build_default_registry(cfg)
+    selected = select_market_provider(registry, cfg)
+    assert selected.id == "data-twelvedata"
+    market_providers = registry.providers("odin.data.market@1")
+    assert [provider.id for provider in market_providers] == ["data-twelvedata"]
 
+    for legacy in ("auto", "yahoo"):
+        old_cfg = {**cfg, "data_source": legacy}
+        for factory in (get_source, lambda value: select_market_provider(registry, value)):
+            try:
+                factory(old_cfg)
+            except ValueError:
+                pass
+            else:
+                raise AssertionError(f"legacy market source {legacy!r} must be rejected")
+
+    print("market source policy passed: Twelve Data only; no fallback provider.")
+    
 
 if __name__ == "__main__":
     main()
