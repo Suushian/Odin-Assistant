@@ -39,7 +39,7 @@
 
 ```
 run_cycle / cycleCore:
-  collect_market   (yahoo/auto → analyze_symbol → currency_strength → TV → calendar → news)
+  collect_market   (Twelve Data → analyze_symbol → currency_strength → TV → calendar → news)
   journal_pre      resolve_open_signals + compute_stats
                    ⚠️ عمداً *قبل* از بررسی موفقیت داده — اگر منبع قطع باشد هم
                       سیگنال‌های باز باید منقضی/بسته شوند
@@ -103,7 +103,7 @@ cycle / event_alerts / briefing / journal(nightly+weekly).
         │
 ┌───────┴─────────────────────────────────────────────────────┐
 │                    PLUGINS (built-in adapters)               │
-│ data-yahoo · data-twelvedata · data-auto · data-tradingview  │
+│ data-twelvedata · data-tradingview                           │
 │ analysis-technical · analysis-strength · session             │
 │ fundamental-calendar · fundamental-news                      │
 │ judge-core · judge-veto-×۷ · judge-evidence-×۸ · judge-risk  │
@@ -128,7 +128,7 @@ cycle / event_alerts / briefing / journal(nightly+weekly).
 
 | Contract ID | shape (از کد فعلی) | پلاگین‌های فعلی |
 |---|---|---|
-| `odin.data.market@1` | `connect()/disconnect()/fetch(sym_cfg)→MarketData\|None` (= ABC موجود) | data-yahoo, data-twelvedata, data-auto |
+| `odin.data.market@1` | `connect()/disconnect()/fetch(sym_cfg)→MarketData\|None` (= ABC موجود) | data-twelvedata (تنها منبع قیمت) |
 | `odin.data.tv@1` | `fetch_tv_snapshot(symbols, tf, timeout)→{symbol: TVSnapshot}` | data-tradingview |
 | `odin.analysis.technical@1` | `analyze_symbol(sym_cfg, md, acfg)→SymbolAnalysis` | analysis-technical |
 | `odin.analysis.strength@1` | `currency_strength(datasets, lookback_h1)→[(ccy, score)]` | analysis-strength |
@@ -176,8 +176,8 @@ shape یکدست `rule(a, ctx, direction)` را با نادیده‌گرفتن �
 
 - `register(manifest, factory)` — id تکراری → `DuplicatePluginError` (پرسروصدا)
 - `providers(contract)` — **چند فراهم‌کننده برای یک قرارداد مشروع است**
-  (yahoo/twelvedata/auto هر سه `odin.data.market@1`اند)؛ ترتیب قطعی
-  `(priority, order)` و انتخاب نهایی config-driven است (مثل `data_source` امروز)
+  تنها `data-twelvedata` قرارداد `odin.data.market@1` را فراهم می‌کند؛ انتخاب
+  منبع جایگزین یا fallback وجود ندارد و `data_source` فقط `twelvedata` می‌پذیرد
 - `get(contract)` — بالاترین اولویت یا `None` (هرگز استثنا)
 - `enable/disable` + `status()` — پایهٔ کلید فعال/غیرفعال (فاز ۷: یکپارچه زیر
   مانیفست انجام شد؛ «نمایش در UI» به بعد از مهاجرت موکول شد — تصمیم فاز ۷
