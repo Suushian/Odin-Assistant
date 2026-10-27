@@ -98,21 +98,45 @@
   }
 
   function loadSettings() {
+    var migratedSecret = false;
     try {
       var raw = S.storage.get('settings');
       var saved = raw ? JSON.parse(raw) : {};
       S.settings = O.deepFill(DEFAULT_SETTINGS, saved);
+      // API key is kept outside the general settings blob on Android so backup
+      // rules can exclude it. Migrate keys saved by earlier app builds.
+      if (typeof ODINNative !== 'undefined' && ODINNative.getSecretPref && ODINNative.setSecretPref) {
+        var legacyKey = String(S.settings.twelvedata_api_key || '').trim();
+        var nativeKey = String(ODINNative.getSecretPref('twelvedata_api_key') || '').trim();
+        if (!nativeKey && legacyKey) {
+          ODINNative.setSecretPref('twelvedata_api_key', legacyKey);
+          nativeKey = legacyKey;
+        }
+        migratedSecret = Object.prototype.hasOwnProperty.call(saved, 'twelvedata_api_key');
+        S.settings.twelvedata_api_key = nativeKey;
+      }
       // پلن رایگان Twelve Data برای ۸ نماد به چرخهٔ حداقل ۳۰ دقیقه‌ای نیاز دارد.
       S.settings.auto_refresh_min = Math.max(30, Math.min(120, +S.settings.auto_refresh_min || 30));
     } catch (e) {
       S.settings = JSON.parse(JSON.stringify(DEFAULT_SETTINGS));
     }
     S.cfg = buildCfg();
+    if (migratedSecret) saveSettings();
   }
 
   function saveSettings() {
     S.cfg = buildCfg();
-    try { S.storage.set('settings', JSON.stringify(S.settings)); } catch (e) { }
+    try {
+      var settingsToSave = S.settings;
+      if (typeof ODINNative !== 'undefined' && ODINNative.setSecretPref) {
+        ODINNative.setSecretPref('twelvedata_api_key', String(S.settings.twelvedata_api_key || '').trim());
+        settingsToSave = {};
+        Object.keys(S.settings).forEach(function (key) {
+          if (key !== 'twelvedata_api_key') settingsToSave[key] = S.settings[key];
+        });
+      }
+      S.storage.set('settings', JSON.stringify(settingsToSave));
+    } catch (e) { }
   }
 
   // ── پل نیتیو (اعلان، اشتراک، ذخیره فایل، رصد پس‌زمینه) ────────
