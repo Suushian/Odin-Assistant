@@ -31,9 +31,7 @@ RECOMMENDATION_FA = {
 TV_DIR = {"STRONG_BUY": 2, "BUY": 1, "NEUTRAL": 0, "SELL": -1, "STRONG_SELL": -2}
 
 SOURCE_FA = {
-    "yahoo": "Yahoo Finance",
     "twelvedata": "Twelve Data",
-    "auto": "خودکار (Yahoo — زاپاس: Twelve Data)",
 }
 
 
@@ -241,9 +239,6 @@ def render_report(analyses: List[SymbolAnalysis],
         parts.append(SEP)
         parts.append(journal_line)
 
-    if any(a.symbol == "XAUUSD" for a in analyses):
-        parts.append(SEP)
-        parts.append("📎 طلا از Yahoo به‌صورت فیوچرز (GC=F) است — اختلاف چند دلاری با قیمت اسپات طبیعی است")
     parts.append("")
     parts.append("⚠️ این گزارش فقط تحلیل است، نه دستور معامله — تصمیم نهایی با شماست")
     if not fund_on:
