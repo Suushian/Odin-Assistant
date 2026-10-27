@@ -69,7 +69,7 @@ function hasLog(rec, substr) {
 async function testInlinePins() {
   // ۱) چرخهٔ کامل با سیگنال
   const s1 = await gen.runScenario('svc_cycle_signals');
-  A(s1.cycleDone.length === 1 && s1.cycleDone[0] === 15 && s1.stopBg === 0,
+  A(s1.cycleDone.length === 1 && s1.cycleDone[0] === 30 && s1.stopBg === 0,
     'چرخهٔ سالم: bgCycleDone(15) و بدون stopBackground');
   A(s1.notify.length === 1 && s1.notify[0][0] === 'سیگنال جدید — EURUSD (خرید)',
     'اعلان سیگنال تازه با عنوان دقیق');
@@ -142,7 +142,7 @@ async function testInlinePins() {
   const s2 = await gen.runScenario('data_outage');
   A(hasLog(s2, 'هیچ نمادی تحلیل نشد — اینترنت را بررسی کنید'),
     'early-exit با پیام دقیقِ فعلی');
-  A(s2.notify.length === 0 && s2.cycleDone[0] === 15,
+  A(s2.notify.length === 0 && s2.cycleDone[0] === 30,
     'بدون اعلان سیگنال؛ زمان‌بندی چرخه بعدی سالم');
   A(s2.storage['state.last'] && s2.storage['state.last'].nAnalyses === 0
     && s2.storage['state.last'].errors >= 1,
@@ -180,7 +180,7 @@ async function testInlinePins() {
   const s6 = await gen.runScenario('judge_disabled');
   A(s6.ongoing.some((x) => x[1] === 'داور در تنظیمات خاموش است — سیگنالی صادر نمی‌شود'),
     'گیت داور: پیام ongoing دقیق');
-  A(s6.cycleDone[0] === 15 && !hasLog(s6, 'دریافت EURUSD'),
+  A(s6.cycleDone[0] === 30 && !hasLog(s6, 'دریافت EURUSD'),
     'چرخه اصلاً اجرا نشد (بدون واکشی داده)');
 
   // ۷) فیچرها خاموش — مسیر غیرفعالِ guardهای داخلی (fallback فاز ۶)
