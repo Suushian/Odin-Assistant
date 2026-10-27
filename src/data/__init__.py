@@ -10,7 +10,7 @@ def get_source(cfg: dict) -> DataSource:
     kind = str(cfg.get("data_source", "twelvedata")).strip().lower()
     if kind != "twelvedata":
         raise ValueError(
-            f"منبع دادهٔ ناشناخته/حذف‌شده: {kind!r} (تنها مقدار مجاز: twelvedata)"
+            "منبع بازار نامعتبر است؛ تنها منبع مجاز Twelve Data است."
         )
     from .twelvedata_source import TwelveDataSource
     return TwelveDataSource(cfg)
