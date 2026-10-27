@@ -277,7 +277,7 @@ async function testRegistryWhenPresent() {
   // (فاز ۶b: ۱۵ قاعدهٔ داور اضافه شد — فهرست ساختاری است، نه طلاییِ رفتاری)
   // (S3: چهار پلاگین strategy-* در مسیر فعال داور؛ آینهٔ src/plugins/strategies.py)
   const ids = reg.all().map((r) => r.id);
-  const expectedIds = ['data-yahoo', 'data-tradingview', 'analysis-technical',
+  const expectedIds = ['data-twelvedata', 'data-tradingview', 'analysis-technical',
     'analysis-strength', 'session', 'fundamental-calendar', 'fundamental-news',
     'judge-core', 'judge-risk', 'journal', 'alerts-price',
     'veto-data', 'veto-weekend', 'veto-tf-conflict', 'veto-range',
@@ -288,6 +288,8 @@ async function testRegistryWhenPresent() {
   A(ids.join(',') === expectedIds.join(','),
     '۳۰ پلاگین اندروید با idهای متقارن پایتون (۱۱ زیرساخت/داده + ۱۵ قاعدهٔ داور + ۴ استراتژی): ' + JSON.stringify(ids));
   A(info.disabled.length === 0, 'با config پیش‌فرض هیچ پلاگینی disabled نیست');
+  A(reg.get('odin.data.market@1').id === 'data-twelvedata',
+    'منبع بازار اندروید باید Twelve Data باشد؛ Yahoo دیگر منبع فعال اصلی نیست');
 
   // bindingها: خاموشی فیچرها → پلاگین مربوطه غیرفعال (همان کلیدهای موجود)
   const off = O.deepFill(O.CONFIG, {
