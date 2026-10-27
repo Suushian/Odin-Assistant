@@ -771,9 +771,9 @@
       '<input id="twelvedata-api-key" class="text-input" type="password" data-set="twelvedata_api_key" ' +
       'value="' + esc(set.twelvedata_api_key || '') + '" maxlength="128" autocomplete="off" spellcheck="false" ' +
       'placeholder="کلید Twelve Data را وارد کنید" dir="ltr">' +
-      '<div class="set-sub" style="margin-top:8px">کلید در تنظیمات خصوصی این نصب ذخیره می‌شود و در مخزن کد قرار نمی‌گیرد. برای گرفتن کلید: ' +
+      '<div class="set-sub" style="margin-top:8px">کلید فقط در تنظیمات همین گوشی ذخیره می‌شود؛ در مخزن کد قرار نمی‌گیرد. ' +
       '<a href="https://twelvedata.com/pricing" data-ext="https://twelvedata.com/pricing" style="color:var(--accent)">Twelve Data</a></div>' +
-      '<div class="set-sub" style="margin-top:6px">برای کنترل سهمیهٔ رایگان، فاصلهٔ تازه‌سازی حداقل ۳۰ دقیقه است. هر نماد با یک درخواست M15 دریافت می‌شود و H1/H4 از همان کندل‌ها ساخته می‌شوند.</div>' +
+      '<div class="set-sub" style="margin-top:6px">برای سهمیهٔ رایگان، تازه‌سازی حداقل هر ۳۰ دقیقه؛ H1/H4 از M15 ساخته می‌شوند.</div>' +
       '</div>';
 
     // لایسنس و قفل دستگاه (v0.14.0) + دورهٔ آزمایشی (v0.15.0)
