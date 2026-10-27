@@ -15,7 +15,7 @@
 مستقیم از همهٔ فیچرها دارد. هدفِ این مهاجرت:
 
 - **Core کوچک، پایدار و مستقل از قابلیت‌ها** — هسته فقط *قراردادها* را بشناسد،
-  نه RSI، نه Yahoo، نه News، نه TradingView.
+  نه RSI، نه Twelve Data، نه News، نه TradingView.
 - **قابلیت‌ها به Plugin تبدیل شوند** — با Manifest، Lifecycle، وابستگی‌های
   صریح، Enable/Disable و Failure Isolation.
 - **بدون بازنویسی** — منطق فعلی دست‌نخورده می‌ماند؛ فقط مرزهای وابستگی
@@ -99,7 +99,7 @@ cycle / event_alerts / briefing / journal(nightly+weekly).
 │  ⑦ Event Bus +    — pub/sub همگام ایزوله + مراحل قطعی         │
 │     Pipeline Runner                                          │
 └─────────────────────────────────────────────────────────────┘
-        ▲ فقط قراردادها را می‌شناسد — نه RSI، نه Yahoo، نه News
+        ▲ فقط قراردادها را می‌شناسد — نه RSI، نه Twelve Data، نه News
         │
 ┌───────┴─────────────────────────────────────────────────────┐
 │                    PLUGINS (built-in adapters)               │
