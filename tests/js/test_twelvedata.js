@@ -22,8 +22,8 @@ async function main() {
   const fixedNow = gen.FIXED_WED;
   const interval = 15 * 60000;
   const rows = [];
-  for (let i = 0; i < 5000; i++) {
-    const t = fixedNow - (5000 - i) * interval;
+  for (let i = 0; i < 4500; i++) {
+    const t = fixedNow - (4500 - i) * interval;
     const dt = new Date(t).toISOString().slice(0, 19).replace('T', ' ');
     const close = 1.1 + i * 0.000001;
     rows.push({
@@ -42,16 +42,16 @@ async function main() {
   };
   const md = await O.fetchTwelveDataSymbol(
     { name: 'EURUSD', td: 'EUR/USD' },
-    { api_key: 'test-key-not-real', outputsize: 5000, min_request_gap_sec: 15 },
+    { api_key: 'test-key-not-real', outputsize: 4500, min_request_gap_sec: 15 },
     O.CONFIG.history
   );
 
   A(urls.length === 1, 'برای هر نماد باید فقط یک درخواست API انجام شود؛ تعداد واقعی=' + urls.length);
   A(urls[0].indexOf('symbol=EUR%2FUSD') >= 0 && urls[0].indexOf('interval=15min') >= 0,
     'درخواست باید از نماد EUR/USD و کندل M15 استفاده کند');
-  A(urls[0].indexOf('outputsize=5000') >= 0 && urls[0].indexOf('timezone=UTC') >= 0,
-    'درخواست باید تاریخچهٔ حداکثری و منطقهٔ زمانی UTC بخواهد');
-  A(!!md, '۵۰۰۰ کندل معتبر باید به مجموعهٔ داده تبدیل شود');
+  A(urls[0].indexOf('outputsize=4500') >= 0 && urls[0].indexOf('timezone=UTC') >= 0,
+    'درخواست باید تاریخچهٔ بهینه‌شده و منطقهٔ زمانی UTC بخواهد');
+  A(!!md, '۴۵۰۰ کندل معتبر باید به مجموعهٔ داده تبدیل شود');
   A(md.m15.length >= 4000 && md.h1.length >= 250 && md.h4.length >= 210,
     'M15/H1/H4 باید تاریخچهٔ کافی داشته باشند');
   A(md.h1.every((x) => x.t % 3600000 === 0) && md.h4.every((x) => x.t % 14400000 === 0),
@@ -91,7 +91,7 @@ async function main() {
     if (attempts === 1) return Promise.reject(new Error('simulated network failure'));
     return Promise.resolve({ status: 200, text: JSON.stringify({ values: rows.slice().reverse() }) });
   };
-  const pacingCfg = { api_key: 'test-key-not-real', outputsize: 5000, min_request_gap_sec: 15 };
+  const pacingCfg = { api_key: 'test-key-not-real', outputsize: 4500, min_request_gap_sec: 15 };
   const pacingSym = { name: 'EURUSD', td: 'EUR/USD' };
   const failed = await pacingApp.O.fetchTwelveDataSymbol(pacingSym, pacingCfg, pacingApp.O.CONFIG.history);
   A(failed === null && attempts === 1, 'خطای شبکه باید بدون پرتاب خطا مدیریت شود');
