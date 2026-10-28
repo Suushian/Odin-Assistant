@@ -30,8 +30,9 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 /**
  * پل نیتیو ↔ وب: درخواست HTTP (بدون محدودیت CORS)، حافظهٔ محلی
@@ -58,7 +59,14 @@ public class Bridge {
     private final Activity act;         // در حالت سرویس null است
     private final WebView web;
     private final Handler ui = new Handler(Looper.getMainLooper());
-    private final ExecutorService pool = Executors.newFixedThreadPool(4);
+    // Both foreground and background WebViews share one bounded-concurrency HTTP
+    // worker pool. Idle workers time out, instead of retaining four threads per Bridge.
+    private static final ThreadPoolExecutor HTTP_POOL =
+            new ThreadPoolExecutor(4, 4, 30L, TimeUnit.SECONDS,
+                    new LinkedBlockingQueue<Runnable>());
+    static {
+        HTTP_POOL.allowCoreThreadTimeOut(true);
+    }
     private final SharedPreferences prefs;
     private final SharedPreferences secretPrefs;
 
@@ -92,7 +100,7 @@ public class Bridge {
     @JavascriptInterface
     public void http(final int cbId, final String url, final String method,
                      final String body, final String contentType) {
-        pool.execute(new Runnable() {
+        HTTP_POOL.execute(new Runnable() {
             @Override
             public void run() {
                 int status = -1;
