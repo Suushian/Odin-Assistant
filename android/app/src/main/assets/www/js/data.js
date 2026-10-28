@@ -136,7 +136,9 @@
     hcfg = hcfg || {};
     var key = String(tdCfg.api_key || '').trim();
     var symbol = String(symCfg.td || '').trim();
-    var outputsize = Math.max(4000, Math.min(5000, (tdCfg.outputsize | 0) || 5000));
+    // 4500 leaves headroom above the validated 210 H4 / 250 H1 minimums while
+    // trimming 10% of the provider payload and JS parsing/allocation work.
+    var outputsize = Math.max(4000, Math.min(5000, (tdCfg.outputsize | 0) || 4500));
     var gapMs = Math.max(15000, (+tdCfg.min_request_gap_sec || 15) * 1000);
     var dropForming = hcfg.drop_forming_candle !== false;
     tdErrors[symCfg.name] = '';
@@ -168,14 +170,17 @@
       }
 
       var rows = [];
-      payload.values.slice().reverse().forEach(function (v) {
+      // Provider values arrive newest-first. Walk backwards instead of
+      // slice().reverse() so we do not allocate a second 4,500-item array.
+      for (var vi = payload.values.length - 1; vi >= 0; vi--) {
+        var v = payload.values[vi];
         var t = parseTwelveDataTime(v && v.datetime);
         var o = Number(v && v.open), h = Number(v && v.high);
         var l = Number(v && v.low), close = Number(v && v.close);
         if (!Number.isFinite(t) || !Number.isFinite(o) || !Number.isFinite(h) ||
-            !Number.isFinite(l) || !Number.isFinite(close)) return;
+            !Number.isFinite(l) || !Number.isFinite(close)) continue;
         rows.push({ t: t, o: o, h: h, l: l, c: close });
-      });
+      }
       var now = Date.now();
       if (dropForming) {
         rows = rows.filter(function (x) { return x.t + 15 * 60000 <= now; });
