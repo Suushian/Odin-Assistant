@@ -30,7 +30,7 @@
     },
 
     // Twelve Data Basic: یک درخواست M15 برای هر نماد؛ H1/H4 از M15 ساخته می‌شوند.
-    twelvedata: { api_key: '', outputsize: 5000, min_request_gap_sec: 15 },
+    twelvedata: { api_key: '', outputsize: 4500, min_request_gap_sec: 15 },
 
     tradingview: { enabled: true, timeframe: '4h' },
 
