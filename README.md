@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png" alt="آیکون برنامه ODIN Assistant" width="128" />
+<img src="docs/odin-launcher-icon.svg" alt="آیکون آبی حباب گفت‌وگوی ODIN Assistant" width="128" />
 
 # ODIN Assistant
 
@@ -166,6 +166,8 @@ for s in tests/js/smoke_*.js tests/js/test_*.js; do node "$s"; done
 تست‌های parity زنده و سرویس پس‌زمینه ممکن است به اینترنت یا دستگاه واقعی نیاز داشته باشند و در همهٔ اجراهای CI پوشش داده نمی‌شوند.
 
 ## تغییرات اخیر
+
+- هویت بصری لانچر به حباب گفت‌وگوی آبی با دو خط سفید و پس‌زمینهٔ تیره تغییر کرده است؛ منبع برداری و پیش‌نمایش SVG در `docs/odin-launcher-icon.svg` نگهداری می‌شود.
 
 بر اساس نسخهٔ موجود در `main` و تغییرات ثبت‌شده در تاریخچه:
 

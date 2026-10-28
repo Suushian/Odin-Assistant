@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108" role="img" aria-label="ODIN Assistant blue chat bubble icon">
+  <defs>
+    <radialGradient id="halo" cx="50%" cy="48%" r="54%"><stop offset="0" stop-color="#087BFF" stop-opacity=".24"/><stop offset="1" stop-color="#087BFF" stop-opacity="0"/></radialGradient>
+    <linearGradient id="bubble" x1="18%" y1="5%" x2="82%" y2="100%"><stop offset="0" stop-color="#278BFF"/><stop offset=".52" stop-color="#0878F9"/><stop offset="1" stop-color="#62C5FF"/></linearGradient>
+  </defs>
+  <rect width="108" height="108" rx="24" fill="#05080D"/>
+  <circle cx="54" cy="52" r="49" fill="url(#halo)"/>
+  <path d="M13 49C13 26 29 14 53 14s42 14 42 38c0 18-10 31-24 36v12L53 89C29 90 13 74 13 49Z" fill="url(#bubble)"/>
+  <path d="M29 31c7-8 17-10 27-10" fill="none" stroke="#9BD7FF" stroke-width="2" stroke-linecap="round" opacity=".6"/>
+  <rect x="36" y="33" width="14" height="35" rx="7" fill="#FFFFFF"/><rect x="58" y="33" width="14" height="35" rx="7" fill="#FFFFFF"/>
+</svg>
