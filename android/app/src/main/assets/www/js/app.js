@@ -1144,7 +1144,10 @@
         var jf = O.jalaliFa(now);
         if (ij.textContent !== jf) ij.textContent = jf;   // سر نیمه‌شب تازه شود
       }
-    }, 1000);
+    }, 15000);
+    // Clock text is minute-precision; refreshing every second only wakes the WebView.
+    // A 15-second cadence is sufficient and reduces idle timer callbacks by ~93%.
+
     setInterval(function () {
       var now = Date.now();
       document.querySelectorAll('[data-cd-ts]').forEach(function (el) {
