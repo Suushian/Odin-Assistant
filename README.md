@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="docs/odin-launcher-icon.svg" alt="آیکون برنامه ODIN Assistant" width="128" />
+<img src="docs/odin-launcher-icon.svg" alt="آیکون آبی حباب گفت‌وگوی ODIN Assistant" width="128" />
 
 # ODIN Assistant
 
