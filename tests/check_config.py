@@ -111,8 +111,8 @@ need(int(j.get("resend_score_gain", 0)) >= 1,
      f"judge.resend_score_gain = {j.get('resend_score_gain')}")
 
 v = j["veto"]
-need(1 <= int(v.get("min_count", 0)) <= 3,
-     f"judge.veto.min_count = {v.get('min_count')} (بین ۱ و ۳)")
+need(2 <= int(v.get("min_count", 0)) <= 3,
+     f"judge.veto.min_count = {v.get('min_count')} (بین ۲ و ۳)")
 for key in ("weekend", "high_impact_event", "timeframe_conflict", "range_market",
             "volatility_spike", "breaking_news"):
     need(isinstance(v.get(key), bool), f"judge.veto.{key} = {v.get(key)}")
