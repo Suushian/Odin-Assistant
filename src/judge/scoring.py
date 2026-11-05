@@ -58,7 +58,7 @@ from .session import MarketStatus, market_status
 # ── مقادیر پیش‌فرض (با config.yaml ادغام می‌شوند) ───────────────
 DEFAULTS: dict = {
     "enabled": True,
-    "min_score": 7,
+    "min_score": 5,
     "max_signals_per_cycle": 3,
     "resend_cooldown_minutes": 180,
     "resend_score_gain": 2,
@@ -69,6 +69,7 @@ DEFAULTS: dict = {
         "range_market": True,
         "volatility_spike": True,
         "breaking_news": True,
+        "min_count": 2,
     },
     "fundamental": {"clean_high_hours": 6, "clean_med_hours": 2},
     "news": {"min_score": 4, "breaking_min_score": 5},
@@ -765,9 +766,13 @@ def judge_symbol(a: SymbolAnalysis, sym_cfg: dict, md: Optional[MarketData],
     elif a.verdict == "SELL_SETUP":
         j.direction = "SELL"
 
-    if j.vetoes:
+    hard_vetoes = [v for v in j.vetoes
+                   if v.key in {"DATA", "CALENDAR_UNAVAILABLE"}]
+    veto_min = max(1, int(ctx.jcfg.get("veto", {}).get("min_count", 2)))
+    if hard_vetoes or len(j.vetoes) >= veto_min:
+        blocking = hard_vetoes or j.vetoes
         j.reject_reason = "VETO"
-        j.reject_detail = "؛ ".join(v.title_fa for v in j.vetoes)
+        j.reject_detail = "؛ ".join(v.title_fa for v in blocking)
         return j
     if j.direction is None:
         j.reject_reason = "NO_SETUP"
@@ -785,7 +790,7 @@ def judge_symbol(a: SymbolAnalysis, sym_cfg: dict, md: Optional[MarketData],
         if e.detail_fa.startswith("⚠️"):
             j.warnings.append(e.detail_fa.lstrip("⚠️ ").strip())
     # ۵) آستانه
-    if j.score < int(ctx.jcfg.get("min_score", 7)):
+    if j.score < int(ctx.jcfg.get("min_score", 5)):
         j.reject_reason = "LOW_SCORE"
         j.reject_detail = (f"امتیاز {fa_num(j.score)} از {fa_num(j.max_score)} — زیر "
                            f"آستانهٔ {fa_num(int(ctx.jcfg.get('min_score', 7)))} است، "
