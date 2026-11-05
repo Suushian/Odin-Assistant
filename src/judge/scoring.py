@@ -768,7 +768,7 @@ def judge_symbol(a: SymbolAnalysis, sym_cfg: dict, md: Optional[MarketData],
 
     hard_vetoes = [v for v in j.vetoes
                    if v.key in {"DATA", "CALENDAR_UNAVAILABLE"}]
-    veto_min = max(1, int(ctx.jcfg.get("veto", {}).get("min_count", 2)))
+    veto_min = max(2, min(3, int(ctx.jcfg.get("veto", {}).get("min_count", 2))))
     if hard_vetoes or len(j.vetoes) >= veto_min:
         blocking = hard_vetoes or j.vetoes
         j.reject_reason = "VETO"
@@ -793,7 +793,7 @@ def judge_symbol(a: SymbolAnalysis, sym_cfg: dict, md: Optional[MarketData],
     if j.score < int(ctx.jcfg.get("min_score", 5)):
         j.reject_reason = "LOW_SCORE"
         j.reject_detail = (f"امتیاز {fa_num(j.score)} از {fa_num(j.max_score)} — زیر "
-                           f"آستانهٔ {fa_num(int(ctx.jcfg.get('min_score', 7)))} است، "
+                           f"آستانهٔ {fa_num(int(ctx.jcfg.get('min_score', 5)))} است، "
                            f"پس سیگنال صادر نمی‌شود")
         return j
 
