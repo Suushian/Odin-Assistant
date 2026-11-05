@@ -292,26 +292,29 @@ def _judge(a, md=None, ctx=None, jfn=None, rules=_DEFAULT_RULES) -> dict:
 #  گروه ۱ — وتوها
 # ══════════════════════════════════════════════════════════════
 def battery_veto_single(jfn=None) -> dict:
-    """هر وتو به‌تنهایی — بقیهٔ دروازه‌ها خاموش/دور نگه داشته شده‌اند."""
+    """هر وتو به‌تنهایی — برای پین‌کردن جزئیات، آستانهٔ این گروه صریحاً ۱ است."""
     out = {}
+
+    def single_ctx(**kwargs):
+        return make_ctx(**kwargs, veto={**JCFG["veto"], "min_count": 1})
     out["DATA"] = _judge(make_analysis(verdict="DATA"),
-                         ctx=make_ctx(cal=clean_cal(), news=good_news()), jfn=jfn)
+                         ctx=single_ctx(cal=clean_cal(), news=good_news()), jfn=jfn)
     out["WEEKEND"] = _judge(make_analysis(),
-                            ctx=make_ctx(now=SAT, cal=clean_cal(), news=good_news()),
+                            ctx=single_ctx(now=SAT, cal=clean_cal(), news=good_news()),
                             jfn=jfn)
     out["TF_CONFLICT"] = _judge(make_analysis(h1_agrees=False),
-                                ctx=make_ctx(cal=clean_cal(), news=good_news()),
+                                ctx=single_ctx(cal=clean_cal(), news=good_news()),
                                 jfn=jfn)
     out["RANGE"] = _judge(make_analysis(adx=14.0),
-                          ctx=make_ctx(cal=clean_cal(), news=good_news()), jfn=jfn)
+                          ctx=single_ctx(cal=clean_cal(), news=good_news()), jfn=jfn)
     out["EVENT"] = _judge(make_analysis(),
-                          ctx=make_ctx(cal=near_cal(WED_OVERLAP), news=good_news()),
+                          ctx=single_ctx(cal=near_cal(WED_OVERLAP), news=good_news()),
                           jfn=jfn)
     out["VOL_SPIKE"] = _judge(make_analysis(), md=make_md(last_spike=9.0),
-                              ctx=make_ctx(cal=clean_cal(), news=good_news()),
+                              ctx=single_ctx(cal=clean_cal(), news=good_news()),
                               jfn=jfn)
     out["BREAKING_NEWS"] = _judge(make_analysis(),
-                                  ctx=make_ctx(cal=clean_cal(), news=breaking_news()),
+                                  ctx=single_ctx(cal=clean_cal(), news=breaking_news()),
                                   jfn=jfn)
     return out
 
