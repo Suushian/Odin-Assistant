@@ -519,8 +519,8 @@ def battery_judge_all_mixed(jall=None) -> list:
     """judge_all با ۴ نماد در ۴ سرنوشت: سیگنال / وتو / بدون ستاپ / امتیاز کم."""
     a1 = make_analysis()                                             # BUY ۱۰/۱۱ (بدون خبر)
     a2 = make_analysis(symbol="GBPUSD", fa_name="پوند به دلار آمریکا",
-                       base="GBP", quote="USD", price=1.3500, adx=14.0, h1_agrees=False,
-                       support=1.3496, resistance=1.3560)            # VETO (RANGE + TF_CONFLICT)
+                       base="GBP", quote="USD", price=1.3500, adx=14.0,
+                       support=1.3496, resistance=1.3560)            # VETO (RANGE)
     a3 = make_analysis(symbol="USDJPY", fa_name="دلار به ین ژاپن",
                        base="USD", quote="JPY", price=150.00, pip=0.01,
                        atr=0.10, trend="none", verdict="WAIT",
@@ -531,7 +531,8 @@ def battery_judge_all_mixed(jall=None) -> list:
     # S3: فقط a1 (سیگنال) به md نیاز دارد — a2/a3/a4 پیش از دروازه رد
     # می‌شوند (VETO/NO_SETUP/LOW_SCORE) و datasets برایشان بی‌اثر است
     datasets = {"EURUSD": make_md(last_dir="bull")}
-    ctx = make_ctx(cal=clean_cal(), news=None)
+    ctx = make_ctx(cal=clean_cal(), news=None,
+                   veto={**JCFG["veto"], "min_count": 1})
     if jall is not None:
         fn = jall
     else:
