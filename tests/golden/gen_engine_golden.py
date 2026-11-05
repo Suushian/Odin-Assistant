@@ -148,6 +148,8 @@ def make_cfg():
     # چرخهٔ طلایی رفتار پیشین را پین می‌کند؛ مسیر فعال اسکالپ در تست داور جداگانه است.
     (cfg.get("strategies") or {}).setdefault("scalping", {})["enabled"] = False
     cfg["data_source"] = "twelvedata"              # تنها منبع بازار
+    # این golden چرخهٔ تاریخی را پین می‌کند؛ آستانهٔ پیش‌فرض محصول جداگانه ۵ است.
+    cfg["judge"]["min_score"] = 7
     cfg["telegram"] = {"send_reports": True, "bot_token": "123:fake-token",
                        "chat_id": "42"}
     return cfg
