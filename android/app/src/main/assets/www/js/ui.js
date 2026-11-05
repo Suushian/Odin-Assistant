@@ -948,7 +948,7 @@
     // کارت اصلی: لوگو + نام برنامه + سازنده
     html += '<div class="card ink" style="text-align:center;padding:22px 16px">' +
       '<svg viewBox="0 0 48 48" width="56" height="56" fill="none" stroke="#F2F5F9" stroke-width="3.2" stroke-linecap="round" aria-hidden="true">' +
-      '<circle cx="24" cy="24" r="14"/><path d="M7 41 41 7"/></svg>' +
+      '<circle cx="24" cy="24" r="11"/><path d="M11 37 37 11"/></svg>' +
       '<div style="font-size:17px;font-weight:800;color:#fff;margin-top:10px" dir="ltr">ODIN ASSISTANT</div>' +
       '<div class="ink-cap" style="margin-top:3px;color:rgba(255,255,255,.78)" dir="ltr">Publisher: Sushian</div>' +
       '<div class="ink-cap" style="margin-top:4px"><span dir="ltr">ODIN ASSISTANT</span> — نسخهٔ اندروید ' + O.faNum(ver) + '</div>' +
