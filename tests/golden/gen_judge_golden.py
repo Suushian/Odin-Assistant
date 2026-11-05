@@ -519,8 +519,8 @@ def battery_judge_all_mixed(jall=None) -> list:
     """judge_all با ۴ نماد در ۴ سرنوشت: سیگنال / وتو / بدون ستاپ / امتیاز کم."""
     a1 = make_analysis()                                             # BUY ۱۰/۱۱ (بدون خبر)
     a2 = make_analysis(symbol="GBPUSD", fa_name="پوند به دلار آمریکا",
-                       base="GBP", quote="USD", price=1.3500, adx=14.0,
-                       support=1.3496, resistance=1.3560)            # VETO (RANGE)
+                       base="GBP", quote="USD", price=1.3500, adx=14.0, h1_agrees=False,
+                       support=1.3496, resistance=1.3560)            # VETO (RANGE + TF_CONFLICT)
     a3 = make_analysis(symbol="USDJPY", fa_name="دلار به ین ژاپن",
                        base="USD", quote="JPY", price=150.00, pip=0.01,
                        atr=0.10, trend="none", verdict="WAIT",
