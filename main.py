@@ -283,7 +283,7 @@ def _selftest() -> int:
                         event_veto_minutes=30.0)
     r = judge_symbol(_ana(), {}, None, weak)
     assert r.signal is None and r.reject_reason == "LOW_SCORE", f"reject={r.reject_reason}"
-    assert r.score < int(jcfg["min_score"]), f"امتیاز {r.score} باید زیر آستانه باشد"
+    assert r.score < int(weak_jcfg["min_score"]), f"امتیاز {r.score} باید زیر آستانهٔ آزمون باشد"
     for e in r.evidences:
         if e.key in ("fundamental", "news", "tv", "session", "strength"):
             assert e.points == 0, f"مدرک {e.key} با دادهٔ نامناسب {e.points} امتیاز گرفت"
