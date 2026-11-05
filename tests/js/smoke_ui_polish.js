@@ -15,7 +15,7 @@ const checks = [
   ['فوکوس صفحه‌کلید قابل مشاهده است', /button:focus-visible[\s\S]*?outline:\s*2px solid var\(--brand\)/s.test(css)],
   ['وضعیت غیرفعال دکمه‌ها مشخص است', /button:disabled[\s\S]*?cursor:\s*not-allowed/s.test(css)],
   ['کاهش حرکت سیستم رعایت می‌شود', /@media\s*\(prefers-reduced-motion:\s*reduce\)[\s\S]*?transition-duration:\s*\.01ms/s.test(css)],
-  ['توکن‌های تم در بلوک root حفظ شده‌اند', /--radius-card:\s*22px/.test(css) && /--brand:\s*#5B4BE8/i.test(css)]
+  ['توکن‌های تم در بلوک root حفظ شده‌اند', /--radius-card:\s*22px/.test(css) && /--brand:\s*#101013/i.test(css)]
 ];
 
 let failures = 0;
