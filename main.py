@@ -272,7 +272,7 @@ def _selftest() -> int:
     assert "WEEKEND" not in [v.key for v in r.vetoes], "وتو باید تنظیم‌پذیر باشد"
 
     # پ) امتیاز ناکافی → رد با دلیل روشن، بدون بادکردن امتیاز
-    weak_jcfg = {**jcfg, "min_score": 8, "veto": {**jcfg["veto"], "high_impact_event": False}}
+    weak_jcfg = {**jcfg, "min_score": 9, "veto": {**jcfg["veto"], "high_impact_event": False}}
     weak = JudgeContext(jcfg=weak_jcfg, acfg=acfg, symbols_cfg=syms,
                         ranking=[("USD", 0.4), ("JPY", 0.2), ("GBP", 0.0), ("EUR", -0.3)],
                         tv_map={"EURUSD": TVSnapshot("EURUSD", 1.149, 62.0, 32.0, "SELL", 3, 14, 9)},
