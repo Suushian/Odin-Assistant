@@ -55,7 +55,7 @@
   var DEFAULT_SETTINGS = {
     user_name: 'تریدر',
     judge_enabled: true,
-    min_score: 7,
+    min_score: 5,
     veto: {
       weekend: true, high_impact_event: true, timeframe_conflict: true,
       range_market: true, volatility_spike: true, breaking_news: true
