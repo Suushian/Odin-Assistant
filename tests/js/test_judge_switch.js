@@ -403,6 +403,19 @@ function testStrategyGatePins() {
     'LOW_SCORE مقدم بر NO_STRATEGY (کمترین جابه‌جاییِ آمار)');
 }
 
+function testFivePointSignalThreshold() {
+  const ctx = gen.makeCtx(O, {
+    ranking: gen.RANK_USD_STRONG, tvMap: gen.TV_SELL, newsSnap: gen.contraNews(),
+    jcfg: { min_score: 5 }
+  });
+  const j = O.judgeSymbol(gen.makeAnalysis({ rsi: 55.0, support: 1.1400 }), {},
+    gen.makeMd(O, 'EURUSD'), ctx, null, null, null, null);
+  A(j.score === 5 && j.max_score === 11,
+    'سناریوی مرزی باید دقیقاً ۵ از ۱۱ امتیاز داشته باشد');
+  A(j.signal !== null && j.reject_reason !== 'LOW_SCORE',
+    'امتیاز ۵ با آستانهٔ ۵ باید پذیرفته شود');
+}
+
 function testCumulativeVetoThreshold() {
   function run(a, over, count) {
     const veto = Object.assign({}, O.CONFIG.judge.veto, { min_count: count });
@@ -443,7 +456,7 @@ function testCumulativeVetoThreshold() {
 
 // ══════════════════════════════════════════════════════════════
 function main() {
-  const tests = [testGoldenBattery, testVetoPins, testCumulativeVetoThreshold, testEvidencePins,
+  const tests = [testGoldenBattery, testVetoPins, testFivePointSignalThreshold, testCumulativeVetoThreshold, testEvidencePins,
     testJudgePathPins, testStrategyGatePins, testRegistryRulesWhenPresent];
   const fails = [];
   tests.forEach((t) => {
