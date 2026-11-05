@@ -125,6 +125,7 @@ jobs:
       - name: JS smoke tests (رندر بدون ایموجی، لایسنس، دربارهٔ ما)
         run: |
           node tests/js/smoke_about.js
+          node tests/js/smoke_brand_identity.js
           node tests/js/smoke_icons.js
           node tests/js/smoke_license.js
           node tests/js/smoke_journal.js
