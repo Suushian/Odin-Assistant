@@ -574,6 +574,19 @@ def test_gate_order_and_legacy() -> None:
       "دروازه جدول امتیاز را عوض نمی‌کند — فقط لایهٔ رد است")
 
 
+def test_five_point_signal_threshold() -> None:
+    """امتیاز دقیقاً ۵ با آستانهٔ پیش‌فرض ۵ باید از LOW_SCORE عبور کند."""
+    a = gen.make_analysis(rsi=55.0, support=1.1400)
+    ctx = gen.make_ctx(cal=gen.clean_cal(), news=gen.contra_news(),
+                       ranking=gen.RANK_USD_STRONG, tv=gen.TV_SELL,
+                       min_score=5)
+    j = gen.judge_symbol(a, {}, gen.make_md(), ctx, strategy_rules=None)
+    A(j.score == 5 and j.max_score == 11,
+      "سناریوی مرزی باید دقیقاً ۵ از ۱۱ امتیاز داشته باشد")
+    A(j.signal is not None and j.reject_reason != "LOW_SCORE",
+      "امتیاز ۵ با آستانهٔ ۵ باید پذیرفته شود")
+
+
 def test_cumulative_veto_threshold() -> None:
     """وتوهای عادی فقط پس از رسیدن به آستانهٔ ۲ یا ۳ متوقف می‌کنند؛ DATA مستقل است."""
     v2 = {**gen.JCFG["veto"], "min_count": 2}
@@ -615,7 +628,7 @@ def test_cumulative_veto_threshold() -> None:
 
 # ══════════════════════════════════════════════════════════════
 def main() -> int:
-    tests = [test_golden_battery, test_veto_single, test_cumulative_veto_threshold, test_veto_order,
+    tests = [test_golden_battery, test_veto_single, test_five_point_signal_threshold, test_cumulative_veto_threshold, test_veto_order,
              test_veto_toggles_and_clean, test_evidence_branches,
              test_judge_full_paths, test_low_score, test_no_setup,
              test_capped, test_judge_all_mixed, test_risk_math,
