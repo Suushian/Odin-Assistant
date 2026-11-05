@@ -48,6 +48,7 @@ jobs:
           set -euo pipefail
           for test in \
             tests/js/smoke_about.js \
+            tests/js/smoke_brand_identity.js \
             tests/js/smoke_icons.js \
             tests/js/smoke_license.js \
             tests/js/smoke_journal.js \

@@ -67,8 +67,8 @@ class Theme:
 
     # ── v0.20.0 — برند و شفق (Aurora) ─────────────────────────
     # رنگ برند فقط در جاهای ظریف: حلقهٔ فوکوس، نشانگر فعال، چیپ برند.
-    brand: str = "#5B4BE8"
-    brand_tint: str = "#EBE9FD"
+    brand: str = "#101013"
+    brand_tint: str = "#EDEDF0"
     # توده‌های شفق در پس‌زمینه — همیشه با آلفای خیلی پایین (<۱۰٪)
     aurora_indigo: str = "#7A6CF0"
     aurora_cyan: str = "#46C8E8"

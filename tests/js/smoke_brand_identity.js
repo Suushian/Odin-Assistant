@@ -1,0 +1,33 @@
+'use strict';
+const fs = require('fs');
+const path = require('path');
+const assert = require('assert');
+const root = path.resolve(__dirname, '..', '..');
+const read = (p) => fs.readFileSync(path.join(root, p), 'utf8');
+const svg = read('docs/odin-launcher-icon.svg');
+const launcher = read('android/app/src/main/res/drawable/odin_launcher_icon.xml');
+const status = read('android/app/src/main/res/drawable/ic_stat_odin.xml');
+const html = read('android/app/src/main/assets/www/index.html');
+const about = read('android/app/src/main/assets/www/js/ui.js');
+const pyIcons = read('src/ui/icons.py');
+const pyTheme = read('src/ui/theme.py');
+const css = read('android/app/src/main/assets/www/style.css');
+const generator = read('assets/make_icon.py');
+
+assert(svg.includes('<circle cx="54" cy="54" r="25"/>') && svg.includes('<path d="M25 83 83 25"/>'), 'canonical SVG must contain the Ø ring and slash');
+assert(launcher.includes('M54,29 a25,25 0,1 1,0 50') && launcher.includes('M25,83 L83,25'), 'Android launcher must use the same Ø geometry');
+assert(status.includes('M24,13 a11,11 0,1 1,0 22') && status.includes('M11,37 L37,11'), 'notification mark must be the monochrome Ø silhouette');
+assert(html.includes('<circle cx="24" cy="24" r="11"/>') && html.includes('<path d="M11 37 37 11"/>'), 'Android splash must use the Ø mark');
+assert(about.includes('<circle cx="24" cy="24" r="11"/><path d="M11 37 37 11"/>'), 'About page must use the Ø mark');
+assert(pyIcons.includes('<circle cx="12" cy="12" r="5.55"/><path d="M5.55 18.45 18.45 5.55"/>'), 'desktop splash icon must use the Ø mark');
+assert(generator.includes('d.ellipse') && generator.includes('d.line([start, end]') && generator.includes('extent = ring_r + 152'), 'desktop raster generator must draw ring and slash');
+assert(pyTheme.includes('brand: str = "#101013"') && pyTheme.includes('brand_tint: str = "#EDEDF0"'), 'Python brand tokens must be monochrome');
+assert(css.includes('--brand: #101013;') && css.includes('--brand-tint: #EDEDF0;'), 'Android CSS brand tokens must match Python');
+assert(!svg.includes('chat bubble') && !launcher.includes('#1685F8') && !html.includes('M24 4v8'), 'legacy blue chat/sun symbols must not remain in brand surfaces');
+
+const png = fs.readFileSync(path.join(root, 'assets/icon.png'));
+assert(png.subarray(0, 8).equals(Buffer.from([137,80,78,71,13,10,26,10])), 'desktop PNG signature invalid');
+assert(png.readUInt32BE(16) === 512 && png.readUInt32BE(20) === 512, 'desktop PNG must be 512x512');
+const ico = fs.readFileSync(path.join(root, 'assets/icon.ico'));
+assert(ico.readUInt16LE(0) === 0 && ico.readUInt16LE(2) === 1 && ico.readUInt16LE(4) >= 1, 'desktop ICO container invalid');
+console.log('SMOKE BRAND IDENTITY OK — shared Ø mark, monochrome tokens, PNG/ICO assets');

@@ -114,6 +114,7 @@ jobs:
       - name: JS smoke tests (اپ اندروید)
         run: |
           node tests/js/smoke_about.js
+          node tests/js/smoke_brand_identity.js
           node tests/js/smoke_icons.js
           node tests/js/smoke_license.js
           node tests/js/smoke_journal.js
