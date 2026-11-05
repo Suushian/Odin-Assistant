@@ -233,7 +233,7 @@ def _selftest() -> int:
     assert "= ۷ پیپ" not in msg and msg.count("پیپ فاصله") == 2, \
         "فاصلهٔ حد ضرر/هدف باید یک‌بار و بدون تکرار چاپ شود"
 
-    # ب) هر وتو باید جداگانه سیگنال را متوقف کند
+    # ب) وتوهای معاملاتی تجمعی‌اند: یک عامل ثبت می‌شود، اما کافی نیست.
     veto_cases = {
         "WEEKEND": (_ctx(now=sat, cal=clean, news=supportive), _ana()),
         "TF_CONFLICT": (_ctx(cal=clean, news=supportive), _ana(h1_agrees=False)),
@@ -249,9 +249,16 @@ def _selftest() -> int:
     }
     for key, (c, aa) in veto_cases.items():
         r = judge_symbol(aa, {}, None, c)
-        assert r.signal is None, f"وتوی {key} جلوی سیگنال را نگرفت"
-        assert r.reject_reason == "VETO", f"reject_reason برای {key} = {r.reject_reason}"
         assert key in [v.key for v in r.vetoes], f"{key} در فهرست وتوها نیست: {[v.key for v in r.vetoes]}"
+        if key == "DATA":
+            assert r.signal is None and r.reject_reason == "VETO", "وتوی داده باید مستقل باقی بماند"
+        else:
+            assert r.reject_reason != "VETO", f"یک وتوی {key} نباید به‌تنهایی سیگنال را متوقف کند"
+
+    # دو وتوی معاملاتی هم‌زمان باید سیگنال را متوقف کنند.
+    combined = judge_symbol(_ana(adx=14.0), {}, None,
+                            _ctx(now=sat, cal=clean, news=supportive))
+    assert combined.reject_reason == "VETO" and combined.signal is None, "دو وتوی هم‌زمان باید سیگنال را متوقف کنند"
 
     # تقویم ناموجود نباید به‌معنای «هیچ رویداد پراثری نیست» تفسیر شود.
     unavailable_calendar = _ctx(cal=cal.CalendarSnapshot(error="timeout"), news=supportive)
