@@ -42,7 +42,7 @@ def build_master() -> Image.Image:
     ring_r, width = 237, 78
     d.ellipse([cx - ring_r, cy - ring_r, cx + ring_r, cy + ring_r],
               outline=INK, width=width)
-    extent = ring_r + 37
+    extent = ring_r + 152
     start = (cx - extent * 0.7071, cy + extent * 0.7071)
     end = (cx + extent * 0.7071, cy - extent * 0.7071)
     d.line([start, end], fill=INK, width=width)
