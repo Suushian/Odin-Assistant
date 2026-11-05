@@ -296,7 +296,7 @@ def battery_veto_single(jfn=None) -> dict:
     out = {}
 
     def single_ctx(**kwargs):
-        return make_ctx(**kwargs, veto={**JCFG["veto"], "min_count": 1})
+        return make_ctx(**kwargs, veto={**JCFG["veto"], "min_count": 1}, min_score=7)
     out["DATA"] = _judge(make_analysis(verdict="DATA"),
                          ctx=single_ctx(cal=clean_cal(), news=good_news()), jfn=jfn)
     out["WEEKEND"] = _judge(make_analysis(),
@@ -461,7 +461,7 @@ def battery_judge_low_score(jfn=None) -> dict:
         make_analysis(rsi=55.0, support=1.1400),
         md=make_md(),
         ctx=make_ctx(cal=clean_cal(), news=contra_news(),
-                     ranking=RANK_USD_STRONG, tv=TV_SELL), jfn=jfn)}
+                     ranking=RANK_USD_STRONG, tv=TV_SELL, min_score=7), jfn=jfn)}
 
 
 def battery_judge_no_setup(jfn=None) -> dict:
