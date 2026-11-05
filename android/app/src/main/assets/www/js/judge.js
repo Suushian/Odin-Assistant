@@ -466,7 +466,7 @@
     });
     var vetoMin = Math.max(1, Math.min(3, (ctx.jcfg.veto.min_count | 0) || 2));
     if (hardVetoes.length || j.vetoes.length >= vetoMin) {
-      var blockingVetoes = hardVetoes.length ? hardVetoes : j.vetoes;
+      var blockingVetoes = j.vetoes;
       j.reject_reason = 'VETO';
       j.reject_detail = blockingVetoes.map(function (v) { return v.title_fa; }).join('؛ ');
       return j;
