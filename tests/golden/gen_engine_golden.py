@@ -143,11 +143,15 @@ def make_tv_map(symbol_names):
 def make_cfg():
     from src.config import load_config
     cfg = copy.deepcopy(load_config())
+    # Preserve this historical cycle fixture; threshold 5 is covered by judge-policy pins.
+    cfg["judge"]["min_score"] = 7
     # The golden fixture pins historical seven-symbol behavior; production symbol coverage is tested separately.
     cfg["symbols"] = [s for s in cfg["symbols"] if s["name"] != "NZDUSD"]
     # چرخهٔ طلایی رفتار پیشین را پین می‌کند؛ مسیر فعال اسکالپ در تست داور جداگانه است.
     (cfg.get("strategies") or {}).setdefault("scalping", {})["enabled"] = False
     cfg["data_source"] = "twelvedata"              # تنها منبع بازار
+    # این golden چرخهٔ تاریخی را پین می‌کند؛ آستانهٔ پیش‌فرض محصول جداگانه ۵ است.
+    cfg["judge"]["min_score"] = 7
     cfg["telegram"] = {"send_reports": True, "bot_token": "123:fake-token",
                        "chat_id": "42"}
     return cfg

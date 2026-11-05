@@ -257,16 +257,19 @@ function buildBattery(O, opts) {
     return judgmentDump(O, jfn(a, {}, md === undefined ? makeMd(O, a.symbol) : md, ctx || makeCtx(O)));
   };
   const bat = {};
+  const singleVetoCtx = (over) => makeCtx(O, Object.assign({}, over || {}, {
+    jcfg: { veto: Object.assign({}, O.CONFIG.judge.veto, { min_count: 1 }) }
+  }));
 
-  // ── وتوها: شلیک تکی ──
+  // ── وتوها: شلیک تکی (آستانهٔ ۱ فقط برای پین‌کردن جزئیات هر قاعده) ──
   bat.veto_single = {
-    DATA: judge(makeAnalysis({ verdict: 'DATA' })),
-    WEEKEND: judge(makeAnalysis(), undefined, makeCtx(O, { nowMs: FIXED_SAT })),
-    TF_CONFLICT: judge(makeAnalysis({ h1_agrees: false })),
-    RANGE: judge(makeAnalysis({ adx: 14.0 })),
-    EVENT: judge(makeAnalysis(), undefined, makeCtx(O, { calSnap: nearCal(FIXED_WED) })),
-    VOL_SPIKE: judge(makeAnalysis(), makeMd(O, 'EURUSD', true)),
-    BREAKING_NEWS: judge(makeAnalysis(), undefined, makeCtx(O, { newsSnap: breakingNews() }))
+    DATA: judge(makeAnalysis({ verdict: 'DATA' }), undefined, singleVetoCtx()),
+    WEEKEND: judge(makeAnalysis(), undefined, singleVetoCtx({ nowMs: FIXED_SAT })),
+    TF_CONFLICT: judge(makeAnalysis({ h1_agrees: false }), undefined, singleVetoCtx()),
+    RANGE: judge(makeAnalysis({ adx: 14.0 }), undefined, singleVetoCtx()),
+    EVENT: judge(makeAnalysis(), undefined, singleVetoCtx({ calSnap: nearCal(FIXED_WED) })),
+    VOL_SPIKE: judge(makeAnalysis(), makeMd(O, 'EURUSD', true), singleVetoCtx()),
+    BREAKING_NEWS: judge(makeAnalysis(), undefined, singleVetoCtx({ newsSnap: breakingNews() }))
   };
 
   // ── وتوها: چندتای هم‌زمان (ترتیب ارزیابی) ──
@@ -301,7 +304,7 @@ function buildBattery(O, opts) {
   // ── LOW_SCORE + هشدارهای ⚠️ ──
   bat.judge_low_score = {
     low_score: judge(makeAnalysis({ rsi: 55.0, support: 1.1400 }), undefined,
-      makeCtx(O, { ranking: RANK_USD_STRONG, tvMap: TV_SELL, newsSnap: contraNews() }))
+      makeCtx(O, { ranking: RANK_USD_STRONG, tvMap: TV_SELL, newsSnap: contraNews(), jcfg: { min_score: 7 } }))
   };
 
   // ── NO_SETUP: هر ۵ دلیل ──
@@ -377,7 +380,7 @@ function buildBattery(O, opts) {
     // S3: فقط a1 (سیگنال) به md نیاز دارد — بقیه پیش از دروازه رد می‌شوند
     bat.judge_all_mixed = jall([a1, a2, a3, a4],
       { EURUSD: makeMd(O, 'EURUSD', false, 'bull') },
-      makeCtx(O, { newsSnap: null })).map((j) => judgmentDump(O, j));
+      makeCtx(O, { newsSnap: null, jcfg: { min_score: 7, veto: Object.assign({}, O.CONFIG.judge.veto, { min_count: 1 }) } })).map((j) => judgmentDump(O, j));
   }
 
   // ── S3: دروازهٔ توافق استراتژی‌ها — آینهٔ battery_strategy_gate پایتون ──

@@ -51,6 +51,9 @@ async function testGoldenScenarios() {
   const golden = JSON.parse(fs.readFileSync(gen.GOLDEN_PATH, 'utf8'));
   const got = await gen.runAllScenarios();
   for (const name of gen.SCENARIOS) {
+    // The breaking-news scenario intentionally changes under cumulative vetoes;
+    // its behavior is asserted below instead of compared with the legacy golden.
+    if (name === 'breaking_news') continue;
     const g = gen.stableStringify(got[name]);
     const e = gen.stableStringify(golden[name]);
     if (g !== e) {
@@ -173,8 +176,8 @@ async function testInlinePins() {
   A(hasLog(s5, '۱ فوری'), 'لاگ موتور اخبار تعداد فوری را می‌گوید');
   const st5 = s5.storage['state.last'];
   const eur5 = st5.judgments.filter((j) => j.symbol === 'EURUSD')[0];
-  A(eur5 && eur5.reject_reason === 'VETO' && eur5.hasSignal === false,
-    'خبر فوریِ ناسازگار در چرخهٔ دوم سیگنال را وتو کرد (BREAKING_NEWS)');
+  A(eur5 && eur5.reject_reason !== 'VETO' && eur5.hasSignal === true,
+    'یک وتوی خبر فوری به‌تنهایی سیگنال را متوقف نمی‌کند');
 
   // ۶) داور خاموش — گیت svcTick بدون اجرای چرخه
   const s6 = await gen.runScenario('judge_disabled');

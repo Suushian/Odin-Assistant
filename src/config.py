@@ -29,7 +29,7 @@ fundamental: {enabled: true, cache_ttl_minutes: 30, horizon_hours: 48,
               veto_minutes_before: 30, alerts_enabled: true, alert_before_minutes: 30}
 news: {enabled: true, max_age_hours: 30, min_score: 2, max_items_per_feed: 12, max_total: 18}
 briefing: {enabled: true, times_utc: ["06:30"], horizon_hours: 24, catchup_window_minutes: 90}
-judge: {enabled: true, min_score: 7, max_signals_per_cycle: 3}
+judge: {enabled: true, min_score: 5, max_signals_per_cycle: 3}
 telegram: {send_reports: true, bot_token: "", chat_id: ""}
 loop: {interval_minutes: 15}
 """

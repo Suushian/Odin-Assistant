@@ -233,7 +233,7 @@ def _selftest() -> int:
     assert "= ۷ پیپ" not in msg and msg.count("پیپ فاصله") == 2, \
         "فاصلهٔ حد ضرر/هدف باید یک‌بار و بدون تکرار چاپ شود"
 
-    # ب) هر وتو باید جداگانه سیگنال را متوقف کند
+    # ب) وتوهای معاملاتی تجمعی‌اند: یک عامل ثبت می‌شود، اما کافی نیست.
     veto_cases = {
         "WEEKEND": (_ctx(now=sat, cal=clean, news=supportive), _ana()),
         "TF_CONFLICT": (_ctx(cal=clean, news=supportive), _ana(h1_agrees=False)),
@@ -249,9 +249,16 @@ def _selftest() -> int:
     }
     for key, (c, aa) in veto_cases.items():
         r = judge_symbol(aa, {}, None, c)
-        assert r.signal is None, f"وتوی {key} جلوی سیگنال را نگرفت"
-        assert r.reject_reason == "VETO", f"reject_reason برای {key} = {r.reject_reason}"
         assert key in [v.key for v in r.vetoes], f"{key} در فهرست وتوها نیست: {[v.key for v in r.vetoes]}"
+        if key == "DATA":
+            assert r.signal is None and r.reject_reason == "VETO", "وتوی داده باید مستقل باقی بماند"
+        else:
+            assert r.reject_reason != "VETO", f"یک وتوی {key} نباید به‌تنهایی سیگنال را متوقف کند"
+
+    # دو وتوی معاملاتی هم‌زمان باید سیگنال را متوقف کنند.
+    combined = judge_symbol(_ana(adx=14.0), {}, None,
+                            _ctx(now=sat, cal=clean, news=supportive))
+    assert combined.reject_reason == "VETO" and combined.signal is None, "دو وتوی هم‌زمان باید سیگنال را متوقف کنند"
 
     # تقویم ناموجود نباید به‌معنای «هیچ رویداد پراثری نیست» تفسیر شود.
     unavailable_calendar = _ctx(cal=cal.CalendarSnapshot(error="timeout"), news=supportive)
@@ -265,20 +272,22 @@ def _selftest() -> int:
     assert "WEEKEND" not in [v.key for v in r.vetoes], "وتو باید تنظیم‌پذیر باشد"
 
     # پ) امتیاز ناکافی → رد با دلیل روشن، بدون بادکردن امتیاز
-    weak_jcfg = {**jcfg, "veto": {**jcfg["veto"], "high_impact_event": False}}
+    weak_jcfg = {**jcfg, "min_score": 9, "veto": {**jcfg["veto"], "high_impact_event": False}}
     weak = JudgeContext(jcfg=weak_jcfg, acfg=acfg, symbols_cfg=syms,
                         ranking=[("USD", 0.4), ("JPY", 0.2), ("GBP", 0.0), ("EUR", -0.3)],
                         tv_map={"EURUSD": TVSnapshot("EURUSD", 1.149, 62.0, 32.0, "SELL", 3, 14, 9)},
-                        cal_snap=cal.CalendarSnapshot(error="timeout"),
+                        cal_snap=clean,
                         news_snap=NewsSnapshot(error="down"),
                         now=datetime(2026, 9, 23, 3, 0, tzinfo=timezone.utc),
                         status=market_status(datetime(2026, 9, 23, 3, 0, tzinfo=timezone.utc)),
                         event_veto_minutes=30.0)
     r = judge_symbol(_ana(), {}, None, weak)
     assert r.signal is None and r.reject_reason == "LOW_SCORE", f"reject={r.reject_reason}"
-    assert r.score < int(jcfg["min_score"]), f"امتیاز {r.score} باید زیر آستانه باشد"
+    assert r.score < int(weak_jcfg["min_score"]), f"امتیاز {r.score} باید زیر آستانهٔ آزمون باشد"
+    fundamental_evidence = next(e for e in r.evidences if e.key == "fundamental")
+    assert fundamental_evidence.points == 2, "تقویم پاک باید امتیاز فاندامنتال بگیرد"
     for e in r.evidences:
-        if e.key in ("fundamental", "news", "tv", "session", "strength"):
+        if e.key in ("news", "tv", "session", "strength"):
             assert e.points == 0, f"مدرک {e.key} با دادهٔ نامناسب {e.points} امتیاز گرفت"
     assert any(e.unavailable for e in r.evidences), \
         "مدرکِ بدون داده باید unavailable علامت بخورد، نه اینکه صفرِ بی‌دلیل بگیرد"

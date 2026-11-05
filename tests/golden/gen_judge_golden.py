@@ -292,26 +292,29 @@ def _judge(a, md=None, ctx=None, jfn=None, rules=_DEFAULT_RULES) -> dict:
 #  گروه ۱ — وتوها
 # ══════════════════════════════════════════════════════════════
 def battery_veto_single(jfn=None) -> dict:
-    """هر وتو به‌تنهایی — بقیهٔ دروازه‌ها خاموش/دور نگه داشته شده‌اند."""
+    """هر وتو به‌تنهایی — برای پین‌کردن جزئیات، آستانهٔ این گروه صریحاً ۱ است."""
     out = {}
+
+    def single_ctx(**kwargs):
+        return make_ctx(**kwargs, veto={**JCFG["veto"], "min_count": 1}, min_score=7)
     out["DATA"] = _judge(make_analysis(verdict="DATA"),
-                         ctx=make_ctx(cal=clean_cal(), news=good_news()), jfn=jfn)
+                         ctx=single_ctx(cal=clean_cal(), news=good_news()), jfn=jfn)
     out["WEEKEND"] = _judge(make_analysis(),
-                            ctx=make_ctx(now=SAT, cal=clean_cal(), news=good_news()),
+                            ctx=single_ctx(now=SAT, cal=clean_cal(), news=good_news()),
                             jfn=jfn)
     out["TF_CONFLICT"] = _judge(make_analysis(h1_agrees=False),
-                                ctx=make_ctx(cal=clean_cal(), news=good_news()),
+                                ctx=single_ctx(cal=clean_cal(), news=good_news()),
                                 jfn=jfn)
     out["RANGE"] = _judge(make_analysis(adx=14.0),
-                          ctx=make_ctx(cal=clean_cal(), news=good_news()), jfn=jfn)
+                          ctx=single_ctx(cal=clean_cal(), news=good_news()), jfn=jfn)
     out["EVENT"] = _judge(make_analysis(),
-                          ctx=make_ctx(cal=near_cal(WED_OVERLAP), news=good_news()),
+                          ctx=single_ctx(cal=near_cal(WED_OVERLAP), news=good_news()),
                           jfn=jfn)
     out["VOL_SPIKE"] = _judge(make_analysis(), md=make_md(last_spike=9.0),
-                              ctx=make_ctx(cal=clean_cal(), news=good_news()),
+                              ctx=single_ctx(cal=clean_cal(), news=good_news()),
                               jfn=jfn)
     out["BREAKING_NEWS"] = _judge(make_analysis(),
-                                  ctx=make_ctx(cal=clean_cal(), news=breaking_news()),
+                                  ctx=single_ctx(cal=clean_cal(), news=breaking_news()),
                                   jfn=jfn)
     return out
 
@@ -458,7 +461,7 @@ def battery_judge_low_score(jfn=None) -> dict:
         make_analysis(rsi=55.0, support=1.1400),
         md=make_md(),
         ctx=make_ctx(cal=clean_cal(), news=contra_news(),
-                     ranking=RANK_USD_STRONG, tv=TV_SELL), jfn=jfn)}
+                     ranking=RANK_USD_STRONG, tv=TV_SELL, min_score=7), jfn=jfn)}
 
 
 def battery_judge_no_setup(jfn=None) -> dict:
@@ -528,7 +531,8 @@ def battery_judge_all_mixed(jall=None) -> list:
     # S3: فقط a1 (سیگنال) به md نیاز دارد — a2/a3/a4 پیش از دروازه رد
     # می‌شوند (VETO/NO_SETUP/LOW_SCORE) و datasets برایشان بی‌اثر است
     datasets = {"EURUSD": make_md(last_dir="bull")}
-    ctx = make_ctx(cal=clean_cal(), news=None)
+    ctx = make_ctx(cal=clean_cal(), news=None, min_score=7,
+                   veto={**JCFG["veto"], "min_count": 1})
     if jall is not None:
         fn = jall
     else:

@@ -403,9 +403,60 @@ function testStrategyGatePins() {
     'LOW_SCORE مقدم بر NO_STRATEGY (کمترین جابه‌جاییِ آمار)');
 }
 
+function testFivePointSignalThreshold() {
+  const ctx = gen.makeCtx(O, {
+    ranking: gen.RANK_USD_STRONG, tvMap: gen.TV_SELL, newsSnap: gen.contraNews(),
+    jcfg: { min_score: 5 }
+  });
+  const j = O.judgeSymbol(gen.makeAnalysis({ rsi: 55.0, support: 1.1400 }), {},
+    gen.makeMd(O, 'EURUSD'), ctx, null, null, null, null);
+  A(j.score === 5 && j.max_score === 11,
+    'سناریوی مرزی باید دقیقاً ۵ از ۱۱ امتیاز داشته باشد');
+  A(j.signal !== null && j.reject_reason !== 'LOW_SCORE',
+    'امتیاز ۵ با آستانهٔ ۵ باید پذیرفته شود');
+}
+
+function testCumulativeVetoThreshold() {
+  function run(a, over, count) {
+    const veto = Object.assign({}, O.CONFIG.judge.veto, { min_count: count });
+    const ctx = gen.makeCtx(O, Object.assign({}, over || {}, { jcfg: { veto } }));
+    return O.judgeSymbol(a, {}, gen.makeMd(O, a.symbol), ctx);
+  }
+
+  const one = run(gen.makeAnalysis(), { nowMs: gen.FIXED_SAT }, 2);
+  A(one.vetoes.map((v) => v.key).join(',') === 'WEEKEND'
+    && one.reject_reason !== 'VETO',
+    'یک وتوی عادی با آستانهٔ ۲ به‌تنهایی مانع نیست');
+
+  const two = run(gen.makeAnalysis(), {
+    nowMs: gen.FIXED_SAT, calSnap: gen.nearCal(gen.FIXED_SAT)
+  }, 2);
+  A(two.vetoes.map((v) => v.key).join(',') === 'WEEKEND,EVENT'
+    && two.reject_reason === 'VETO' && two.signal === null,
+    'دو وتوی هم‌زمان با آستانهٔ ۲ مانع صدور می‌شوند');
+
+  const belowThree = run(gen.makeAnalysis(), {
+    nowMs: gen.FIXED_SAT, calSnap: gen.nearCal(gen.FIXED_SAT)
+  }, 3);
+  A(belowThree.reject_reason !== 'VETO',
+    'دو وتو با آستانهٔ ۳ مانع صدور نمی‌شوند');
+
+  const three = run(gen.makeAnalysis(), {
+    nowMs: gen.FIXED_SAT, calSnap: gen.nearCal(gen.FIXED_SAT),
+    newsSnap: gen.breakingNews()
+  }, 3);
+  A(three.vetoes.length === 3 && three.reject_reason === 'VETO'
+    && three.signal === null,
+    'سه وتوی هم‌زمان با آستانهٔ ۳ مانع صدور می‌شوند');
+
+  const hard = run(gen.makeAnalysis({ verdict: 'DATA' }), {}, 3);
+  A(hard.reject_reason === 'VETO' && hard.signal === null,
+    'وتوی DATA مستقل از شمارندهٔ وتوهای عادی باقی می‌ماند');
+}
+
 // ══════════════════════════════════════════════════════════════
 function main() {
-  const tests = [testGoldenBattery, testVetoPins, testEvidencePins,
+  const tests = [testGoldenBattery, testVetoPins, testFivePointSignalThreshold, testCumulativeVetoThreshold, testEvidencePins,
     testJudgePathPins, testStrategyGatePins, testRegistryRulesWhenPresent];
   const fails = [];
   tests.forEach((t) => {

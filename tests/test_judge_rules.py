@@ -574,9 +574,61 @@ def test_gate_order_and_legacy() -> None:
       "دروازه جدول امتیاز را عوض نمی‌کند — فقط لایهٔ رد است")
 
 
+def test_five_point_signal_threshold() -> None:
+    """امتیاز دقیقاً ۵ با آستانهٔ پیش‌فرض ۵ باید از LOW_SCORE عبور کند."""
+    a = gen.make_analysis(rsi=55.0, support=1.1400)
+    ctx = gen.make_ctx(cal=gen.clean_cal(), news=gen.contra_news(),
+                       ranking=gen.RANK_USD_STRONG, tv=gen.TV_SELL,
+                       min_score=5)
+    j = gen.judge_symbol(a, {}, gen.make_md(), ctx, strategy_rules=None)
+    A(j.score == 5 and j.max_score == 11,
+      "سناریوی مرزی باید دقیقاً ۵ از ۱۱ امتیاز داشته باشد")
+    A(j.signal is not None and j.reject_reason != "LOW_SCORE",
+      "امتیاز ۵ با آستانهٔ ۵ باید پذیرفته شود")
+
+
+def test_cumulative_veto_threshold() -> None:
+    """وتوهای عادی فقط پس از رسیدن به آستانهٔ ۲ یا ۳ متوقف می‌کنند؛ DATA مستقل است."""
+    v2 = {**gen.JCFG["veto"], "min_count": 2}
+    one = gen._judge(gen.make_analysis(),
+                     ctx=gen.make_ctx(now=gen.SAT, cal=gen.clean_cal(),
+                                      news=gen.good_news(), veto=v2))
+    A([v["key"] for v in one["vetoes"]] == ["WEEKEND"],
+      "سناریوی تک‌وتو باید فقط WEEKEND داشته باشد")
+    A(one["reject_reason"] != "VETO",
+      "یک وتوی عادی با آستانهٔ ۲ نباید به‌تنهایی سیگنال را وتو کند")
+
+    two = gen._judge(gen.make_analysis(),
+                     ctx=gen.make_ctx(now=gen.SAT, cal=gen.near_cal(gen.SAT),
+                                      news=gen.good_news(), veto=v2))
+    A([v["key"] for v in two["vetoes"]] == ["WEEKEND", "EVENT"],
+      "سناریوی دو وتو باید WEEKEND و EVENT داشته باشد")
+    A(two["reject_reason"] == "VETO" and two["signal"] is None,
+      "دو وتوی هم‌زمان با آستانهٔ ۲ باید سیگنال را متوقف کنند")
+
+    v3 = {**gen.JCFG["veto"], "min_count": 3}
+    below_three = gen._judge(gen.make_analysis(),
+                             ctx=gen.make_ctx(now=gen.SAT, cal=gen.near_cal(gen.SAT),
+                                              news=gen.good_news(), veto=v3))
+    A(below_three["reject_reason"] != "VETO",
+      "دو وتو با آستانهٔ ۳ نباید سیگنال را متوقف کنند")
+    three = gen._judge(gen.make_analysis(),
+                       ctx=gen.make_ctx(now=gen.SAT, cal=gen.near_cal(gen.SAT),
+                                        news=gen.breaking_news(), veto=v3))
+    A(len(three["vetoes"]) == 3 and three["reject_reason"] == "VETO"
+      and three["signal"] is None,
+      "سه وتوی هم‌زمان با آستانهٔ ۳ باید سیگنال را متوقف کنند")
+
+    hard = gen._judge(gen.make_analysis(verdict="DATA"),
+                      ctx=gen.make_ctx(cal=gen.clean_cal(), news=gen.good_news(),
+                                       veto=v3))
+    A(hard["reject_reason"] == "VETO" and hard["signal"] is None,
+      "وتوی DATA مستقل از شمارندهٔ وتوهای عادی باقی می‌ماند")
+
+
 # ══════════════════════════════════════════════════════════════
 def main() -> int:
-    tests = [test_golden_battery, test_veto_single, test_veto_order,
+    tests = [test_golden_battery, test_veto_single, test_five_point_signal_threshold, test_cumulative_veto_threshold, test_veto_order,
              test_veto_toggles_and_clean, test_evidence_branches,
              test_judge_full_paths, test_low_score, test_no_setup,
              test_capped, test_judge_all_mixed, test_risk_math,

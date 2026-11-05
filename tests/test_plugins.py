@@ -410,8 +410,20 @@ def test_judge_registry_parity() -> None:
     if plugin_bat != golden:
         diff = [k for k in sorted(set(plugin_bat) | set(golden))
                 if plugin_bat.get(k) != golden.get(k)]
+        details = {}
+        if "veto_multi" in diff:
+            for case in ("all_except_data", "with_data"):
+                p = plugin_bat["veto_multi"][case]
+                g = golden["veto_multi"][case]
+                details[case] = {
+                    "plugin": {"vetoes": [v["key"] for v in p["vetoes"]],
+                               "reject_reason": p["reject_reason"],
+                               "reject_detail": p["reject_detail"]},
+                    "golden": {"vetoes": [v["key"] for v in g["vetoes"]],
+                               "reject_reason": g["reject_reason"],
+                               "reject_detail": g["reject_detail"]}}
         raise AssertionError(
-            f"باتریِ مسیر rule-plugin با طلایی فرق دارد — گروه‌های: {diff}")
+            f"باتریِ مسیر rule-plugin با طلایی فرق دارد — گروه‌ها: {diff}; details={details}")
     A(True, "باتری کامل داوری از مسیر registry == مسیر مستقیم (بایت‌به‌بایت)")
 
     # نمونهٔ lifecycle: judge-core از طریق _Caps-style initialize هم همان است
