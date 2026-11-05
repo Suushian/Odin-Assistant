@@ -276,7 +276,7 @@ def _selftest() -> int:
     weak = JudgeContext(jcfg=weak_jcfg, acfg=acfg, symbols_cfg=syms,
                         ranking=[("USD", 0.4), ("JPY", 0.2), ("GBP", 0.0), ("EUR", -0.3)],
                         tv_map={"EURUSD": TVSnapshot("EURUSD", 1.149, 62.0, 32.0, "SELL", 3, 14, 9)},
-                        cal_snap=cal.CalendarSnapshot(error="timeout"),
+                        cal_snap=clean,
                         news_snap=NewsSnapshot(error="down"),
                         now=datetime(2026, 9, 23, 3, 0, tzinfo=timezone.utc),
                         status=market_status(datetime(2026, 9, 23, 3, 0, tzinfo=timezone.utc)),
