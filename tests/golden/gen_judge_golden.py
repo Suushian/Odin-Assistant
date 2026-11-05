@@ -531,7 +531,7 @@ def battery_judge_all_mixed(jall=None) -> list:
     # S3: فقط a1 (سیگنال) به md نیاز دارد — a2/a3/a4 پیش از دروازه رد
     # می‌شوند (VETO/NO_SETUP/LOW_SCORE) و datasets برایشان بی‌اثر است
     datasets = {"EURUSD": make_md(last_dir="bull")}
-    ctx = make_ctx(cal=clean_cal(), news=None,
+    ctx = make_ctx(cal=clean_cal(), news=None, min_score=7,
                    veto={**JCFG["veto"], "min_count": 1})
     if jall is not None:
         fn = jall
