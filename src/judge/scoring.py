@@ -768,7 +768,7 @@ def judge_symbol(a: SymbolAnalysis, sym_cfg: dict, md: Optional[MarketData],
 
     hard_vetoes = [v for v in j.vetoes
                    if v.key in {"DATA", "CALENDAR_UNAVAILABLE"}]
-    veto_min = max(2, min(3, int(ctx.jcfg.get("veto", {}).get("min_count", 2))))
+    veto_min = max(1, min(3, int(ctx.jcfg.get("veto", {}).get("min_count", 2))))
     if hard_vetoes or len(j.vetoes) >= veto_min:
         blocking = hard_vetoes or j.vetoes
         j.reject_reason = "VETO"
