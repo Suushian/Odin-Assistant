@@ -18,7 +18,7 @@ assert(svg.includes('<circle cx="54" cy="54" r="25"/>') && svg.includes('<path d
 assert(launcher.includes('M54,29 a25,25 0,1 1,0 50') && launcher.includes('M25,83 L83,25'), 'Android launcher must use the same Ø geometry');
 assert(status.includes('M24,13 a11,11 0,1 1,0 22') && status.includes('M11,37 L37,11'), 'notification mark must be the monochrome Ø silhouette');
 assert(html.includes('<circle cx="24" cy="24" r="11"/>') && html.includes('<path d="M11 37 37 11"/>'), 'Android splash must use the Ø mark');
-assert(about.includes('<circle cx="24" cy="24" r="14"/><path d="M7 41 41 7"/>'), 'About page must use the Ø mark');
+assert(about.includes('<circle cx="24" cy="24" r="11"/><path d="M11 37 37 11"/>'), 'About page must use the Ø mark');
 assert(pyIcons.includes('<circle cx="12" cy="12" r="5.55"/><path d="M5.55 18.45 18.45 5.55"/>'), 'desktop splash icon must use the Ø mark');
 assert(generator.includes('d.ellipse') && generator.includes('d.line([start, end]') && generator.includes('extent = ring_r + 152'), 'desktop raster generator must draw ring and slash');
 assert(pyTheme.includes('brand: str = "#101013"') && pyTheme.includes('brand_tint: str = "#EDEDF0"'), 'Python brand tokens must be monochrome');
