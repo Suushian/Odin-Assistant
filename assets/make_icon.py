@@ -1,11 +1,9 @@
 # -*- coding: utf-8 -*-
-"""تولید assets/icon.ico و assets/icon.png — نشان برند ODIN Assistant.
+"""Generate the ODIN Assistant desktop icon from the canonical Ø brand mark.
 
-طراحی: مربع گوشه‌گرد تیره (هم‌خانواده با تم شیشه‌ای مونوکروم) + مونوگرام «Ø»
-(حلقه + نیزهٔ مورب — اشاره به اودین/اسکاندیناوی) به رنگ سفید. بدون هیچ رنگ
-معنایی (سبز/قرمز فقط برای خرید/فروش داخل رابط است، نه لوگو).
-
-اجرا:  python assets/make_icon.py
+Run: python assets/make_icon.py
+The same proportions are used by docs/odin-launcher-icon.svg and Android
+vector resources: dark rounded-square field, white ring, diagonal spear stroke.
 """
 from __future__ import annotations
 
@@ -14,10 +12,10 @@ from pathlib import Path
 from PIL import Image, ImageDraw
 
 HERE = Path(__file__).resolve().parent
-S = 1024                      # بوم اصلی (همهٔ اندازه‌ها از این کوچک می‌شوند)
+S = 1024
 RADIUS = 228
-TOP, BOT = (28, 35, 45), (10, 13, 18)          # گرادیان عمودی تیره
-INK = (242, 245, 249, 255)                     # سفیدِ نشان
+TOP, BOT = (28, 35, 45), (10, 13, 18)
+INK = (242, 245, 249, 255)
 
 
 def _gradient() -> Image.Image:
@@ -32,37 +30,36 @@ def _gradient() -> Image.Image:
 def build_master() -> Image.Image:
     img = Image.new("RGBA", (S, S), (0, 0, 0, 0))
     mask = Image.new("L", (S, S), 0)
-    ImageDraw.Draw(mask).rounded_rectangle([0, 0, S - 1, S - 1],
-                                           radius=RADIUS, fill=255)
+    ImageDraw.Draw(mask).rounded_rectangle(
+        [0, 0, S - 1, S - 1], radius=RADIUS, fill=255)
     img.paste(_gradient(), (0, 0), mask)
 
     d = ImageDraw.Draw(img)
-    # حاشیهٔ شیشه‌ای ظریف
     d.rounded_rectangle([4, 4, S - 5, S - 5], radius=RADIUS - 4,
                         outline=(255, 255, 255, 34), width=4)
 
-    # مونوگرام Ø : حلقه + نیزهٔ مورب با سرِ گِرد
     cx = cy = S // 2
-    ring_r, w = 226, 78
-    d.ellipse([cx - ring_r - w // 2, cy - ring_r - w // 2,
-               cx + ring_r + w // 2, cy + ring_r + w // 2],
-              outline=INK, width=w)
-    ext = ring_r + 84
-    p1 = (cx - ext * 0.7071, cy + ext * 0.7071)
-    p2 = (cx + ext * 0.7071, cy - ext * 0.7071)
-    d.line([p1, p2], fill=INK, width=w)
-    for px, py in (p1, p2):                    # سرِ گِردِ نیزه
-        d.ellipse([px - w / 2, py - w / 2, px + w / 2, py + w / 2], fill=INK)
+    ring_r, width = 226, 78
+    d.ellipse([cx - ring_r, cy - ring_r, cx + ring_r, cy + ring_r],
+              outline=INK, width=width)
+    extent = ring_r + 84
+    start = (cx - extent * 0.7071, cy + extent * 0.7071)
+    end = (cx + extent * 0.7071, cy - extent * 0.7071)
+    d.line([start, end], fill=INK, width=width)
+    for x, y in (start, end):
+        d.ellipse([x - width / 2, y - width / 2,
+                   x + width / 2, y + width / 2], fill=INK)
     return img
 
 
 def main() -> None:
     master = build_master()
-    ico_sizes = [(16, 16), (20, 20), (24, 24), (32, 32), (40, 40),
-                 (48, 48), (64, 64), (128, 128), (256, 256)]
-    master.save(HERE / "icon.ico", format="ICO", sizes=ico_sizes)
-    master.resize((512, 512), Image.LANCZOS).save(HERE / "icon.png")
-    print(f"[make_icon] icon.ico ({len(ico_sizes)} sizes) + icon.png (512)")
+    sizes = [(16, 16), (20, 20), (24, 24), (32, 32), (40, 40),
+             (48, 48), (64, 64), (128, 128), (256, 256)]
+    master.save(HERE / "icon.ico", format="ICO", sizes=sizes)
+    master.resize((512, 512), Image.Resampling.LANCZOS).save(
+        HERE / "icon.png", optimize=True)
+    print(f"[make_icon] icon.ico ({len(sizes)} sizes) + icon.png (512)")
 
 
 if __name__ == "__main__":
