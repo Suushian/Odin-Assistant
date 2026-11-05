@@ -284,8 +284,10 @@ def _selftest() -> int:
     r = judge_symbol(_ana(), {}, None, weak)
     assert r.signal is None and r.reject_reason == "LOW_SCORE", f"reject={r.reject_reason}"
     assert r.score < int(weak_jcfg["min_score"]), f"امتیاز {r.score} باید زیر آستانهٔ آزمون باشد"
+    fundamental_evidence = next(e for e in r.evidences if e.key == "fundamental")
+    assert fundamental_evidence.points == 2, "تقویم پاک باید امتیاز فاندامنتال بگیرد"
     for e in r.evidences:
-        if e.key in ("fundamental", "news", "tv", "session", "strength"):
+        if e.key in ("news", "tv", "session", "strength"):
             assert e.points == 0, f"مدرک {e.key} با دادهٔ نامناسب {e.points} امتیاز گرفت"
     assert any(e.unavailable for e in r.evidences), \
         "مدرکِ بدون داده باید unavailable علامت بخورد، نه اینکه صفرِ بی‌دلیل بگیرد"
