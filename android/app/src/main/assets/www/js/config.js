@@ -62,13 +62,14 @@
     // مقادیر پیش‌فرض داور (با DEFAULTS در src/judge/scoring.py یکی است)
     judge: {
       enabled: true,
-      min_score: 7,
+      min_score: 5,
       max_signals_per_cycle: 3,
       resend_cooldown_minutes: 180,
       resend_score_gain: 2,
       veto: {
         weekend: true, high_impact_event: true, timeframe_conflict: true,
-        range_market: true, volatility_spike: true, breaking_news: true
+        range_market: true, volatility_spike: true, breaking_news: true,
+        min_count: 2
       },
       fundamental: { clean_high_hours: 6, clean_med_hours: 2 },
       news: { min_score: 4, breaking_min_score: 5 },
