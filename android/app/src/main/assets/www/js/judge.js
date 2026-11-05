@@ -464,7 +464,7 @@
     var hardVetoes = j.vetoes.filter(function (v) {
       return v.key === 'DATA' || v.key === 'CALENDAR_UNAVAILABLE';
     });
-    var vetoMin = Math.max(1, (ctx.jcfg.veto.min_count | 0) || 2);
+    var vetoMin = Math.max(2, Math.min(3, (ctx.jcfg.veto.min_count | 0) || 2));
     if (hardVetoes.length || j.vetoes.length >= vetoMin) {
       var blockingVetoes = hardVetoes.length ? hardVetoes : j.vetoes;
       j.reject_reason = 'VETO';
