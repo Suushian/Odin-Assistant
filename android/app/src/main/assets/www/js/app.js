@@ -56,6 +56,7 @@
     user_name: 'تریدر',
     judge_enabled: true,
     min_score: 5,
+    signal_policy_version: 2,
     veto: {
       weekend: true, high_impact_event: true, timeframe_conflict: true,
       range_market: true, volatility_spike: true, breaking_news: true
@@ -102,7 +103,13 @@
     try {
       var raw = S.storage.get('settings');
       var saved = raw ? JSON.parse(raw) : {};
+      // نسخهٔ سیاست سیگنال: فقط مقدار پیش‌فرض قدیمی ۷ را یک‌بار به ۵ مهاجرت
+      // کن؛ انتخاب آگاهانهٔ کاربر برای ۷ در نسخه‌های بعدی حفظ می‌شود.
+      var migrateSignalPolicy = saved.signal_policy_version !== 2
+        && Number(saved.min_score) === 7;
       S.settings = O.deepFill(DEFAULT_SETTINGS, saved);
+      if (migrateSignalPolicy) S.settings.min_score = 5;
+      S.settings.signal_policy_version = 2;
       // API key is kept outside the general settings blob on Android so backup
       // rules can exclude it. Migrate keys saved by earlier app builds.
       if (typeof ODINNative !== 'undefined' && ODINNative.getSecretPref && ODINNative.setSecretPref) {
@@ -121,7 +128,7 @@
       S.settings = JSON.parse(JSON.stringify(DEFAULT_SETTINGS));
     }
     S.cfg = buildCfg();
-    if (migratedSecret) saveSettings();
+    if (migratedSecret || migrateSignalPolicy) saveSettings();
   }
 
   function saveSettings() {
