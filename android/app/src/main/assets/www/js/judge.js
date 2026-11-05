@@ -461,9 +461,14 @@
     if (a.verdict === 'BUY_SETUP') j.direction = 'BUY';
     else if (a.verdict === 'SELL_SETUP') j.direction = 'SELL';
 
-    if (j.vetoes.length) {
+    var hardVetoes = j.vetoes.filter(function (v) {
+      return v.key === 'DATA' || v.key === 'CALENDAR_UNAVAILABLE';
+    });
+    var vetoMin = Math.max(1, (ctx.jcfg.veto.min_count | 0) || 2);
+    if (hardVetoes.length || j.vetoes.length >= vetoMin) {
+      var blockingVetoes = hardVetoes.length ? hardVetoes : j.vetoes;
       j.reject_reason = 'VETO';
-      j.reject_detail = j.vetoes.map(function (v) { return v.title_fa; }).join('؛ ');
+      j.reject_detail = blockingVetoes.map(function (v) { return v.title_fa; }).join('؛ ');
       return j;
     }
     if (j.direction === null) {
@@ -484,7 +489,7 @@
       }
     });
 
-    var minScore = (ctx.jcfg.min_score | 0) || 7;
+    var minScore = (ctx.jcfg.min_score | 0) || 5;
     if (j.score < minScore) {
       j.reject_reason = 'LOW_SCORE';
       j.reject_detail = 'امتیاز ' + O.faNum(j.score) + ' از ' + O.faNum(j.max_score) +
