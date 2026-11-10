@@ -247,6 +247,22 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+      # Publish the CI debug-signed APK to the existing development release when
+      # no private release keystore is configured. This is for fresh installs/testing;
+      # the ephemeral CI debug certificate may differ from previously installed builds.
+      - name: Publish debug APK to existing GitHub Release (unsigned-key fallback)
+        if: github.ref == 'refs/heads/main' && env.SIGNED != '1'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: v1.0.0
+        run: |
+          set -euo pipefail
+          SRC="android/app/build/outputs/apk/debug/app-debug.apk"
+          test -f "$SRC" || { echo "::error::Debug APK not found: $SRC"; exit 1; }
+          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null
+          gh release upload "$TAG" "$SRC#app-debug.apk" --repo "$GITHUB_REPOSITORY" --clobber
+          echo "::notice::Debug APK from $GITHUB_SHA uploaded to release $TAG. Fresh install may be required due to debug certificate rotation."
+
       # ── انتشار روی Release ──────────────────────────────────────────────
       # فقط روی تگ‌ها و فقط وقتی APK با کلید رسمی امضا شده باشد.
       # نام و متن ریلیز را ورک‌فلو ویندوز می‌سازد؛ ما فقط «فایل» اضافه می‌کنیم
