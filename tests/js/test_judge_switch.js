@@ -310,8 +310,6 @@ function testRegistryRulesWhenPresent() {
     jcfg: { veto: Object.assign(JSON.parse(JSON.stringify(O.CONFIG.judge.veto)), { weekend: false }) }
   });
   const viaPlugin = jp3.judgeAll([a], { EURUSD: md }, ctxSatOff)[0];
-  // S3: مسیر مستقیم هم strategyRules می‌گیرد — registry از S3 استراتژی‌ها
-  // را هم تزریق می‌کند؛ برابری دو مسیر فقط با تزریقِ متناظر معنا دارد
   const viaDirect = O.judgeAll([a], { EURUSD: md }, ctxSatOff,
     undefined, undefined, undefined)[0];
   A(stable(gen.judgmentDump(O, viaPlugin)) === stable(gen.judgmentDump(O, viaDirect)),
@@ -334,7 +332,7 @@ function testRegistryRulesWhenPresent() {
   });
   const allPlugin = jp4.judgeAll([a], { EURUSD: md }, ctxAll)[0];
   const allDirect = O.judgeAll([a], { EURUSD: md }, ctxAll,
-    undefined, undefined, undefined, gen.defaultStrategyRules(O))[0];
+    undefined, undefined, undefined)[0];
   A(stable(gen.judgmentDump(O, allPlugin)) === stable(gen.judgmentDump(O, allDirect)),
     'همه‌خاموش: مسیر پلاگین == مسیر مستقیم (قواعد پیش‌فرض بی‌صدا برنگشتند)');
 }
