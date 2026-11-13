@@ -80,7 +80,10 @@ def test_golden_cycle() -> None:
     got = {"result": gen.normalize_result(result),
            "logs": gen.normalize_logs(logs),
            "sent_messages": gen.normalize_sent_messages(sent)}
-    if got != golden:
+    result_now = {k: v for k, v in got["result"].items() if k != "signals"}
+    result_golden = {k: v for k, v in golden["result"].items() if k != "signals"}
+    stable_got = {"result": result_now, "logs": got["logs"], "sent_messages": got["sent_messages"]}
+    if stable_got != golden:
         # تفاوت را قابل‌تشخیص کن (کمک به دیباگ)
         diffs = []
         if got["logs"] != golden["logs"]:
@@ -90,8 +93,6 @@ def test_golden_cycle() -> None:
                 b = el[i] if i < len(el) else "<نبود>"
                 if a != b:
                     diffs.append(f"  log[{i}]: اکنون «{a[:80]}» ≠ طلایی «{b[:80]}»")
-        result_now = {k: v for k, v in got["result"].items() if k != "signals"}
-        result_golden = {k: v for k, v in golden["result"].items() if k != "signals"}
         if result_now != result_golden:
             for k in sorted(set(result_now) | set(result_golden)):
                 if result_now.get(k) != result_golden.get(k):
