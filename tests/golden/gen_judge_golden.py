@@ -232,7 +232,7 @@ def signal_dump(s) -> dict:
             "risk_pips": s.risk_pips, "reward_pips": s.reward_pips, "rr": s.rr,
             "is_gold": s.is_gold, "session_fa": s.session_fa,
             "now": s.now.isoformat(), "warnings": s.warnings, "sl_capped": s.sl_capped,
-            "direction_fa": s.direction_fa, "strategies": s.strategies,
+            "direction_fa": s.direction_fa,
             "journal": s.to_journal(sent=True)}
 
 
@@ -506,7 +506,7 @@ def battery_judge_all_mixed(jall=None) -> list:
         fn = jall
     else:
         def fn(lst, ds, c):
-            return judge_all(lst, ds, c, strategy_rules=DEFAULT_STRATEGY_RULES)
+            return judge_all(lst, ds, c)
     return [judgment_dump(j) for j in fn([a1, a2, a3, a4], datasets, ctx)]
 
 
@@ -564,7 +564,6 @@ def main() -> int:
            + len(battery["judge_all_mixed"]))
     print(f"✅ طلاییِ داور ضبط شد — {GOLDEN_PATH.name}: "
           f"{n_veto} سناریوی وتو + {n_ev} شاخهٔ شاهد + {n_j} داوری کامل "
-          f"+ {len(battery['strategy_gate'])} دروازهٔ استراتژی (S3) "
           f"+ {len(battery['risk_math'])} حالت ریاضی ریسک")
     return 0
 
