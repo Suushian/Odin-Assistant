@@ -49,16 +49,16 @@ class JudgePlugin:
 
     def _rules(self) -> tuple:
         """(veto_rules, evidence_rules, risk_fn) از registry —
-        یا چهارتایی None (بدون registry = delegation سادهٔ پیش از فاز ۴).
+        یا سه‌تایی None (بدون registry = delegation سادهٔ پیش از فاز ۴).
 
         adapterهای قاعده stateless‌اند (delegation خالص، بدون هوک lifecycle)،
         پس اگر نمونهٔ lifecycle هنوز ساخته نشده باشد، مستقیم با factory ساخته
         می‌شوند. فیلتر providers(only_active) همان enable/disable را محترم
-        می‌شمارد؛ فهرست خالی → None → fallback به قواعد پیش‌فرض scoring
+        می‌شمارد؛ فهرست خالی در registry حفظ می‌شود تا غیرفعال‌سازی صریح رعایت شود
         (رفتار امروز). نتیجه cache می‌شود — registry در عمر یک _Caps ثابت است.
         """
         if self._registry is None:
-            return (None, None, None, None)
+            return (None, None, None)
         if self._rules_cache is None:
             reg = self._registry
 
