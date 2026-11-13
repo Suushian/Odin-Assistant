@@ -326,7 +326,7 @@ def veto_range(a: SymbolAnalysis, sym_cfg: dict, md: Optional[MarketData],
     adx_min = float(acfg.get("adx_min_trend", 20))
     if vc.get("range_market", True) and a.verdict != "DATA" and a.adx < adx_min:
         return Veto("RANGE", "😴 بازار بی‌روند (رنج)",
-                    f"ADX={a.adx:.0f} زیر آستانهٔ {adx_min:.0f} است — استراتژی روندی "
+                    f"ADX={a.adx:.0f} زیر آستانهٔ {adx_min:.0f} است — روند "
                     f"در بازار رنج کار نمی‌کند")
     return None
 
