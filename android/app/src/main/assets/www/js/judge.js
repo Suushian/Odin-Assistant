@@ -87,7 +87,7 @@
     var adxMin = +((ctx.acfg.adx_min_trend != null) ? ctx.acfg.adx_min_trend : 20);
     if (vc.range_market !== false && a.verdict !== 'DATA' && a.adx < adxMin) {
       return Veto('RANGE', '😴 بازار بی‌روند (رنج)',
-        'ADX=' + O.pyFixed(a.adx, 0) + ' زیر آستانهٔ ' + O.pyFixed(adxMin, 0) + ' است — استراتژی روندی در بازار رنج کار نمی‌کند');
+        'ADX=' + O.pyFixed(a.adx, 0) + ' زیر آستانهٔ ' + O.pyFixed(adxMin, 0) + ' است — بازار رنج است و روند قابل اتکا نیست');
     }
     return null;
   };
