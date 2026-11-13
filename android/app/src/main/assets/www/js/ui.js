@@ -309,8 +309,7 @@
       return html + '<div class="card"><div class="empty-state"><div class="e-ico">' + O.ico('antenna', 40) + '</div><div class="e-t">هنوز داوری انجام نشده</div><div class="e-s">اول «تحلیل تازه» را از صفحهٔ خانه اجرا کن.</div></div></div>';
     }
 
-    // S3: ترتیب نمایش = ترتیب دروازه‌های داوری (NO_STRATEGY بعد از امتیاز)
-    var order = { SIGNAL: 0, VETO: 1, LOW_SCORE: 2, NO_STRATEGY: 3, CAPPED: 4, NO_SETUP: 5 };
+    var order = { SIGNAL: 0, VETO: 1, LOW_SCORE: 2, CAPPED: 3, NO_SETUP: 4 };
     var js = st.judgments.slice().sort(function (a, b) {
       var ka = a.signal ? -1 : (order[a.reject_reason] != null ? order[a.reject_reason] : 9);
       var kb = b.signal ? -1 : (order[b.reject_reason] != null ? order[b.reject_reason] : 9);
@@ -321,14 +320,12 @@
     if (!signals.length) {
       var vet = js.filter(function (j) { return j.reject_reason === 'VETO'; }).length;
       var low = js.filter(function (j) { return j.reject_reason === 'LOW_SCORE'; }).length;
-      var nstr = js.filter(function (j) { return j.reject_reason === 'NO_STRATEGY'; }).length;
       var nos = js.filter(function (j) { return j.reject_reason === 'NO_SETUP'; }).length;
       html += '<div class="card ink"><div class="ink-title">' + O.ico('no-entry', 15) + '<span>هیچ سیگنالی صادر نشد — و این خودش یک خروجی معتبر است.</span></div>' +
         '<div class="ink-cap" style="margin-top:6px;line-height:2">وعدهٔ سیستم این است که «سیگنال بدون پشتوانه ندهد»، نه اینکه «همیشه سیگنال بدهد».</div>' +
         '<div class="ink-tiles">' +
         '<div class="ink-tile"><div class="t-num">' + O.faNum(vet) + '</div><div class="t-cap">وتو</div></div>' +
         '<div class="ink-tile"><div class="t-num">' + O.faNum(low) + '</div><div class="t-cap">امتیاز ناکافی</div></div>' +
-        '<div class="ink-tile"><div class="t-num">' + O.faNum(nstr) + '</div><div class="t-cap">بدون توافق</div></div>' +
         '<div class="ink-tile"><div class="t-num">' + O.faNum(nos) + '</div><div class="t-cap">بدون ستاپ</div></div>' +
         '</div></div>';
     }
@@ -394,13 +391,6 @@
 
     h += scoreBar(j, minScore);
 
-    // S3: پشتوانهٔ استراتژی — موافق‌ها سبز با قدرت، بقیه با دلیلِ NONE
-    if ((s.strategies || []).length) {
-      h += '<div style="margin-top:8px;font-size:11.5px;font-weight:700">' +
-        O.ico('scale', 12) + ' پشتوانهٔ استراتژی</div>';
-      h += strategiesHtml(s.strategies, s.direction);
-    }
-
     h += '<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">' +
       '<button class="btn subtle" data-chart-sig="' + esc(s.symbol) + '"' +
       ' style="padding:5px 12px;font-size:10.5px">' + O.ico('chart-line', 12) + ' نمایش روی نمودار</button>' +
@@ -465,39 +455,9 @@
         '</div>';
       h += scoreBar(j, minScore);
       h += evidencesHtml(j, id);
-    } else if (j.reject_reason === 'NO_STRATEGY') {
-      // S3: دروازهٔ توافق — امتیاز کافی بود، استراتژی هم‌جهت نبود.
-      // فهرست صادقانهٔ نظرِ هر استراتژی + دلیلِ کوتاهِ NONE (حلقهٔ صداقت:
-      // کاربر باید بداند کدام لایه رد کرده)، بعد نوارِ امتیاز.
-      h += strategiesHtml(j.strategies || [], j.direction);
-      h += scoreBar(j, minScore);
     } else if (j.reject_reason === 'NO_SETUP' && j.price) {
       // توضیح بیشتر بدون جدول مدارک (مدرکی حساب نشده)
     }
-    return h + '</div>';
-  }
-
-  // فهرست فشردهٔ verdict استراتژی‌ها (S3) — هم‌جهت‌ها سبز، بقیه با دلیلِ
-  // کوتاهِ NONE. بدون ایموجی (آیکون SVG — سیاست v0.13.0).
-  var STRAT_WORD = { BUY: 'خرید', SELL: 'فروش', NONE: 'بی‌نظر' };
-  function strategiesHtml(list, sigDir) {
-    if (!list.length) {
-      return '<div style="margin-top:8px;font-size:11px">' + O.ico('no-entry', 12) +
-        ' هیچ استراتژیِ فعالی در دسترس نیست</div>';
-    }
-    var h = '<div style="margin-top:8px;font-size:11px;line-height:2.1">';
-    list.forEach(function (v) {
-      var agree = v.direction === sigDir;
-      h += '<div>' + O.ico(agree ? 'check-circle' : 'minus', 12, agree ? 'c-green' : '') +
-        ' <b>' + esc(v.name_fa) + '</b>: ' +
-        '<span style="color:var(--text-2)">' + esc(STRAT_WORD[v.direction] || v.direction) + '</span>';
-      if (agree) {
-        h += ' — قدرت ' + O.faNum(O.pyFixed(+v.strength || 0, 2)).replace('.', '\u066b');
-      } else if (v.reasons_fa && v.reasons_fa.length) {
-        h += ' — ' + eico(String(v.reasons_fa[0]), 11);
-      }
-      h += '</div>';
-    });
     return h + '</div>';
   }
 
@@ -718,25 +678,6 @@
       html += '</div></div>';
     }
 
-    // به تفکیک استراتژی (S4 — v0.27؛ رکوردهای ژورنال از v0.26 برچسب دارند)
-    var stKeys = Object.keys(stats.by_strategy || {});
-    if (stKeys.length) {
-      html += '<div class="card"><button class="expand-toggle" data-expand="j-strats" style="padding-top:0">' +
-        O.ico('scale', 13) + ' تفکیک استراتژی‌ها <span>' + O.ico('chevron-down', 12) + '</span></button>' +
-        '<div class="expand-body closed" id="j-strats" style="width:100%">';
-      stKeys.sort().forEach(function (k) {
-        var b = stats.by_strategy[k];
-        var nm = k;
-        try { nm = O.strategyFor(k).nameFa; } catch (err) { /* کلیدِ ناشناخته → همان کلید */ }
-        html += '<div class="j-entry"><div class="j-sym"><div class="s1">' + esc(nm) + '</div>' +
-          '<div class="s2">توافقاتِ بسته‌شده ' + O.faNum(b.closed) + ' · برد ' + O.faNum(b.wins) +
-          ' · باخت ' + O.faNum(b.losses) + ' · منقضی ' + O.faNum(b.expired) + '</div></div>' +
-          '<span class="r-chip ' + ((b.avg_r || 0) >= 0 ? 'win' : 'loss') + '">' + O.rFmt(b.avg_r) + '</span></div>';
-      });
-      html += '<div class="stat-defs" style="margin-top:6px">سرنوشتِ سیگنال‌هایی که این استراتژی با آن‌ها توافق کرد — همبستگی ≠ علیت (صادقانه).</div>';
-      html += '</div></div>';
-    }
-
     html += '<div class="action-row" style="margin-top:4px">' +
       '<button class="btn ghost sm" data-action="journal-save" style="flex:1">' + O.ico('save', 13) + ' ذخیره در دانلودها</button>' +
       '<button class="btn ghost sm" data-action="journal-export" style="flex:1">' + O.ico('share', 13) + ' کپی JSONL</button>' +
@@ -832,17 +773,6 @@
       '<div class="set-row"><div><div class="set-label">داور فعال است</div></div>' + switchHtml('judge_enabled', set.judge_enabled) + '</div>' +
       '<div class="set-row"><div><div class="set-label">آستانهٔ صدور سیگنال</div></div>' +
       '<span class="stepper"><button data-step="min_score:-1">−</button><span class="val">' + O.faNum(set.min_score) + '</span><button data-step="min_score:1">+</button></span></div>' +
-      '</div>';
-
-    // استراتژی‌های ورود (S4 — v0.27) — کلیدها از راه buildCfg به همان
-    // آبشارِ فعال/غیرفعالِ فاز ۷ می‌رسند (strategies.<key>.enabled)
-    html += '<div class="card"><div class="section-title" style="margin-top:0">' + ct('target', 'استراتژی‌های ورود', 13) + '</div>' +
-      row2('strategy_tp_enabled', 'trend-up', 'روند + پولبک', 'روند H4+H1 · پولبک RSI · تأییدِ ادامهٔ حرکت', set.strategy_tp_enabled !== false) +
-      row2('strategy_lb_enabled', 'clock', 'شکست لندن', 'شکستِ محدودهٔ آسیا فقط در ۰۷ تا ۱۱ UTC', set.strategy_lb_enabled !== false) +
-      row2('strategy_carry_enabled', 'coins', 'کری (نرخ بهره)', 'فقط «توافق» می‌آورد — به‌تنهایی سیگنال نمی‌سازد', set.strategy_carry_enabled !== false) +
-      row2('strategy_scalping_enabled', 'activity', 'اسکالپ M15', 'مومنتوم M15 با فیلتر جهت H1 · حد ضرر/هدف اختصاصی', set.strategy_scalping_enabled !== false) +
-      '<div class="set-row"><div><div class="set-label">حداقل توافقِ استراتژی‌ها</div></div>' +
-      '<span class="stepper"><button data-step="strategy_min_agree:-1">−</button><span class="val">' + O.faNum(set.strategy_min_agree | 0) + '</span><button data-step="strategy_min_agree:1">+</button></span></div>' +
       '</div>';
 
     // وضعیت پلاگین‌ها (§۸-2 — v0.28): API از فاز ۷ آماده بود
