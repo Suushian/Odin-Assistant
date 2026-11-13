@@ -22,10 +22,6 @@
  *   است و قواعد را از registry به judgeAll تزریق می‌کند (fallback صادقانه:
  *   بدون registry → delegation سادهٔ قبلی).
  *
- * ⚠️ S2 (v0.26): سه استراتژی ورود هم ثبت‌اند (strategy-*×۳ با قرارداد
- *   odin.strategy@1 — آینهٔ src/plugins/strategies.py). هنوز مصرف‌کننده
- *   ندارند (چرخه/داور دست‌نخورده) — سوییچ دروازهٔ توافق در S3.
- *
  * سبک: ES5 خالص (var/function) — نگهبانش بخش مشروطِ test_cycle_switch.js.
  */
 (function (O) {
