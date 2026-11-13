@@ -431,7 +431,7 @@
       esc(j.symbol) + '</div> <span class="card-sub">' + esc(j.fa_name) + '</span>' +
       '<div style="margin-top:5px"><span class="pill ' + (j.reject_reason === 'VETO' ? 'red' : '') + '">' + eico(statusFa, 11) + '</span>' +
       ((j.reject_reason === 'LOW_SCORE' || j.reject_reason === 'CAPPED'
-        || j.reject_reason === 'NO_STRATEGY')
+       )
         ? ' <span class="pill outline">' + O.faNum(j.score) + '/' + O.faNum(j.max_score) + '</span>' : '') +
       '</div></div>' +
       '<div class="card-sub" style="text-align:left">قیمت<br><b class="mono" style="color:var(--text);font-size:13px">' + esc(O.fmtPrice(j.price, j.pip)) + '</b></div></div>';
