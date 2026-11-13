@@ -522,9 +522,9 @@ group('۹) پاریتیِ سورس — فهرست‌ها مستقیماً از s
   const cStart = contractsPy.indexOf('CONTRACTS: Dict[str, type] = {');
   const cBody = contractsPy.slice(cStart, contractsPy.indexOf('}', cStart));
   const pyContracts = (cBody.match(/"([a-z0-9.]+@\d+)":/g) || []).map((s) => s.slice(1, -2));
-  ok(pyContracts.length === 16 && pyContracts.every((cid) => cid in core.CONTRACTS)
-     && Object.keys(core.CONTRACTS).length === 16,
-    'CONTRACTS باید دقیقاً همان ۱۶ کلید contracts.py باشد');
+  ok(pyContracts.length === 15 && pyContracts.every((cid) => cid in core.CONTRACTS)
+     && Object.keys(core.CONTRACTS).length === 15,
+    'CONTRACTS باید دقیقاً همان ۱۵ کلید contracts.py باشد');
 
   // STATES از کلاس PluginState
   const stBody = lifecyclePy.slice(lifecyclePy.indexOf('class PluginState'),
