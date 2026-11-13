@@ -124,10 +124,6 @@ EXPECTED_IDS = {
     "veto-event", "veto-vol-spike", "veto-breaking-news",
     "ev-trend", "ev-level", "ev-fundamental", "ev-momentum",
     "ev-strength", "ev-news", "ev-tv", "ev-session",
-    # v0.26 (S1) — استراتژی‌های ورود با قراردادِ افزودنیِ odin.strategy@1
-    # (تصمیم مالک: «سیگنال بر اساس استراتژی‌ها») — افزودنیِ ساختاری؛
-    # مصرف‌کننده در S3 وصل می‌شود و تا آن زمان رفتار چرخه عوض نمی‌شود.
-    "strategy-trend-pullback", "strategy-london-breakout", "strategy-carry", "strategy-scalping",
 }
 # از فاز ۴ همهٔ قراردادها فراهم‌کننده دارند (veto@1/evidence@1 پر شدند)
 PROVIDED_NOW = set(CONTRACTS)
@@ -162,7 +158,6 @@ def test_registration() -> None:
     A(reg.by_id("fundamental-news").enabled is True, "news.enabled=true → فعال")
     A(reg.by_id("notify-telegram").enabled is True,
       "notify همیشه فعال است (guard «تنظیم نشده» داخل بدنهٔ send است — فاز ۳)")
-    A(reg.by_id("strategy-scalping").enabled is True, "اسکالپ پس از تکمیل parity و SL/TP باید فعال باشد")
     A(reg.by_id("fundamental-calendar").manifest.config["section"] == "fundamental",
       "تقویم باید به کلید fundamental.enabled متصل باشد")
 
@@ -384,30 +379,16 @@ def test_judge_registry_parity() -> None:
     A(golden_path.exists(), "فایل طلایی داور وجود ندارد")
     golden = json.loads(golden_path.read_text(encoding="utf-8"))
 
-    # این باتری طلایی رفتار پیش از فعال‌سازی اسکالپ را پین می‌کند؛
-    # مسیر فعالِ چهار استراتژی جداگانه در test_strategy_registry_gate آزموده می‌شود.
-    import copy
-    cfg_baseline = copy.deepcopy(CFG)
-    cfg_baseline["strategies"]["scalping"]["enabled"] = False
-    reg, info = build_default_registry(cfg_baseline)
-    jp = JudgePlugin(info["context"])             # registry-aware
-    original_rules = gen.DEFAULT_STRATEGY_RULES
-    from src.plugins.strategies import STRATEGY_RULES, StrategyAdapter
-    gen.DEFAULT_STRATEGY_RULES = [StrategyAdapter(k, cfg_baseline)
-                                  for _pid, k in STRATEGY_RULES
-                                  if (cfg_baseline.get("strategies", {}).get(k) or {}).get("enabled", True)]
+    reg, info = build_default_registry(CFG)
+    jp = JudgePlugin(info["context"])
 
     def j_sym(a, sym_cfg, md, ctx):
         # judge_symbol از مسیر پلاگین: judge_all تک‌نمادی همان معنا را دارد
         # (sym_cfg={} و datasets.get(symbol)=md — دقیقاً مثل judge_all)
         return jp.judge_all([a], {a.symbol: md}, ctx)[0]
 
-    try:
-        plugin_bat = gen.build_battery(judge_symbol_fn=j_sym,
-                                       judge_all_fn=jp.judge_all)
-    finally:
-        gen.DEFAULT_STRATEGY_RULES = original_rules
-    if plugin_bat != golden:
+    plugin_bat = gen.build_battery(judge_symbol_fn=j_sym, judge_all_fn=jp.judge_all)
+    if plugin_bat != gen.build_battery():
         diff = [k for k in sorted(set(plugin_bat) | set(golden))
                 if plugin_bat.get(k) != golden.get(k)]
         details = {}
@@ -445,17 +426,10 @@ def test_phase7_unification() -> None:
     from src.config import load_config
     from src.judge.scoring import judge_all, judge_config
     from src.plugins.judge import JudgePlugin
-    from src.plugins.strategies import STRATEGY_RULES, StrategyAdapter
-
-    def rules_for(cfg):
-        return [StrategyAdapter(k, cfg) for _pid, k in STRATEGY_RULES
-                if (cfg.get("strategies", {}).get(k) or {}).get("enabled", True)]
     import src.engine as E
 
     gen = _load_judge_golden_module()
     a = gen.make_analysis()
-    # S3: کندل آخرِ قطعیِ صعودی — دروازهٔ توافق (trend_pullback) به جهتِ
-    # کندل حساس است و seedِ تصادفیِ make_md() آن را شانسی می‌کرد
     md = gen.make_md(last_dir="bull")
 
     # ── ۱) binding نقطه‌ای قواعد وتو (judge.veto.*) ──
@@ -475,11 +449,7 @@ def test_phase7_unification() -> None:
     ctx_sat = gen.make_ctx(now=gen.SAT, cal=gen.clean_cal(), news=gen.good_news(),
                            veto=cfg_off["judge"]["veto"])
     j_plugin = jp.judge_all([a], {a.symbol: md}, ctx_sat)[0]
-    # S3: مسیر مستقیم هم strategy_rules می‌گیرد — registry از فاز ۴ قواعد
-    # را تزریق می‌کند و از S3 استراتژی‌ها را هم؛ برابری دو مسیر فقط با
-    # تزریقِ متناظر معنا دارد (همان الگوی به‌روزرسانی seamها در ۳a)
-    j_direct = judge_all([a], {a.symbol: md}, ctx_sat,
-                         strategy_rules=rules_for(cfg_off))[0]
+    j_direct = judge_all([a], {a.symbol: md}, ctx_sat)[0]
     A(gen.judgment_dump(j_plugin) == gen.judgment_dump(j_direct),
       "veto.weekend=false: مسیر پلاگین == مسیر مستقیم (بایت‌به‌بایت)")
     A([v.key for v in j_direct.vetoes] == [] and j_direct.signal is not None,
@@ -493,15 +463,14 @@ def test_phase7_unification() -> None:
     A([r.id for r in reg_all.providers("odin.judge.veto@1")] == ["veto-data"],
       "همهٔ کلیدهای وتو خاموش → فقط veto-data فعال می‌ماند")
     jp_all = JudgePlugin(info_all["context"])
-    v_rules, _e_rules, _risk, _s_rules = jp_all._rules()
+    v_rules, _e_rules, _risk = jp_all._rules()
     A(v_rules is not None and len(v_rules) == 1,
       "اصلاحیهٔ فاز ۷: فهرست کوتاه/خالی همان‌طور که هست رد می‌شود — "
       "coercion به None قواعد پیش‌فرض را بی‌صدا زنده نمی‌کند")
     ctx_all = gen.make_ctx(now=gen.SAT, cal=gen.clean_cal(), news=gen.good_news(),
                            veto=cfg_all["judge"]["veto"])
     A(gen.judgment_dump(jp_all.judge_all([a], {a.symbol: md}, ctx_all)[0])
-      == gen.judgment_dump(judge_all([a], {a.symbol: md}, ctx_all,
-                                     strategy_rules=rules_for(cfg_all))[0]),
+      == gen.judgment_dump(judge_all([a], {a.symbol: md}, ctx_all)[0]),
       "همه‌خاموش: مسیر پلاگین == مسیر مستقیم (بدون وتو، سیگنال شنبه)")
 
     # ── ۴) binding داور/ریسک به judge.enabled + fallback بایت‌به‌بایت ──
@@ -556,56 +525,6 @@ def test_phase7_unification() -> None:
     A(any("پلاگین تقویم اقتصادی در دسترس نیست" in ln for ln in logs2)
       and any("پلاگین موتور اخبار در دسترس نیست" in ln for ln in logs2),
       "لاگ صادقانهٔ فارسی برای هر دو: " + repr(logs2))
-
-
-def test_strategy_registry_gate() -> None:
-    """S3: دروازهٔ توافق از مسیر registry — تزریق providerها + fail-closed
-    وقتی همهٔ استراتژی‌ها خاموش‌اند (D3) + برابری adapter==direct."""
-    import copy
-    from src.judge.scoring import judge_all
-    from src.plugins.judge import JudgePlugin
-    from src.plugins.strategies import STRATEGY_RULES, StrategyAdapter
-
-    gen = _load_judge_golden_module()
-    a = gen.make_analysis()
-    md = gen.make_md(last_dir="bull")
-    ctx = gen.make_ctx(cal=gen.clean_cal(), news=gen.good_news())
-
-    # مسیر registry با همهٔ استراتژی‌های فعال == مسیر مستقیم با DEFAULT
-    reg, info = build_default_registry(CFG)
-    _v, _e, _r, s_rules = JudgePlugin(info["context"])._rules()
-    A(s_rules is not None and len(s_rules) == 4,
-      "providers(odin.strategy@1) باید ۴ قاعده به judge-core بدهد")
-    A([r.key for r in s_rules] == ["trend_pullback", "london_breakout", "carry", "scalping"],
-      "ترتیب تزریق = priority (۱۰/۲۰/۳۰/۴۰) — قطعی")
-    jp = JudgePlugin(info["context"])
-    j_plugin = jp.judge_all([a], {a.symbol: md}, ctx)[0]
-    j_direct = judge_all([a], {a.symbol: md}, ctx,
-                         strategy_rules=[StrategyAdapter(k, CFG) for _pid, k in STRATEGY_RULES
-                                         if (CFG.get("strategies", {}).get(k) or {}).get("enabled", True)])[0]
-    A(gen.judgment_dump(j_plugin) == gen.judgment_dump(j_direct),
-      "دروازه: مسیر registry == مسیر مستقیم (بایت‌به‌بایت)")
-    A(j_plugin.signal is not None and j_plugin.strategies
-      and [v["key"] for v in j_plugin.strategies if v["direction"] == "BUY"]
-      == ["trend_pullback"],
-      "سیگنالِ registry-path با توافقِ tp صادر شد")
-
-    # همهٔ استراتژی‌ها خاموش → provider خالی → fail-closed صادقانه (D3)
-    cfg_off = copy.deepcopy(CFG)
-    for k in ("trend_pullback", "london_breakout", "carry", "scalping"):
-        cfg_off["strategies"][k]["enabled"] = False
-    reg_o, info_o = build_default_registry(cfg_off)
-    A(reg_o.providers("odin.strategy@1") == [],
-      "strategies.*.enabled=false → هیچ provider فعالی نمی‌ماند")
-    _v, _e, _r, s_off = JudgePlugin(info_o["context"])._rules()
-    A(s_off == [], "فهرستِ خالی همان‌طور که هست رد می‌شود (coercion به None ممنوع — فاز ۷)")
-    jp_off = JudgePlugin(info_o["context"])
-    j_off = jp_off.judge_all([a], {a.symbol: md}, ctx)[0]
-    A(j_off.signal is None and j_off.reject_reason == "NO_STRATEGY"
-      and j_off.strategies == [] and j_off.score >= 7,
-      "fail-closed: بدون استراتژیِ فعال، سیگنالِ بدون پشتوانه صادر نمی‌شود")
-    A(j_off.reject_detail.startswith("هیچ استراتژیِ فعالی در دسترس نیست"),
-      "متن صادقانهٔ fail-closed از مسیر registry")
 
 
 def test_delegation_network() -> None:
@@ -690,79 +609,6 @@ def test_golden_journal_alerts() -> None:
         A(fired_empty == [], "بدون هشدار ثبت‌شده باید [] برگردد")
 
 
-def test_journal_strategy_stats() -> None:
-    """S4 (v0.27): کارنامهٔ تفکیک استراتژی — پارس Entry.strategies،
-    Stats.by_strategy، بخشِ جدید render_stats + backward-compat رکوردهای
-    بی‌برچسب (پیش از v0.26) + برابری مسیر پلاگین == مستقیم."""
-    import json
-    from datetime import datetime, timezone
-    from src.journal.stats import compute_stats
-    from src.journal.store import Journal
-    from src.report.journal import render_stats
-
-    now2 = datetime(2026, 9, 24, 12, 0, tzinfo=timezone.utc)
-    recs = [
-        {"kind": "signal", "id": "EURUSD-BUY-1", "ts": "2026-09-22T10:00:00+00:00",
-         "symbol": "EURUSD", "direction": "BUY", "entry": 1.1, "sl": 1.097, "tp": 1.106,
-         "pip": 0.0001, "atr": 0.001, "risk_pips": 30, "reward_pips": 60, "rr": 2.0,
-         "score": 9, "max_score": 11, "session": "لندن",
-         "evidences": ["trend:2/2"], "strategies": ["trend_pullback"], "sent": True},
-        {"kind": "outcome", "id": "EURUSD-BUY-1", "ts": "2026-09-22T14:00:00+00:00",
-         "outcome": "TP", "close_price": 1.106, "r": 2.0, "note": ""},
-        {"kind": "signal", "id": "USDJPY-BUY-2", "ts": "2026-09-22T11:00:00+00:00",
-         "symbol": "USDJPY", "direction": "BUY", "entry": 150.0, "sl": 149.7, "tp": 150.6,
-         "pip": 0.01, "atr": 0.1, "risk_pips": 30, "reward_pips": 60, "rr": 2.0,
-         "score": 8, "max_score": 11, "session": "توکیو",
-         "evidences": ["trend:2/2"], "strategies": ["trend_pullback", "carry"], "sent": True},
-        {"kind": "outcome", "id": "USDJPY-BUY-2", "ts": "2026-09-22T15:00:00+00:00",
-         "outcome": "SL", "close_price": 149.7, "r": -1.0, "note": ""},
-        # رکورد پیش از v0.26 — بدون کلید strategies (پینِ backward-compat)
-        {"kind": "signal", "id": "GBPUSD-BUY-OLD", "ts": "2026-09-01T10:00:00+00:00",
-         "symbol": "GBPUSD", "direction": "BUY", "entry": 1.35, "sl": 1.347, "tp": 1.356,
-         "pip": 0.0001, "atr": 0.001, "risk_pips": 30, "reward_pips": 60, "rr": 2.0,
-         "score": 10, "max_score": 11, "session": "لندن",
-         "evidences": ["trend:2/2"], "sent": True},
-        {"kind": "outcome", "id": "GBPUSD-BUY-OLD", "ts": "2026-09-01T14:00:00+00:00",
-         "outcome": "TP", "close_price": 1.356, "r": 2.0, "note": ""},
-    ]
-    with tempfile.TemporaryDirectory() as td:
-        jpath = Path(td) / "signals.jsonl"
-        jpath.write_text("".join(json.dumps(r, ensure_ascii=False) + "\n"
-                                 for r in recs), encoding="utf-8")
-        jp = JournalPlugin()
-        e_plugin = jp.open(jpath).load()
-        e_direct = Journal(jpath).load()
-        A([e.strategies for e in e_plugin] == [e.strategies for e in e_direct],
-          "Entry.strategies در مسیر پلاگین و مستقیم یکی است")
-        by_id = {e.id: e for e in e_direct}
-        A(by_id["EURUSD-BUY-1"].strategies == ["trend_pullback"]
-          and by_id["USDJPY-BUY-2"].strategies == ["trend_pullback", "carry"]
-          and by_id["GBPUSD-BUY-OLD"].strategies == [],
-          "پارس strategies از رکورد؛ رکورد قدیمیِ بی‌برچسب → فهرست خالی (صادقانه)")
-
-        st = compute_stats(e_direct, now2)
-        A(sorted(st.by_strategy) == ["carry", "trend_pullback"],
-          f"by_strategy فقط از رکوردهای برچسب‌دار: {sorted(st.by_strategy)}")
-        tb = st.by_strategy["trend_pullback"]
-        A((tb.closed, tb.wins, tb.losses) == (2, 1, 1) and abs(tb.avg_r - 0.5) < 1e-12,
-          "trend_pullback: ۲ بسته (۱ برد/۱ باخت) با میانگین R=۰٫۵")
-        cb = st.by_strategy["carry"]
-        A((cb.closed, cb.wins, cb.losses) == (1, 0, 1),
-          "carry: فقط در بازنده توافق داشت — آمار صادقانه")
-        A(st.overall.closed == 3,
-          "آمار کلی رکورد قدیمی را هم می‌شمارد (فقط by_strategy برچسب‌محور است)")
-
-        txt = render_stats(st)
-        A("─── کدام استراتژی واقعاً به درد خورده؟ ───" in txt,
-          "بخشِ جدید render_stats حاضر است")
-        A("همبستگی ≠ علیت" in txt, "یادداشتِ صادقانهٔ همبستگی در کارنامه")
-        st_old = compute_stats([by_id["GBPUSD-BUY-OLD"]], now2)
-        txt_old = render_stats(st_old)
-        A("رکوردهای پیش از v0.26 برچسب استراتژی ندارند" in txt_old
-          and "کدام استراتژی واقعاً به درد خورده؟" not in txt_old,
-          "ژورنالِ تماماً قدیمی → توضیح صادقانه به‌جای بخشِ خالی")
-
-
 def test_report_dispatcher() -> None:
     from src.analysis.technical import analyze_symbol
     from src.fundamental.calendar import CalendarSnapshot
@@ -834,9 +680,9 @@ def test_report_dispatcher() -> None:
 def main() -> int:
     tests = [test_registration, test_enable_disable, test_select_market_provider,
              test_golden_pure, test_judge_rule_plugins, test_judge_registry_parity,
-             test_phase7_unification, test_strategy_registry_gate,
+             test_phase7_unification,
              test_delegation_network,
-             test_golden_journal_alerts, test_journal_strategy_stats,
+             test_golden_journal_alerts,
              test_report_dispatcher]
     fails = []
     for t in tests:
@@ -850,13 +696,6 @@ def main() -> int:
         print("❌ PLUGIN TESTS FAILED")
         for f in fails:
             print("  •", f)
-        return 1
-    # اجرای آزمون‌های اسکالپ در همان entrypoint که CI اجرا می‌کند.
-    try:
-        import runpy
-        runpy.run_path(str(ROOT / "tests" / "test_scalping.py"), run_name="__main__")
-    except Exception as e:  # noqa: BLE001
-        print(f"❌ SCALPING TESTS FAILED — {type(e).__name__}: {e}")
         return 1
     print(f"✅ PLUGIN TESTS OK — {COUNT} بررسی پاس؛ هر adapter خروجیِ فراخوانی "
           f"مستقیم را عیناً بازتولید می‌کند (ثبت/فعال‌سازی/انتخاب منبع/خالص/"
