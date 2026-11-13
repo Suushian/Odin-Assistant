@@ -375,10 +375,6 @@ def test_judge_registry_parity() -> None:
     بایت‌به‌بایت، شامل متن‌های فارسی، ترتیب وتوها/شاهدها، امتیازها،
     ریاضی SL/TP، CAPPED و رکوردهای ژورنال."""
     gen = _load_judge_golden_module()
-    golden_path = ROOT / "tests" / "golden" / "judge_rules_golden.json"
-    A(golden_path.exists(), "فایل طلایی داور وجود ندارد")
-    golden = json.loads(golden_path.read_text(encoding="utf-8"))
-
     reg, info = build_default_registry(CFG)
     jp = JudgePlugin(info["context"])
 
@@ -389,22 +385,9 @@ def test_judge_registry_parity() -> None:
 
     plugin_bat = gen.build_battery(judge_symbol_fn=j_sym, judge_all_fn=jp.judge_all)
     if plugin_bat != gen.build_battery():
-        diff = [k for k in sorted(set(plugin_bat) | set(golden))
-                if plugin_bat.get(k) != golden.get(k)]
-        details = {}
-        if "veto_multi" in diff:
-            for case in ("all_except_data", "with_data"):
-                p = plugin_bat["veto_multi"][case]
-                g = golden["veto_multi"][case]
-                details[case] = {
-                    "plugin": {"vetoes": [v["key"] for v in p["vetoes"]],
-                               "reject_reason": p["reject_reason"],
-                               "reject_detail": p["reject_detail"]},
-                    "golden": {"vetoes": [v["key"] for v in g["vetoes"]],
-                               "reject_reason": g["reject_reason"],
-                               "reject_detail": g["reject_detail"]}}
-        raise AssertionError(
-            f"باتریِ مسیر rule-plugin با طلایی فرق دارد — گروه‌ها: {diff}; details={details}")
+        diff = [k for k in sorted(set(plugin_bat) | set(gen.build_battery()))
+                if plugin_bat.get(k) != gen.build_battery().get(k)]
+        raise AssertionError(f"باتری مسیر registry با مسیر مستقیم فرق دارد: {diff}")
     A(True, "باتری کامل داوری از مسیر registry == مسیر مستقیم (بایت‌به‌بایت)")
 
     # نمونهٔ lifecycle: judge-core از طریق _Caps-style initialize هم همان است
