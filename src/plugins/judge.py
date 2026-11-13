@@ -41,16 +41,14 @@ class JudgePlugin:
     def judge_all(self, analyses: List[Any], datasets: Dict[str, Any],
                   ctx: Any) -> List[Any]:
         from ..judge.scoring import judge_all
-        veto_rules, evidence_rules, risk_fn, strategy_rules = self._rules()
-        if (veto_rules is None and evidence_rules is None and risk_fn is None
-                and strategy_rules is None):
+        veto_rules, evidence_rules, risk_fn = self._rules()
+        if veto_rules is None and evidence_rules is None and risk_fn is None:
             return judge_all(analyses, datasets, ctx)
         return judge_all(analyses, datasets, ctx, veto_rules=veto_rules,
-                         evidence_rules=evidence_rules, risk_fn=risk_fn,
-                         strategy_rules=strategy_rules)
+                         evidence_rules=evidence_rules, risk_fn=risk_fn)
 
     def _rules(self) -> tuple:
-        """(veto_rules, evidence_rules, risk_fn, strategy_rules) از registry —
+        """(veto_rules, evidence_rules, risk_fn) از registry —
         یا چهارتایی None (بدون registry = delegation سادهٔ پیش از فاز ۴).
 
         adapterهای قاعده stateless‌اند (delegation خالص، بدون هوک lifecycle)،
@@ -74,17 +72,11 @@ class JudgePlugin:
             risk_rec = reg.get("odin.judge.risk@1")
             risk_fn = (inst(risk_rec).compute_levels
                        if risk_rec is not None else None)
-            # S3 (v0.26): providerهای odin.strategy@1 — *نمونه‌های* adapter
-            # (نه متدِ bound): دروازه به .evaluate(a, md, ctx) و .key (برای
-            # placeholder صادقانهٔ خطا) نیاز دارد. فهرست خالی (همهٔ
-            # استراتژی‌ها خاموش) همان‌طور که هست رد می‌شود — fail-closedِ
-            # دروازه تصمیم D3 است، نه باگِ binding.
-            strategies = [inst(r) for r in reg.providers("odin.strategy@1")]
             # اصلاحیهٔ فاز ۷: وقتی registry هست، فهرست‌ها *همان‌طور که
             # هستند* رد می‌شوند — حتی خالی. پیش‌تر `vetoes or None` فهرست
             # خالی (همهٔ وتوها خاموش) را به None تبدیل می‌کرد و قواعد
             # پیش‌فرضِ scoring بی‌صدا برمی‌گشتند — خلافِ تنظیمات کاربر.
-            self._rules_cache = (vetoes, evidences, risk_fn, strategies)
+            self._rules_cache = (vetoes, evidences, risk_fn)
         return self._rules_cache
 
 
