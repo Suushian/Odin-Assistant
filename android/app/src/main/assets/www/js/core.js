@@ -61,7 +61,6 @@
     'odin.judge.veto@1': ['rule'],
     'odin.judge.evidence@1': ['rule'],
     'odin.judge.risk@1': ['computeLevels'],
-    'odin.strategy@1': ['evaluate'],
     'odin.journal@1': ['open', 'resolveOpenSignals', 'computeStats'],
     'odin.notify@1': ['send'],
     'odin.alerts.price@1': ['checkAlerts'],
