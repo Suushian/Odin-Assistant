@@ -104,13 +104,14 @@ def test_golden_cycle() -> None:
     signals = got["result"]["signals"]
     A(len(signals) == 1, "چرخهٔ mock باید دقیقاً ۱ سیگنال معتبر داشته باشد")
     signal = signals[0]
-    required = {"symbol", "direction", "score", "entry", "sl", "tp", "rr", "evidences", "warnings", "sid"}
+    required = {"symbol", "direction", "score", "max_score", "entry", "sl", "tp", "text", "sent", "simulated"}
     A(required.issubset(signal), f"فیلدهای اصلی سیگنال ناقص‌اند: {required - set(signal)}")
-    A("strategies" not in signal, "مدل سیگنال نباید فیلد یا وابستگی استراتژی داشته باشد")
+    A("strategies" not in signal and "استراتژی" not in signal["text"],
+      "خروجی سیگنال و متن اعلان نباید هیچ وابستگی یا بخشی برای استراتژی داشته باشند")
     A(signal["direction"] in {"BUY", "SELL"} and signal["entry"] != signal["sl"]
       and signal["entry"] != signal["tp"], "جهت و سطوح ریسک سیگنال باید معتبر باشند")
     ratio = abs(signal["tp"] - signal["entry"]) / abs(signal["entry"] - signal["sl"])
-    A(abs(ratio - signal["rr"]) < 1e-8, "نسبت سود به زیان باید با سطوح ورود/حدضرر/هدف سازگار باشد")
+    A(abs(ratio - 2.0) < 1e-8, "نسبت سود به ریسک باید با سطوح ورود/حدضرر/هدف سازگار باشد")
 
 
 def test_early_exit() -> None:
