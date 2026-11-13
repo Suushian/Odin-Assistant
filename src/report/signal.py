@@ -171,5 +171,4 @@ def render_no_signals_note(judgments: list[Judgment]) -> str:
     low = sum(1 for j in judgments if j.reject_reason == "LOW_SCORE")
     nos = sum(1 for j in judgments if j.reject_reason == "NO_SETUP")
     return (f"⛔ سیگنالی صادر نشد — {fa_num(vet)} وتو، {fa_num(low)} امتیاز ناکافی، "
-            f"{fa_num(nstr)} بدون توافق استراتژی، "
             f"{fa_num(nos)} بدون ستاپ (از {fa_num(len(judgments))} نماد)")
