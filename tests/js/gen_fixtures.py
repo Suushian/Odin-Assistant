@@ -41,8 +41,6 @@ from src.journal.store import Journal                         # noqa: E402
 from src.journal.tracker import resolve_open_signals          # noqa: E402
 from src.judge.scoring import JudgeContext, judge_all, judge_config  # noqa: E402
 from src.judge.session import market_status                   # noqa: E402
-from src.plugins.strategies import STRATEGY_RULES             # noqa: E402
-from src.strategies import carry, london_breakout, trend_pullback  # noqa: E402
 
 UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
       "(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36")
@@ -95,7 +93,6 @@ def main() -> None:
     gen_tv_fixtures(cfg)
     gen_news_fixtures(cfg, now_ms)
     gen_judge_fixtures(cfg, now_ms)
-    gen_strategy_fixtures(cfg, now_ms)
     gen_journal_fixtures(now_ms)
 
     OUT.write_text(json.dumps(FX, ensure_ascii=False), encoding="utf-8")
@@ -524,7 +521,6 @@ def judgment_dump(j) -> dict:
                "risk_pips": s.risk_pips, "reward_pips": s.reward_pips, "rr": s.rr,
                "is_gold": s.is_gold, "session_fa": s.session_fa, "warnings": s.warnings,
                "sl_capped": s.sl_capped, "direction_fa": s.direction_fa,
-               "strategies": s.strategies,
                "journal": s.to_journal(sent=True)}
     return {"symbol": j.symbol, "direction": j.direction, "score": j.score,
             "max_score": j.max_score, "reject_reason": j.reject_reason,
@@ -535,7 +531,7 @@ def judgment_dump(j) -> dict:
                            "max_points": e.max_points, "detail_fa": e.detail_fa,
                            "ok": e.ok, "unavailable": e.unavailable, "icon": e.icon}
                           for e in j.evidences],
-            "warnings": j.warnings, "strategies": j.strategies, "signal": sig}
+            "warnings": j.warnings, "signal": sig}
 
 
 def gen_judge_fixtures(cfg: dict, now_ms: int) -> None:
@@ -556,58 +552,12 @@ def gen_judge_fixtures(cfg: dict, now_ms: int) -> None:
             ranking=ranking, tv_map=tv_map, cal_snap=cal_snap, news_snap=news_snap,
             now=now, status=market_status(now),
             event_veto_minutes=float((cfg.get("fundamental") or {}).get("veto_minutes_before", 30)),
-            # S3: دروازهٔ توافق — min_agree از config (پاریتی دو موتور)
-            strategies_cfg=cfg.get("strategies") or {})
+)
         judgments = judge_all(analyses, datasets, ctx)
         out[tag] = {"nowMs": ms, "judgments": [judgment_dump(j) for j in judgments]}
         sigs = [j for j in judgments if j.signal]
         log(f"  ✓ {tag}: {len(sigs)} سیگنال از {len(judgments)} نماد")
     FX["judge"] = out
-
-
-def gen_strategy_fixtures(cfg: dict, now_ms: int) -> None:
-    """S2 (افزودنی — پاریتی زندهٔ استراتژی‌ها): verdict سه استراتژی برای هر
-    نماد، با همان ctx/دادهٔ fixtures داور. سمت JS در run_parity.js بازسازی و
-    بایت‌به‌بایت مقایسه می‌شود (آینهٔ js/strategies.js == اوراکل پایتون).
-
-    نکته: مصرف‌کننده هنوز ندارند (سوییچ S3) — این بخش فقط پاریتیِ آینه‌ها را
-    روی دادهٔ *واقعی* بازار قفل می‌کند (مکملِ طلاییِ مصنوعیِ
-    golden/strategies_golden.json).
-    """
-    log("🎯 استراتژی‌ها...")
-    cal_snap = SHARED.get("cal_snap")
-    news_snap = SHARED.get("news_snap")
-    tv_map = SHARED.get("tv_map", {})
-    datasets = SHARED["datasets"]
-    analyses = SHARED["analyses"]
-    ranking = [(c, v) for c, v in FX["ranking"]]
-    jcfg = judge_config(cfg)
-    mods = {"trend_pullback": trend_pullback, "london_breakout": london_breakout,
-            "carry": carry}
-    scfg_root = cfg.get("strategies") or {}
-
-    out = {}
-    for tag, ms in (("live", now_ms), ("sim", pick_sim_now(now_ms))):
-        now = datetime.fromtimestamp(ms / 1000, tz=timezone.utc)
-        ctx = JudgeContext(
-            jcfg=jcfg, acfg=cfg["analysis"], symbols_cfg=cfg["symbols"],
-            ranking=ranking, tv_map=tv_map, cal_snap=cal_snap, news_snap=news_snap,
-            now=now, status=market_status(now),
-            event_veto_minutes=float((cfg.get("fundamental") or {}).get("veto_minutes_before", 30)),
-            strategies_cfg=cfg.get("strategies") or {})
-        rows = []
-        for a in analyses:
-            verdicts = {}
-            for _pid, key in STRATEGY_RULES:
-                v = mods[key].evaluate(a, datasets.get(a.symbol),
-                                       scfg_root.get(key) or {}, ctx)
-                verdicts[key] = v.to_dict()
-            rows.append({"symbol": a.symbol, "verdicts": verdicts})
-        out[tag] = {"nowMs": ms, "rows": rows}
-        n_dir = sum(1 for r in rows for v in r["verdicts"].values()
-                    if v["direction"] != "NONE")
-        log(f"  ✓ {tag}: {n_dir} جهتِ غیرNONE از {len(rows) * 3} ارزیابی")
-    FX["strategies"] = out
 
 
 # ── ژورنال (سنتتیک و قطعی) ────────────────────────────────────
@@ -652,22 +602,22 @@ def gen_journal_fixtures(now_ms: int) -> None:
          "symbol": "EURUSD", "direction": "BUY", "entry": 1.1500, "sl": 1.1470, "tp": 1.1560,
          "pip": 0.0001, "atr": 0.0008, "risk_pips": 30.0, "reward_pips": 60.0, "rr": 2.0,
          "score": 8, "max_score": 11, "session": "لندن", "evidences": ["trend:2/2", "level:2/2", "news:0/1"],
-         "strategies": ["trend_pullback"], "sent": True},
+         "sent": True},
         {"kind": "signal", "id": "XAUUSD-SELL-B", "ts": (now - timedelta(hours=5)).isoformat(),
          "symbol": "XAUUSD", "direction": "SELL", "entry": 4370.0, "sl": 4400.0, "tp": 4310.0,
          "pip": 1.0, "atr": 12.0, "risk_pips": 30.0, "reward_pips": 60.0, "rr": 2.0,
          "score": 9, "max_score": 11, "session": "نیویورک", "evidences": ["trend:2/2"],
-         "strategies": ["trend_pullback", "carry"], "sent": True},
+         "sent": True},
         {"kind": "signal", "id": "GBPUSD-BUY-C", "ts": (now - timedelta(hours=60)).isoformat(),
          "symbol": "GBPUSD", "direction": "BUY", "entry": 1.3500, "sl": 1.3470, "tp": 1.3560,
          "pip": 0.0001, "atr": 0.0009, "risk_pips": 30.0, "reward_pips": 60.0, "rr": 2.0,
          "score": 7, "max_score": 11, "session": "لندن", "evidences": ["trend:1/2"],
-         "strategies": ["london_breakout"], "sent": False},
+         "sent": False},
         {"kind": "signal", "id": "USDJPY-BUY-D", "ts": (now - timedelta(hours=1)).isoformat(),
          "symbol": "USDJPY", "direction": "BUY", "entry": 156.80, "sl": 156.50, "tp": 157.40,
          "pip": 0.01, "atr": 0.09, "risk_pips": 30.0, "reward_pips": 60.0, "rr": 2.0,
          "score": 8, "max_score": 11, "session": "توکیو", "evidences": ["trend:2/2"],
-         "strategies": ["carry"], "sent": True},
+         "sent": True},
         # یک بستهٔ قدیمی برای آمار
         {"kind": "signal", "id": "EURUSD-BUY-OLD", "ts": (now - timedelta(days=9)).isoformat(),
          "symbol": "EURUSD", "direction": "BUY", "entry": 1.1400, "sl": 1.1370, "tp": 1.1460,
@@ -695,7 +645,6 @@ def gen_journal_fixtures(now_ms: int) -> None:
                 "evidences": e.evidences, "sent": e.sent, "outcome": e.outcome,
                 "outcome_ts": int(e.outcome_ts.timestamp() * 1000) if e.outcome_ts else None,
                 "close_price": e.close_price, "r": e.r, "note": e.note,
-                "strategies": e.strategies,
                 "week_key": e.week_key, "evidence_keys": e.evidence_keys()}
 
     FX["journal"] = {
@@ -709,7 +658,6 @@ def gen_journal_fixtures(now_ms: int) -> None:
                   "by_symbol": {k: vars(v) for k, v in stats.by_symbol.items()},
                   "by_score": {k: vars(v) for k, v in stats.by_score.items()},
                   "by_evidence": {k: vars(v) for k, v in stats.by_evidence.items()},
-                  "by_strategy": {k: vars(v) for k, v in stats.by_strategy.items()},
                   "by_week": {k: vars(v) for k, v in stats.by_week.items()}},
     }
 
