@@ -37,7 +37,7 @@ const GOLDEN_PATH = path.join(HERE, 'cycle_core_golden.json');
 
 // ترتیب بارگذاری = ترتیب index.html؛ core/plugins (فاز ۵/۶) اگر حاضر باشند اول‌اند
 const BASE_FILES = ['md5.js', 'fa.js', 'icons.js', 'license.js', 'config.js', 'indicators.js',
-  'session.js', 'technical.js', 'calendar.js', 'news.js', 'judge.js', 'strategies.js', 'journal.js', 'data.js',
+  'session.js', 'technical.js', 'calendar.js', 'news.js', 'judge.js', 'journal.js', 'data.js',
   'alerts.js', 'chart.js', 'sharecard.js', 'briefing.js', 'components.js', 'ui.js', 'app.js'];
 
 function fileList() {
@@ -303,70 +303,6 @@ async function runScenario(name, busSink) {
       await waitCycle(app.calls, 1);
       return record(app);
     }
-    case 'svc_gated_no_strategy': {
-      // S3 (سناریوی ۹) — به‌روزشده در S4: دروازهٔ توافق در سطح سرویس.
-      // مکانیسم از «جهشِ مستقیم O.CONFIG» به مسیرِ رسمیِ *تنظیمات گوشی*
-      // منتقل شد (buildCfg از S4 کلیدهای strategies را از settings می‌سازد
-      // — مسیرِ یگانهٔ کاربر). هدفِ جدید: با خاموشِ فقط «روند + پولبک»،
-      // دو استراتژیِ باقی‌مانده صادقانه NONE می‌دهند (lb بیرونِ پنجره ·
-      // carry صرفِ ناچیز) → EURUSDِ آماده NO_STRATEGY می‌شود با فهرستِ
-      // نظرِ استراتژی‌ها (نه fail-closedِ «هیچ استراتژی فعالی نیست» —
-      // آن حالت، سناریوی ۱۰ است). بدون اعلان/ژورنال؛ state/لاگ باقی‌اند.
-      const app = createApp({
-        prefs: { settings: JSON.stringify({ strategy_tp_enabled: false }) }
-      });
-      if (busSink) subscribeBus(app, busSink);
-      app.O.trialStart(app.pstorage);
-      app.O.svcStart();
-      await waitCycle(app.calls, 1);
-      return record(app);
-    }
-    case 'svc_settings_strategies_off': {
-      // S4 (سناریوی ۱۰): خاموش‌کردن هر سه استراتژی از *تنظیمات گوشی* —
-      // مسیرِ واقعیِ settings → loadSettings/deepFill → buildCfg →
-      // config-bridge (strategies.<key>.enabled) → registry → دروازهٔ
-      // fail-closed. پینِ سرتاسریِ سیم‌کشی UI (بدون جهشِ مستقیمِ CONFIG).
-      const app = createApp({
-        prefs: {
-          settings: JSON.stringify({
-            strategy_tp_enabled: false, strategy_lb_enabled: false,
-            strategy_carry_enabled: false
-          })
-        }
-      });
-      if (busSink) subscribeBus(app, busSink);
-      app.O.trialStart(app.pstorage);
-      app.O.svcStart();
-      await waitCycle(app.calls, 1);
-      return record(app);
-    }
-    case 'svc_settings_scalping_off': {
-      // تنظیم مستقل اسکالپ از تنظیمات گوشی → buildCfg → registry.
-      const app = createApp({
-        prefs: { settings: JSON.stringify({ strategy_scalping_enabled: false }) }
-      });
-      if (busSink) subscribeBus(app, busSink);
-      app.O.trialStart(app.pstorage);
-      app.O.svcStart();
-      await waitCycle(app.calls, 1);
-      const out = record(app);
-      out.scalpingEnabled = app.O.S.cfg.strategies.scalping.enabled;
-      out.scalpingPluginEnabled = app.O.buildDefaultRegistry(app.O.S.cfg, 'android')
-        .registry.byId('strategy-scalping').enabled;
-      return out;
-    }
-    case 'svc_settings_min_agree_2': {
-      // S4 (سناریوی ۱۱): min_agree=2 از تنظیمات گوشی — EURUSD آماده فقط
-      // یک موافق دارد (trend_pullback) → NO_STRATEGY با دلیلِ شمارِ توافق
-      const app = createApp({
-        prefs: { settings: JSON.stringify({ strategy_min_agree: 2 }) }
-      });
-      if (busSink) subscribeBus(app, busSink);
-      app.O.trialStart(app.pstorage);
-      app.O.svcStart();
-      await waitCycle(app.calls, 1);
-      return record(app);
-    }
     case 'data_outage': {
       const app = createApp({ outage: true });
       if (busSink) subscribeBus(app, busSink);
@@ -456,7 +392,7 @@ function subscribeBus(app, sink) {
   ])));
 }
 
-const SCENARIOS = ['svc_cycle_signals', 'svc_gated_no_strategy', 'svc_settings_strategies_off', 'svc_settings_min_agree_2', 'data_outage', 'duplicate_cooldown', 'alerts_fired',
+const SCENARIOS = ['svc_cycle_signals', 'data_outage', 'duplicate_cooldown', 'alerts_fired',
   'breaking_news', 'judge_disabled', 'features_disabled', 'market_closed'];
 
 async function runAllScenarios() {
@@ -476,7 +412,7 @@ async function main() {
   const battery = await runAllScenarios();
   fs.writeFileSync(GOLDEN_PATH, JSON.stringify(battery, null, 1) + '\n', 'utf8');
   console.log('✅ طلاییِ چرخهٔ سرویس ضبط شد — ' + path.basename(GOLDEN_PATH) + ': ' +
-    SCENARIOS.length + ' سناریو (سیگنال/دروازهٔ استراتژی S3 + تنظیماتِ استراتژی S4/قطعی داده/تکراری/هشدار/خبر فوری/داور خاموش/فیچرها خاموش/بازار بسته)');
+    SCENARIOS.length + ' سناریو (سیگنال/قطعی داده/تکراری/هشدار/خبر فوری/داور خاموش/فیچرها خاموش/بازار بسته)');
   return 0;
 }
 
