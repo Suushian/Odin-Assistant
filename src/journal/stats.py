@@ -64,10 +64,6 @@ class Stats:
     by_direction: dict[str, Bucket] = field(default_factory=dict)
     by_score: dict[str, Bucket] = field(default_factory=dict)
     by_evidence: dict[str, Bucket] = field(default_factory=dict)
-    # S4 (v0.27): سرنوشتِ سیگنال‌هایی که هر استراتژی با آن‌ها *توافق* کرد —
-    # همان فلسفهٔ by_evidence (همبستگی ≠ علیت؛ صادقانه در متن کارنامه)
-    by_strategy: dict[str, Bucket] = field(default_factory=dict)
-
     @property
     def this_week_key(self) -> str:
         """کلید هفتهٔ تقویمی جاری؛ نه جدیدترین هفتهٔ موجود در داده‌های تاریخی."""
