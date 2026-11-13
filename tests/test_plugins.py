@@ -384,9 +384,10 @@ def test_judge_registry_parity() -> None:
         return jp.judge_all([a], {a.symbol: md}, ctx)[0]
 
     plugin_bat = gen.build_battery(judge_symbol_fn=j_sym, judge_all_fn=jp.judge_all)
-    if plugin_bat != gen.build_battery():
-        diff = [k for k in sorted(set(plugin_bat) | set(gen.build_battery()))
-                if plugin_bat.get(k) != gen.build_battery().get(k)]
+    direct_bat = gen.build_battery()
+    if plugin_bat != direct_bat:
+        diff = [k for k in sorted(set(plugin_bat) | set(direct_bat))
+                if plugin_bat.get(k) != direct_bat.get(k)]
         raise AssertionError(f"باتری مسیر registry با مسیر مستقیم فرق دارد: {diff}")
     A(True, "باتری کامل داوری از مسیر registry == مسیر مستقیم (بایت‌به‌بایت)")
 
@@ -683,7 +684,7 @@ def main() -> int:
     print(f"✅ PLUGIN TESTS OK — {COUNT} بررسی پاس؛ هر adapter خروجیِ فراخوانی "
           f"مستقیم را عیناً بازتولید می‌کند (ثبت/فعال‌سازی/انتخاب منبع/خالص/"
           f"delegate/ژورنال+هشدار/رندر) + قواعد داور: ۱۵ rule-plugin و باتری "
-          f"کامل سناریوها از مسیر registry بایت‌به‌بایت == طلایی")
+          f"کامل سناریوها از مسیر registry بایت‌به‌بایت == مسیر مستقیم")
     return 0
 
 
