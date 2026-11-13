@@ -18,10 +18,10 @@ from ..core.pipeline import STAGES
 from ..core.registry import PluginRegistry
 from ..core.resolver import resolve
 from . import (alerts, analysis, data, fundamental, judge, journal, notify,  # noqa: F401
-               report, strategies)
+               report)
 
 # ترتیب ثبت = ترتیب اعلامی زیر (قطعی؛ tie-break در resolver هم order است)
-_MODULES = (data, analysis, fundamental, judge, strategies, journal, notify,
+_MODULES = (data, analysis, fundamental, judge, journal, notify,
             alerts, report)
 
 

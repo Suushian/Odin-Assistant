@@ -87,7 +87,7 @@
     var adxMin = +((ctx.acfg.adx_min_trend != null) ? ctx.acfg.adx_min_trend : 20);
     if (vc.range_market !== false && a.verdict !== 'DATA' && a.adx < adxMin) {
       return Veto('RANGE', '😴 بازار بی‌روند (رنج)',
-        'ADX=' + O.pyFixed(a.adx, 0) + ' زیر آستانهٔ ' + O.pyFixed(adxMin, 0) + ' است — استراتژی روندی در بازار رنج کار نمی‌کند');
+        'ADX=' + O.pyFixed(a.adx, 0) + ' زیر آستانهٔ ' + O.pyFixed(adxMin, 0) + ' است — روند در بازار رنج کار نمی‌کند');
     }
     return null;
   };
@@ -399,52 +399,7 @@
 
   // ── داوری یک نماد (هرگز استثنا پرتاب نمی‌کند) ───────────────
   // ══════════════════════════════════════════════════════════
-  //  دروازهٔ توافق استراتژی‌ها (S3 — v0.26) — آینهٔ بایت‌به‌بایتِ
-  //  _strategy_verdicts/_no_strategy_reason در src/judge/scoring.py
-  // ══════════════════════════════════════════════════════════
-  var STRAT_DIR_FA = { BUY: 'خرید', SELL: 'فروش', NONE: 'بی‌نظر' };
-
-  function evalStrategyRules(a, md, ctx, rules) {
-    var out = [];
-    for (var i = 0; i < rules.length; i++) {
-      var rule = rules[i];
-      var key = String((rule && rule.key) || 'strategy');
-      try {
-        var v = rule.evaluate(a, md, ctx);
-        out.push(v && typeof v.toDict === 'function' ? v.toDict() : v);
-      } catch (e) {
-        // Failure Isolation: خطاداده = «نظر ندارد» — هرگز کرش (آینهٔ پایتون)
-        out.push({
-          key: key, name_fa: 'استراتژیِ خطاداده', direction: 'NONE',
-          strength: 0.0, proposes: true,
-          reasons_fa: ['ارزیابی خطا داد؛ نظر صادقانه‌ای نداریم'],
-          detail_fa: key + ': ارزیابی خطا داد'
-        });
-      }
-    }
-    return out;
-  }
-
-  function noStrategyReason(direction, verdicts, minAgree, nTotal, nProp) {
-    if (!verdicts.length) {
-      return 'هیچ استراتژیِ فعالی در دسترس نیست — سیگنال بدون پشتوانهٔ '
-        + 'استراتژی صادر نمی‌شود (دروازهٔ توافق، صادقانه)';
-    }
-    var dirFa = STRAT_DIR_FA[direction] || direction;
-    var parts = [];
-    for (var i = 0; i < verdicts.length; i++) {
-      var v = verdicts[i];
-      parts.push('«' + (v.name_fa !== undefined && v.name_fa !== null ? v.name_fa
-        : (v.key !== undefined && v.key !== null ? v.key : '?')) + '» '
-        + (STRAT_DIR_FA[v.direction] || String(v.direction)));
-    }
-    return 'توافقِ استراتژی‌ها کافی نیست — هم‌جهت با ' + dirFa + ': '
-      + O.faNum(nTotal) + ' (پیشنهاددهنده: ' + O.faNum(nProp) + ') از '
-      + O.faNum(verdicts.length) + '؛ حداقل لازم: ' + O.faNum(minAgree)
-      + ' هم‌جهت + ' + O.faNum(1) + ' پیشنهاددهنده. ' + parts.join('؛ ');
-  }
-
-  O.judgeSymbol = function (a, symCfg, md, ctx, vetoRules, evidenceRules, riskFn, strategyRules) {
+  O.judgeSymbol = function (a, symCfg, md, ctx, vetoRules, evidenceRules, riskFn) {
     // vetoRules/evidenceRules/riskFn (فاز ۶b): تزریق *اختیاری* قواعد —
     // undefined = فهرست‌های پیش‌فرض همین ماژول (بایت‌به‌بایت رفتار امروز).
     // مسیر rule-plugin (JudgeAdapter + registry) همان قواعد را از registry
@@ -453,7 +408,7 @@
       symbol: a.symbol, fa_name: a.fa_name, direction: null,
       score: 0, max_score: 11, evidences: [], vetoes: [], warnings: [],
       signal: null, reject_reason: '', reject_detail: '',
-      price: a.price, pip: a.pip, strategies: []
+      price: a.price, pip: a.pip
     };
 
     j.vetoes = O.collectVetoes(a, symCfg, md, ctx, vetoRules);
@@ -497,49 +452,9 @@
       return j;
     }
 
-    // ۵ب) دروازهٔ توافق استراتژی‌ها (S3 — v0.26؛ آینهٔ scoring.py)
-    // strategyRules null/undefined → دروازه خاموش (بایت‌به‌بایت رفتار v0.25)؛
-    // فهرست خالی → fail-closed صادقانه (D3)؛ min_agree<=0 → opt-out صریح.
-    if (strategyRules !== undefined && strategyRules !== null) {
-      j.strategies = evalStrategyRules(a, md, ctx, strategyRules);
-      var scfg = ctx.strategiesCfg || {};
-      var mv = scfg.min_agree;
-      var minAgree = (typeof mv === 'number' && isFinite(mv))
-        ? (mv < 0 ? Math.ceil(mv) : Math.floor(mv)) : 1;
-      if (minAgree > 0) {
-        var nAgree = 0, nProp = 0;
-        for (var si = 0; si < j.strategies.length; si++) {
-          if (j.strategies[si].direction === j.direction) {
-            nAgree++;
-            if (j.strategies[si].proposes) nProp++;
-          }
-        }
-        if (nProp < 1 || nAgree < minAgree) {
-          j.reject_reason = 'NO_STRATEGY';
-          j.reject_detail = noStrategyReason(j.direction, j.strategies, minAgree, nAgree, nProp);
-          return j;
-        }
-      }
-    }
-
     var rcfg = ctx.jcfg.risk;
-    var scalpSelected = (j.strategies || []).some(function (v) {
-      return v.key === 'scalping' && v.direction === j.direction && v.proposes;
-    });
-    var lv, rr;
-    if (scalpSelected) {
-      lv = O.strategies && O.strategies.scalping && O.strategies.scalping.computeLevels
-        ? O.strategies.scalping.computeLevels(j.direction, a.price, md && md.m15, rcfg) : null;
-      if (!lv) {
-        j.reject_reason = 'NO_SETUP';
-        j.reject_detail = 'حد ضرر ساختاری اسکالپ با ATR M15 سازگار نیست یا دادهٔ لازم موجود نیست؛ سیگنال برای جلوگیری از ریسک نامعتبر رد شد';
-        return j;
-      }
-      rr = +(rcfg.scalping_reward_risk || 1.5);
-    } else {
-      lv = (riskFn || O.computeLevels)(j.direction, a.price, a.atr, a.support, a.resistance, rcfg);
-      rr = +rcfg.reward_risk;
-    }
+    var lv = (riskFn || O.computeLevels)(j.direction, a.price, a.atr, a.support, a.resistance, rcfg);
+    var rr = +rcfg.reward_risk;
     if (lv.capped) {
       j.warnings.push('حد ضرر از سطح کلیدی دور بود و به سقف ' + O.faNum(O.pyFixed(+rcfg.max_sl_atr, 1)) + '×ATR محدود شد');
     }
@@ -561,16 +476,15 @@
       rr: rr,
       is_gold: pip >= 0.5, session_fa: ctx.status.label, now: ctx.nowMs,
       evidences: j.evidences, warnings: j.warnings, sl_capped: lv.capped,
-      strategies: j.strategies
     };
     return j;
   };
 
   // سرنوشت همهٔ نمادها + سقف تعداد سیگنال در هر چرخه
   // (پارامترهای قواعد، pass-through به judgeSymbol — فاز ۶b)
-  O.judgeAll = function (analyses, datasets, ctx, vetoRules, evidenceRules, riskFn, strategyRules) {
+  O.judgeAll = function (analyses, datasets, ctx, vetoRules, evidenceRules, riskFn) {
     var out = analyses.map(function (a) {
-      return O.judgeSymbol(a, {}, datasets[a.symbol], ctx, vetoRules, evidenceRules, riskFn, strategyRules);
+      return O.judgeSymbol(a, {}, datasets[a.symbol], ctx, vetoRules, evidenceRules, riskFn);
     });
     var cap = (ctx.jcfg.max_signals_per_cycle | 0) || 3;
     var ready = out.filter(function (j) { return j.signal; }).sort(function (x, y) { return y.score - x.score; });
@@ -587,7 +501,6 @@
     if (j.signal) return '✅ سیگنال صادر شد';
     return {
       VETO: '🚫 وتو شد', LOW_SCORE: '⏳ امتیاز ناکافی', NO_SETUP: '❔ ستاپی شکل نگرفته',
-      NO_STRATEGY: '🎯 استراتژی موافق نیست',
       CAPPED: '🔢 به سقف تعداد سیگنال رسید', DISABLED: '⚙️ داور خاموش است'
     }[j.reject_reason] || '—';
   };
@@ -605,12 +518,6 @@
       reward_pips: Math.round(s.reward_pips * 10) / 10,
       rr: s.rr, score: s.score, max_score: s.max_score, session: s.session_fa,
       evidences: s.evidences.map(function (e) { return e.key + ':' + e.points + '/' + e.max_points; }),
-      // S3: کلیدِ استراتژی‌های هم‌جهت (آینهٔ to_journal پایتون — رکوردهای
-      // قدیمیِ ژورنال این کلید را ندارند؛ tracker/stats فقط کلیدهای
-      // شناخته‌شده را می‌خوانند → backward-compatible)
-      strategies: (s.strategies || []).filter(function (v) {
-        return v.direction === s.direction;
-      }).map(function (v) { return v.key; }),
       sent: sent !== false
     };
   };

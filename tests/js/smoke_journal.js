@@ -18,7 +18,7 @@ const priorEntry = {
   id: 'old', ts: Date.parse('2026-09-01T12:00:00Z'),
   outcome_ts: Date.parse('2026-10-12T12:00:00Z'),
   symbol: 'EURUSD', direction: 'BUY', score: 10, outcome: O.TP, r: 2,
-  evidences: [], strategies: []
+  evidences: []
 };
 const stats = O.computeStats([priorEntry], now);
 assert.strictEqual(stats.this_week_key, O.isoWeekKey(now));

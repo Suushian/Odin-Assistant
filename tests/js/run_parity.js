@@ -21,7 +21,7 @@ const FIX = JSON.parse(fs.readFileSync(path.join(HERE, 'fixtures.json'), 'utf8')
 
 // ── بارگذاری ماژول‌های اپ (بدون DOM) ─────────────────────────
 const FILES = ['core.js', 'plugins.js', 'md5.js', 'fa.js', 'icons.js', 'license.js', 'config.js', 'indicators.js', 'session.js', 'technical.js',
-  'calendar.js', 'news.js', 'judge.js', 'strategies.js', 'journal.js', 'data.js', 'alerts.js', 'chart.js', 'sharecard.js', 'briefing.js', 'components.js', 'ui.js', 'app.js'];
+  'calendar.js', 'news.js', 'judge.js', 'journal.js', 'data.js', 'alerts.js', 'chart.js', 'sharecard.js', 'briefing.js', 'components.js', 'ui.js', 'app.js'];
 for (const f of FILES) {
   const code = fs.readFileSync(path.join(JS_DIR, f), 'utf8');
   try {
@@ -359,7 +359,6 @@ O.http = async function (url, opts) {
         tvMap: tvMap, calSnap: calSnap, newsSnap: newsSnap,
         nowMs: nowMs, status: O.marketStatus(new Date(nowMs)),
         eventVetoMinutes: O.CONFIG.fundamental.veto_minutes_before,
-        strategiesCfg: O.CONFIG.strategies   // S3: دروازهٔ توافق (min_agree)
       };
       const js = O.judgeAll(analyses, datasets, ctx);
       const act = js.map(j => {
@@ -372,7 +371,6 @@ O.http = async function (url, opts) {
             pip: s.pip, atr: s.atr, risk_pips: s.risk_pips, reward_pips: s.reward_pips,
             rr: s.rr, is_gold: s.is_gold, session_fa: s.session_fa, warnings: s.warnings,
             sl_capped: s.sl_capped, direction_fa: O.DIR_FA[s.direction],
-            strategies: s.strategies,
             journal: (function () {
               const rec = O.signalToJournal(s, true);
               rec.ts = Date.parse(rec.ts);   // مقایسهٔ معنایی زمان
@@ -385,7 +383,7 @@ O.http = async function (url, opts) {
           reject_reason: j.reject_reason, reject_detail: j.reject_detail,
           status_fa: O.judgmentStatusFa(j), price: j.price, pip: j.pip,
           vetoes: j.vetoes, evidences: j.evidences, warnings: j.warnings,
-          strategies: j.strategies, signal: sig
+          signal: sig
         };
       });
       // انتظارات پایتون را هم‌شکل کن (ts ژورنال → ms؛ detail_fa مدرک tv استثنا)
@@ -405,42 +403,6 @@ O.http = async function (url, opts) {
         deepEq(`judge.${tag}[${exp[i].symbol}]`, exp[i], act[i], 1e-9);
       }
     });
-  }
-
-  // ── ۱۰ب) استراتژی‌ها (S2 — پاریتی افزودنی؛ مصرف‌کننده تا S3 ندارند) ──
-  // آینهٔ js/strategies.js در برابر اوراکل پایتون روی دادهٔ *واقعی* بازار —
-  // مکملِ طلاییِ مصنوعی (tests/js/golden/strategies_golden.json). ranking
-  // همان مسیر محاسبهٔ JS داور است (پاریتیِ خودش جدا پین شده) تا ctx دو طرف
-  // هم‌معنا بماند.
-  if (FIX.strategies) {
-    for (const tag of ['live', 'sim']) {
-      const fxs = FIX.strategies[tag];
-      check(`strategies ${tag}`, () => {
-        const ctx = {
-          nowMs: fxs.nowMs,
-          ranking: O.currencyStrength(datasets, O.CONFIG.analysis.strength_lookback_h1),
-          newsSnap: newsSnap,
-          strategiesCfg: O.CONFIG.strategies
-        };
-        const mods = {
-          trend_pullback: O.strategies.trendPullback,
-          london_breakout: O.strategies.londonBreakout,
-          carry: O.strategies.carry
-        };
-        fxs.rows.forEach((row) => {
-          const a = analyses.filter((x) => x.symbol === row.symbol)[0];
-          if (!a) { fails.push(`strategies.${tag}: تحلیلِ ${row.symbol} پیدا نشد`); return; }
-          const act = {};
-          Object.keys(row.verdicts).forEach((key) => {
-            act[key] = mods[key].evaluate(a, datasets[row.symbol],
-              O.CONFIG.strategies[key], ctx);
-          });
-          deepEq(`strategies.${tag}[${row.symbol}]`, row.verdicts, act, 1e-9);
-        });
-      });
-    }
-  } else {
-    fails.push('fixtures.json بخش strategies ندارد — gen_fixtures.py کهنه است (S2)');
   }
 
   // ── ۱۱) ژورنال: tracker + stats ───────────────────────────
@@ -463,7 +425,6 @@ O.http = async function (url, opts) {
       reward_pips: e.reward_pips, rr: e.rr, score: e.score, max_score: e.max_score,
       session: e.session, evidences: e.evidences, sent: e.sent, outcome: e.outcome,
       outcome_ts: e.outcome_ts, close_price: e.close_price, r: e.r, note: e.note,
-      strategies: e.strategies,
       week_key: O.entryWeekKey(e), evidence_keys: O.entryEvidenceKeys(e)
     }));
     deepEq('entries', FIX.journal.entries, actEntries, 1e-9);
@@ -475,7 +436,7 @@ O.http = async function (url, opts) {
     const actStats = {
       total: st.total, open_count: st.open_count, overall: strip(st.overall),
       by_symbol: stripMap(st.by_symbol), by_score: stripMap(st.by_score),
-      by_evidence: stripMap(st.by_evidence), by_strategy: stripMap(st.by_strategy),
+      by_evidence: stripMap(st.by_evidence),
       by_week: stripMap(st.by_week)
     };
     deepEq('stats', FIX.journal.stats, actStats, 1e-9);

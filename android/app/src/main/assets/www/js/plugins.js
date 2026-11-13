@@ -22,10 +22,6 @@
  *   است و قواعد را از registry به judgeAll تزریق می‌کند (fallback صادقانه:
  *   بدون registry → delegation سادهٔ قبلی).
  *
- * ⚠️ S2 (v0.26): سه استراتژی ورود هم ثبت‌اند (strategy-*×۳ با قرارداد
- *   odin.strategy@1 — آینهٔ src/plugins/strategies.py). هنوز مصرف‌کننده
- *   ندارند (چرخه/داور دست‌نخورده) — سوییچ دروازهٔ توافق در S3.
- *
  * سبک: ES5 خالص (var/function) — نگهبانش بخش مشروطِ test_cycle_switch.js.
  */
 (function (O) {
@@ -109,10 +105,10 @@
   JudgeAdapter.prototype.judgeAll = function (analyses, datasets, ctx) {
     var r = this._rules();
     if (r.veto === null && r.evidence === null && r.risk === null
-      && r.strategies === null) {
+) {
       return O.judgeAll(analyses, datasets, ctx);          // delegation ساده
     }
-    return O.judgeAll(analyses, datasets, ctx, r.veto, r.evidence, r.risk, r.strategies);
+    return O.judgeAll(analyses, datasets, ctx, r.veto, r.evidence, r.risk);
   };
   /* قواعد از registry (فاز ۶b — آینهٔ JudgePlugin._rules پایتون):
    * veto@1/evidence@1 با ترتیب قطعی (priority, order) + risk از get().
@@ -121,7 +117,7 @@
    * خالی) — coercion به null قواعد پیش‌فرض را بی‌صدا زنده می‌کرد
    * (همان اصلاحیهٔ فاز ۷ پایتون). cache: registry در عمر یک caps ثابت است. */
   JudgeAdapter.prototype._rules = function () {
-    if (!this._registry) return { veto: null, evidence: null, risk: null, strategies: null };
+    if (!this._registry) return { veto: null, evidence: null, risk: null };
     if (this._rulesCache === null) {
       var reg = this._registry;
       var ctx = this._context;
@@ -143,15 +139,7 @@
         var ri = inst(riskRec);
         risk = ri.computeLevels.bind(ri);
       }
-      /* S3 (v0.26): providerهای odin.strategy@1 — *نمونه‌های* adapter (نه
-       * متدِ bound): دروازه به .evaluate(a, md, ctx) و .key (برای
-       * placeholder صادقانهٔ خطا) نیاز دارد — آینهٔ JudgePlugin._rules
-       * پایتون. فهرست خالی (همه خاموش) همان‌طور که هست رد می‌شود →
-       * fail-closed صادقانه (تصمیم D3)، نه coercion به null. */
-      var strategies = reg.providers('odin.strategy@1').map(function (rec) {
-        return inst(rec);
-      });
-      this._rulesCache = { veto: veto, evidence: evidence, risk: risk, strategies: strategies };
+      this._rulesCache = { veto: veto, evidence: evidence, risk: risk };
     }
     return this._rulesCache;
   };
@@ -208,27 +196,6 @@
     if (this._mode === 'ctx-only') return fn(ctx);
     if (this._mode === 'no-dir') return fn(a, ctx);
     return fn(a, ctx, direction);
-  };
-
-  // ── adapter استراتژی (S2) — آینهٔ StrategyAdapter پایتون ──
-  // shape: odin.strategy@1 → evaluate(a, md, ctx) → verdict
-  // scfg در ساخت گرفته می‌شود (context.cfg.strategies[key]) — factory در هر
-  // makeCaps با cfg جاری ساخته می‌شود، پس تغییرات config بین چرخه‌ها درست
-  // دیده می‌شود (dict(...) پایتون = کپی سطحی).
-  function StrategyAdapter(key, cfg) {
-    this.key = key;
-    var strategies = (cfg && cfg.strategies) || {};
-    var sc = strategies[key];
-    var scfg = {};
-    if (sc && typeof sc === 'object') {
-      for (var k in sc) {
-        if (Object.prototype.hasOwnProperty.call(sc, k)) scfg[k] = sc[k];
-      }
-    }
-    this._scfg = scfg;
-  }
-  StrategyAdapter.prototype.evaluate = function (a, md, ctx) {
-    return O.strategyFor(this.key).evaluate(a, md, this._scfg, ctx);
   };
 
   // ── تعریف پلاگین‌ها — manifestها آینهٔ همتاهای پایتون در src/plugins/ ──
@@ -348,25 +315,6 @@
       id: d[0], provides: ['odin.judge.evidence@1'], config: null,
       stage: 'judge', priority: 10 * (i + 1),
       factory: function () { return new EvidenceRuleAdapter(d[1], d[2], d[3]); }
-    });
-  });
-
-  // ── استراتژی‌های ورود — id/ترتیب/binding آینهٔ src/plugins/strategies.py ──
-  // priority ۱۰..۴۰ ترتیب ارزیابی قطعی است؛ وضعیت فعال از config کنترل می‌شود.
-  var STRATEGY_DEFS = [
-    ['strategy-trend-pullback', 'trend_pullback'],
-    ['strategy-london-breakout', 'london_breakout'],
-    ['strategy-carry', 'carry'],
-    ['strategy-scalping', 'scalping']
-  ];
-  STRATEGY_DEFS.forEach(function (d, i) {
-    DEFS.push({
-      id: d[0], provides: ['odin.strategy@1'],
-      config: { section: 'strategies', enabled_key: d[1] + '.enabled', 'default': true },
-      stage: 'judge', priority: 10 * (i + 1),
-      factory: function (context) {
-        return new StrategyAdapter(d[1], (context && typeof context === 'object') ? context.cfg : null);
-      }
     });
   });
 

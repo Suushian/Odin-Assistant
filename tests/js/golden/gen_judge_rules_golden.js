@@ -39,7 +39,7 @@ const GOLDEN_PATH = path.join(HERE, 'judge_rules_js_golden.json');
 function fileList() {
   const base = ['md5.js', 'fa.js', 'icons.js', 'license.js', 'config.js',
     'indicators.js', 'session.js', 'technical.js', 'calendar.js', 'news.js', 'judge.js',
-    'strategies.js'];   // S3: دروازهٔ توافق، استراتژی‌ها را در VM لازم دارد
+    ];
   const pre = ['core.js', 'plugins.js'].filter((f) => fs.existsSync(path.join(WWW, f)));
   return pre.concat(base);
 }
@@ -51,9 +51,6 @@ function createVm() {
   for (const f of fileList()) {
     vm.runInContext(fs.readFileSync(path.join(WWW, f), 'utf8'), ctx, { filename: f });
   }
-  // طلایی، رفتار تاریخیِ سه استراتژی را پین می‌کند؛ فعال‌سازی اسکالپ
-  // به‌صورت مستقل در tests/js/test_strategies_switch.js آزموده می‌شود.
-  ctx.ODIN.CONFIG.strategies.scalping.enabled = false;
   return ctx.ODIN;
 }
 
@@ -179,8 +176,6 @@ function makeCtx(O, over) {
     nowMs: nowMs,
     status: O.marketStatus(new Date(nowMs)),
     eventVetoMinutes: 30,
-    // S3: دروازهٔ توافق min_agree را از اینجا می‌خواند (آینهٔ make_ctx پایتون)
-    strategiesCfg: over.strategiesCfg !== undefined ? over.strategiesCfg : O.CONFIG.strategies
   };
 }
 
@@ -203,7 +198,6 @@ function signalDump(O, s) {
     is_gold: s.is_gold, session_fa: s.session_fa, now: s.now,
     warnings: s.warnings, sl_capped: s.sl_capped,
     evidences: s.evidences.map((e) => e.key + ':' + e.points + '/' + e.max_points),
-    strategies: s.strategies,
     journal: O.signalToJournal(s, true)
   };
 }
@@ -216,7 +210,6 @@ function judgmentDump(O, j) {
     vetoes: j.vetoes.map(vetoDump),
     evidences: j.evidences.map(evidenceDump),
     warnings: j.warnings,
-    strategies: j.strategies,
     signal: j.signal ? signalDump(O, j.signal) : null
   };
 }
@@ -224,38 +217,15 @@ function judgmentDump(O, j) {
 // ══════════════════════════════════════════════════════════════
 //  باتری سناریوها
 // ══════════════════════════════════════════════════════════════
-/* S3: قواعد استراتژیِ پیش‌فرضِ باتری — نمونه‌های واقعیِ registry
- * (strategy-* adapters با scfg از O.CONFIG) = آینهٔ DEFAULT_STRATEGY_RULES
- * پایتون (StrategyAdapter با config.yaml؛ هم‌مقداریِ config.js با config.yaml
- * در test_strategies_switch پین شده). طلایی با این قواعد ضبط می‌شود چون
- * مسیر production (JudgeAdapter + registry) همیشه آن‌ها را تزریق می‌کند. */
-function defaultStrategyRules(O) {
-  const built = O.buildDefaultRegistry(JSON.parse(JSON.stringify(O.CONFIG)), 'android');
-  return built.registry.providers('odin.strategy@1').map((rec) =>
-    (rec.instance !== null && rec.instance !== undefined) ? rec.instance : rec.factory(built.info.context));
-}
-
 function buildBattery(O, opts) {
   opts = opts || {};
-  const strategyRules = opts.strategyRules !== undefined
-    ? opts.strategyRules : defaultStrategyRules(O);
   const jfn = opts.judgeSymbolFn || function (a, symCfg, md, ctx) {
-    return O.judgeSymbol(a, symCfg, md, ctx, undefined, undefined, undefined, strategyRules);
+    return O.judgeSymbol(a, symCfg, md, ctx);
   };
   const jall = opts.judgeAllFn || function (list, datasets, ctx) {
-    return O.judgeAll(list, datasets, ctx, undefined, undefined, undefined, strategyRules);
+    return O.judgeAll(list, datasets, ctx);
   };
-
-  // rulesOverride: برای سناریوهای strategy_gate که قواعدِ صریحِ خودشون را
-  // دارند (شکسته/خالی/تک) — undefined = همان strategyRules باتری
-  const judge = (a, md, ctx, rulesOverride) => {
-    if (rulesOverride !== undefined) {
-      return judgmentDump(O, O.judgeSymbol(a, {},
-        md === undefined ? makeMd(O, a.symbol) : md, ctx || makeCtx(O),
-        undefined, undefined, undefined, rulesOverride));
-    }
-    return judgmentDump(O, jfn(a, {}, md === undefined ? makeMd(O, a.symbol) : md, ctx || makeCtx(O)));
-  };
+  const judge = (a, md, ctx) => judgmentDump(O, jfn(a, {}, md === undefined ? makeMd(O, a.symbol) : md, ctx || makeCtx(O)));
   const bat = {};
   const singleVetoCtx = (over) => makeCtx(O, Object.assign({}, over || {}, {
     jcfg: { veto: Object.assign({}, O.CONFIG.judge.veto, { min_count: 1 }) }
@@ -383,43 +353,6 @@ function buildBattery(O, opts) {
       makeCtx(O, { newsSnap: null, jcfg: { min_score: 7, veto: Object.assign({}, O.CONFIG.judge.veto, { min_count: 1 }) } })).map((j) => judgmentDump(O, j));
   }
 
-  // ── S3: دروازهٔ توافق استراتژی‌ها — آینهٔ battery_strategy_gate پایتون ──
-  // (همه با judgeSymbol مستقیم و قواعدِ صریح — موضوعِ خودِ دروازه است)
-  {
-    const ThrowingRule = { key: 'trend_pullback', evaluate: function () { throw new Error('boom'); } };
-    const builtG = O.buildDefaultRegistry(JSON.parse(JSON.stringify(O.CONFIG)), 'android');
-    const tpInst = builtG.registry.byId('strategy-trend-pullback').factory(builtG.info.context);
-    const mdBull = makeMd(O, 'EURUSD', false, 'bull');
-    const scfgWith = (over) => Object.assign(JSON.parse(JSON.stringify(O.CONFIG.strategies)), over);
-
-    bat.strategy_gate = {
-      // ۱) امتیاز ≥ ۷ ولی RSI=25 زیر منطقهٔ tp → صفر هم‌جهت → NO_STRATEGY
-      no_agreement: judge(makeAnalysis({ rsi: 25.0 }), mdBull),
-      // ۲) تنها-carry (proposes=false) → n_prop=0 → رد (پینِ D1=R2)
-      carry_only: judge(
-        makeAnalysis({ symbol: 'USDJPY', fa_name: 'دلار به ین ژاپن', base: 'USD',
-          quote: 'JPY', price: 150.00, pip: 0.01, atr: 0.10,
-          support: 149.96, resistance: 150.60, rsi: 25.0 }),
-        makeMd(O, 'USDJPY', false, 'bull'),
-        makeCtx(O, { newsSnap: null, tvMap: {} })),
-      // ۳) min_agree=2 از ctx.strategiesCfg
-      min_agree_2: judge(makeAnalysis(), mdBull,
-        makeCtx(O, { strategiesCfg: scfgWith({ min_agree: 2 }) })),
-      // ۴) فهرست خالی → fail-closed صادقانه (D3)
-      fail_closed_empty: judge(makeAnalysis(), mdBull, undefined, []),
-      // ۵) قاعدهٔ خطاداده + tp سالم → placeholder صادقانه، سیگنال برقرار
-      broken_rule_isolated: judge(makeAnalysis(), mdBull, undefined,
-        [ThrowingRule, tpInst]),
-      // ۶) فقط خطاداده → هیچ نظر واقعی نیست → رد
-      broken_rule_only: judge(makeAnalysis(), mdBull, undefined, [ThrowingRule]),
-      // ۷) opt-out: min_agree=0 → دروازه خاموش، ارزیابی صادقانه باقی است
-      opt_out_min_agree_0: judge(makeAnalysis({ rsi: 25.0 }), mdBull,
-        makeCtx(O, { strategiesCfg: scfgWith({ min_agree: 0 }) })),
-      // ۸) مسیر سالم — سیگنال با strategies پر
-      pass_full: judge(makeAnalysis(), mdBull)
-    };
-  }
-
   // ── ریاضی SL/TP (۶ حالت — آینهٔ باتری پایتون) ──
   bat.risk_math = {};
   const rc = O.CONFIG.judge.risk;
@@ -456,14 +389,12 @@ function main() {
     + Object.keys(battery.judge_no_setup).length + battery.judge_capped.length
     + battery.judge_all_mixed.length;
   console.log('✅ طلاییِ قواعد داور JS ضبط شد — ' + path.basename(GOLDEN_PATH) + ': '
-    + n + ' سناریوی داوری + ' + Object.keys(battery.strategy_gate).length
-    + ' دروازهٔ استراتژی (S3) + ' + Object.keys(battery.risk_math).length + ' حالت ریاضی ریسک');
+    + n + ' سناریوی داوری + ' + Object.keys(battery.risk_math).length + ' حالت ریاضی ریسک');
   return 0;
 }
 
 module.exports = {
   createVm, buildBattery, stableStringify, fileList, GOLDEN_PATH,
-  defaultStrategyRules,
   FIXED_WED, FIXED_SAT, WED_LONDON, WED_THIN,
   makeAnalysis, makeSellAnalysis, makeMd, makeCtx,
   cleanCal, nearCal, highSoonCal, medSoonCal, failedCal,

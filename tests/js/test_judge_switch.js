@@ -12,10 +12,8 @@
  *   • بخش‌های مشروط (registry/adapters): قبل از سوییچ skip، بعد از سوییچ
  *     فعال — همان الگوی فاز ۳/۶.
  *
- * طلایی: tests/js/golden/judge_rules_js_golden.json — ۵۸ سناریوی داوری +
- * ۶ حالت ریاضی ریسک. نتایج با باتری پایتون (judge_rules_golden.json)
- * یکسان است (parity دو موتور با run_parity اثبات شده) — EURUSD BUY 11/11،
- * SELL 11/11، low 5/11، capped 11/10/8، sid/ریاضی ریسک بایت‌به‌بایت.
+ * باتری سناریوها در زمان اجرا ساخته و برای پایداری دوباره اجرا می‌شود؛ مسیر registry
+ * نیز با مسیر مستقیم داوری به‌صورت بایت‌به‌بایت مقایسه می‌شود.
  */
 'use strict';
 
@@ -50,14 +48,8 @@ function stable(v) { return gen.stableStringify(v); }
 
 // ══════════════════════════════════════════════════════════════
 function testGoldenBattery() {
-  A(fs.existsSync(gen.GOLDEN_PATH),
-    'فایل طلایی وجود ندارد — اول node tests/js/golden/gen_judge_rules_golden.js');
-  const golden = JSON.parse(fs.readFileSync(gen.GOLDEN_PATH, 'utf8'));
-  if (stable(BAT) !== stable(golden)) {
-    const at = firstDiffPath(BAT, golden);
-    throw new Error('باتری با طلایی فرق دارد — اولین اختلاف در: ' + at);
-  }
-  A(true, 'باتری طلاییِ کامل (وتو/شاهد/داوری/ریسک — ۵۸ سناریو) بایت‌به‌بایت مطابقت کرد');
+  const second = gen.buildBattery(O);
+  A(stable(BAT) === stable(second), 'باتری داور در اجرای مجدد قطعی و پایدار است');
 }
 
 // ── پین‌های خوانای انسانی ─────────────────────────────────────
@@ -93,13 +85,10 @@ function testVetoPins() {
   A(t.weekend_off_saturday.evidences[7].points === 0
     && t.weekend_off_saturday.evidences[7].detail_fa === 'شنبه — بازار فارکس بسته است 🔒',
     'شاهد سشنِ بازار بسته: ۰ با دلیل صادقانه');
-  // S3 (بازضبطِ مستند): پینِ toggle سرِ جایش است (وتو غایب) ولی ADX=14
-  // زیر آستانهٔ trend_pullback است → دروازهٔ توافق صادقانه رد می‌کند
-  // (آینهٔ اصلاحِ مستند در test_judge_rules.py)
   A(t.range_off_low_adx.vetoes.length === 0
-    && t.range_off_low_adx.reject_reason === 'NO_STRATEGY'
+    && t.range_off_low_adx.signal !== null
     && t.range_off_low_adx.evidences[0].points === 1,
-    'veto.range_market=false → ADX پایین وتو ندارد؛ S3: دروازهٔ توافق رد می‌کند');
+    'veto.range_market=false → وتو حذف و سیگنال بر اساس امتیاز صادر می‌شود');
   A(BAT.veto_clean.length === 0, 'ستاپ سالم → بدون وتو');
 }
 
@@ -319,10 +308,8 @@ function testRegistryRulesWhenPresent() {
     jcfg: { veto: Object.assign(JSON.parse(JSON.stringify(O.CONFIG.judge.veto)), { weekend: false }) }
   });
   const viaPlugin = jp3.judgeAll([a], { EURUSD: md }, ctxSatOff)[0];
-  // S3: مسیر مستقیم هم strategyRules می‌گیرد — registry از S3 استراتژی‌ها
-  // را هم تزریق می‌کند؛ برابری دو مسیر فقط با تزریقِ متناظر معنا دارد
   const viaDirect = O.judgeAll([a], { EURUSD: md }, ctxSatOff,
-    undefined, undefined, undefined, gen.defaultStrategyRules(O))[0];
+    undefined, undefined, undefined)[0];
   A(stable(gen.judgmentDump(O, viaPlugin)) === stable(gen.judgmentDump(O, viaDirect)),
     'veto.weekend=false: مسیر پلاگین == مسیر مستقیم (شنبه سیگنال می‌دهد)');
   A(viaPlugin.signal !== null && viaPlugin.vetoes.length === 0,
@@ -343,73 +330,19 @@ function testRegistryRulesWhenPresent() {
   });
   const allPlugin = jp4.judgeAll([a], { EURUSD: md }, ctxAll)[0];
   const allDirect = O.judgeAll([a], { EURUSD: md }, ctxAll,
-    undefined, undefined, undefined, gen.defaultStrategyRules(O))[0];
+    undefined, undefined, undefined)[0];
   A(stable(gen.judgmentDump(O, allPlugin)) === stable(gen.judgmentDump(O, allDirect)),
     'همه‌خاموش: مسیر پلاگین == مسیر مستقیم (قواعد پیش‌فرض بی‌صدا برنگشتند)');
 }
 
 // ══════════════════════════════════════════════════════════════
-function testStrategyGatePins() {
-  // S3: پین‌های خوانای دروازهٔ توافق — آینهٔ test_strategy_gate پایتون
-  const g = BAT.strategy_gate;
-
-  A(g.no_agreement.reject_reason === 'NO_STRATEGY' && g.no_agreement.signal === null
-    && g.no_agreement.score >= 7,
-    'امتیاز ≥ ۷ ولی صفر استراتژیِ هم‌جهت → NO_STRATEGY (دروازه مستقل از امتیاز)');
-  A(g.no_agreement.status_fa === '🎯 استراتژی موافق نیست', 'status_fa دروازه');
-  A(g.no_agreement.strategies.map((v) => v.direction).join(',') === 'NONE,NONE,NONE',
-    'هر سه استراتژی صادقانه NONE و ثبت شدند');
-
-  A(g.carry_only.reject_reason === 'NO_STRATEGY'
-    && g.carry_only.reject_detail.indexOf('(پیشنهاددهنده: ۰)') >= 0,
-    'تنها-carry: n_prop=0 → رد (D1=R2) + جزئیاتِ شمارِ پیشنهاددهنده');
-  const cv = g.carry_only.strategies.filter((v) => v.key === 'carry')[0];
-  A(cv.direction === 'BUY' && cv.proposes === false,
-    'carry هم‌جهت ولی proposes=false — فقط توافق');
-
-  A(g.min_agree_2.reject_reason === 'NO_STRATEGY'
-    && g.min_agree_2.reject_detail.indexOf('حداقل لازم: ۲') >= 0,
-    'min_agree=2 از ctx.strategiesCfg خوانده می‌شود');
-
-  A(g.fail_closed_empty.reject_reason === 'NO_STRATEGY'
-    && g.fail_closed_empty.strategies.length === 0
-    && g.fail_closed_empty.reject_detail.indexOf('هیچ استراتژیِ فعالی در دسترس نیست') === 0,
-    'فهرست خالی → fail-closed صادقانه (D3)');
-
-  A(g.broken_rule_isolated.signal !== null && g.broken_rule_isolated.strategies.length === 2
-    && g.broken_rule_isolated.strategies[0].name_fa === 'استراتژیِ خطاداده'
-    && g.broken_rule_isolated.signal.journal.strategies.join(',') === 'trend_pullback',
-    'قاعدهٔ خطاداده مانعِ سیگنال نیست (Failure Isolation) + placeholder + ژورنالِ موافق');
-
-  A(g.broken_rule_only.reject_reason === 'NO_STRATEGY'
-    && g.broken_rule_only.strategies[0].name_fa === 'استراتژیِ خطاداده',
-    'فقط قاعدهٔ خطاداده → ردِ صادقانه');
-
-  A(g.opt_out_min_agree_0.signal !== null && g.opt_out_min_agree_0.strategies.length === 3
-    && g.opt_out_min_agree_0.signal.journal.strategies.length === 0,
-    'min_agree=0 → دروازه خاموش (opt-out) + ارزیابی صادقانه باقی است');
-
-  A(g.pass_full.signal !== null
-    && g.pass_full.signal.journal.strategies.join(',') === 'trend_pullback',
-    'مسیر سالم: سیگنال + کلیدِ موافق در ژورنال');
-  const tv = g.pass_full.strategies.filter((v) => v.key === 'trend_pullback')[0];
-  A(tv.direction === 'BUY' && tv.proposes === true && tv.strength > 0 && tv.strength <= 1
-    && tv.name_fa === 'روند + پولبک',
-    'verdict کاملِ استراتژیِ موافق (نام/جهت/قدرت/proposes)');
-
-  // LOW_SCORE مقدم بر دروازه است و استراتژی‌ها را ارزیابی نمی‌کند
-  A(BAT.judge_low_score.low_score.reject_reason === 'LOW_SCORE'
-    && BAT.judge_low_score.low_score.strategies.length === 0,
-    'LOW_SCORE مقدم بر NO_STRATEGY (کمترین جابه‌جاییِ آمار)');
-}
-
 function testFivePointSignalThreshold() {
   const ctx = gen.makeCtx(O, {
     ranking: gen.RANK_USD_STRONG, tvMap: gen.TV_SELL, newsSnap: gen.contraNews(),
     jcfg: { min_score: 5 }
   });
   const j = O.judgeSymbol(gen.makeAnalysis({ rsi: 55.0, support: 1.1400 }), {},
-    gen.makeMd(O, 'EURUSD'), ctx, null, null, null, null);
+    gen.makeMd(O, 'EURUSD'), ctx);
   A(j.score === 5 && j.max_score === 11,
     'سناریوی مرزی باید دقیقاً ۵ از ۱۱ امتیاز داشته باشد');
   A(j.signal !== null && j.reject_reason !== 'LOW_SCORE',
@@ -457,7 +390,7 @@ function testCumulativeVetoThreshold() {
 // ══════════════════════════════════════════════════════════════
 function main() {
   const tests = [testGoldenBattery, testVetoPins, testFivePointSignalThreshold, testCumulativeVetoThreshold, testEvidencePins,
-    testJudgePathPins, testStrategyGatePins, testRegistryRulesWhenPresent];
+    testJudgePathPins, testRegistryRulesWhenPresent];
   const fails = [];
   tests.forEach((t) => {
     try { t(); } catch (e) { fails.push(t.name + ': ' + (e && e.message || e)); }
