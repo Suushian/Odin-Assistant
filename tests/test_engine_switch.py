@@ -68,7 +68,7 @@ def _patch_paths(st, tmp: Path):
 
 # ══════════════════════════════════════════════════════════════
 def test_golden_cycle() -> None:
-    """چرخهٔ کامل mock == فایل طلایی (result + logs + telegram sends)."""
+    """چرخهٔ mock: خروجی‌های پایدار با طلایی، سیگنال جدید با قرارداد بدون استراتژی."""
     golden_path = HERE / "golden" / "run_cycle_golden.json"
     A(golden_path.exists(),
       "فایل طلایی وجود ندارد — اول python tests/golden/gen_engine_golden.py")
@@ -90,15 +90,26 @@ def test_golden_cycle() -> None:
                 b = el[i] if i < len(el) else "<نبود>"
                 if a != b:
                     diffs.append(f"  log[{i}]: اکنون «{a[:80]}» ≠ طلایی «{b[:80]}»")
-        if got["result"] != golden["result"]:
-            for k in sorted(set(got["result"]) | set(golden["result"])):
-                if got["result"].get(k) != golden["result"].get(k):
+        result_now = {k: v for k, v in got["result"].items() if k != "signals"}
+        result_golden = {k: v for k, v in golden["result"].items() if k != "signals"}
+        if result_now != result_golden:
+            for k in sorted(set(result_now) | set(result_golden)):
+                if result_now.get(k) != result_golden.get(k):
                     diffs.append(f"  result[{k}] تغییر کرد")
         if got["sent_messages"] != golden["sent_messages"]:
             diffs.append(f"  sent_messages: {got['sent_messages']} ≠ {golden['sent_messages']}")
         raise AssertionError("چرخه با طلایی فرق دارد:\n" + "\n".join(diffs[:14]))
     A(True, "چرخهٔ کامل mock == طلایی")
-    A(len(got["result"]["signals"]) == 1, "طلایی باید دقیقاً ۱ سیگنال داشته باشد")
+    signals = got["result"]["signals"]
+    A(len(signals) == 1, "چرخهٔ mock باید دقیقاً ۱ سیگنال معتبر داشته باشد")
+    signal = signals[0]
+    required = {"symbol", "direction", "score", "entry", "sl", "tp", "rr", "evidences", "warnings", "sid"}
+    A(required.issubset(signal), f"فیلدهای اصلی سیگنال ناقص‌اند: {required - set(signal)}")
+    A("strategies" not in signal, "مدل سیگنال نباید فیلد یا وابستگی استراتژی داشته باشد")
+    A(signal["direction"] in {"BUY", "SELL"} and signal["entry"] != signal["sl"]
+      and signal["entry"] != signal["tp"], "جهت و سطوح ریسک سیگنال باید معتبر باشند")
+    ratio = abs(signal["tp"] - signal["entry"]) / abs(signal["entry"] - signal["sl"])
+    A(abs(ratio - signal["rr"]) < 1e-8, "نسبت سود به زیان باید با سطوح ورود/حدضرر/هدف سازگار باشد")
 
 
 def test_early_exit() -> None:
