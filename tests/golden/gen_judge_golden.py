@@ -57,7 +57,6 @@ from src.judge.scoring import (JudgeContext, collect_vetoes,       # noqa: E402
                                ev_momentum, ev_news, ev_session, ev_strength,
                                ev_tradingview, ev_trend, judge_all,
                                judge_config, judge_symbol)
-from src.plugins.strategies import STRATEGY_RULES, StrategyAdapter  # noqa: E402
 from src.judge.session import market_status                        # noqa: E402
 
 GOLDEN_PATH = HERE / "judge_rules_golden.json"
@@ -69,29 +68,10 @@ WED_THIN = datetime(2026, 9, 23, 3, 0, tzinfo=timezone.utc)       # توکیو/�
 SAT = datetime(2026, 9, 19, 12, 0, tzinfo=timezone.utc)           # شنبه — بازار بسته
 
 CFG = load_config()
-# فایل طلایی، رفتار تاریخیِ سه استراتژی را پین می‌کند؛ فعال‌سازی اسکالپ
-# در test_strategy_registry_gate به‌صورت مستقل پوشش داده می‌شود.
-(CFG.get("strategies") or {}).setdefault("scalping", {})["enabled"] = False
 ACFG = CFG["analysis"]
 JCFG = CFG["judge"]
 SYMS = CFG["symbols"]
-SCFG_ROOT = CFG.get("strategies") or {}
 
-# S3: قواعد استراتژیِ پیش‌فرضِ باتری — همان adapterهای production
-# (StrategyAdapter با cfg جاری؛ scfg در ساخت bind می‌شود). طلایی با این
-# قواعد ضبط می‌شود چون مسیر production (registry) همیشه آن‌ها را تزریق
-# می‌کند؛ مسیرِ strategy_rules=None (رفتار v0.25) جدا در test_judge_rules
-# پین شده است.
-DEFAULT_STRATEGY_RULES = [StrategyAdapter(k, CFG) for _pid, k in STRATEGY_RULES
-                          if (SCFG_ROOT.get(k) or {}).get("enabled", True)]
-
-
-class ThrowingRule:
-    """قاعدهٔ خطاداده — پینِ Failure Isolation دروازهٔ توافق (S3)."""
-    key = "trend_pullback"
-
-    def evaluate(self, a, md, ctx):
-        raise RuntimeError("boom")
 
 RANK_DEFAULT = [("EUR", 0.30), ("GBP", 0.10), ("USD", -0.20), ("JPY", -0.40)]
 RANK_USD_STRONG = [("USD", 0.30), ("GBP", 0.10), ("EUR", -0.20), ("JPY", -0.40)]
@@ -138,16 +118,14 @@ def make_analysis(**kw) -> SymbolAnalysis:
 
 
 def make_ctx(now: datetime = WED_OVERLAP, cal=None, news=None, ranking=None,
-             tv=None, scfg=None, **jover) -> JudgeContext:
+             tv=None, **jover) -> JudgeContext:
     jcfg = dict(JCFG)
     jcfg.update(jover)
     return JudgeContext(jcfg=jcfg, acfg=ACFG, symbols_cfg=SYMS,
                         ranking=RANK_DEFAULT if ranking is None else ranking,
                         tv_map=TV_BUY if tv is None else tv,
                         cal_snap=cal, news_snap=news, now=now,
-                        status=market_status(now), event_veto_minutes=30.0,
-                        # S3: دروازهٔ توافق min_agree را از اینجا می‌خواند
-                        strategies_cfg=(SCFG_ROOT if scfg is None else scfg))
+                        status=market_status(now), event_veto_minutes=30.0)
 
 
 def clean_cal() -> CalendarSnapshot:
@@ -266,26 +244,17 @@ def judgment_dump(j) -> dict:
             "vetoes": [veto_dump(v) for v in j.vetoes],
             "evidences": [evidence_dump(e) for e in j.evidences],
             "warnings": j.warnings,
-            "strategies": j.strategies,
             "signal": signal_dump(j.signal) if j.signal else None}
 
 
-_DEFAULT_RULES = object()   # sentinel: «قواعد پیش‌فرضِ S3 تزریق شود»
-
-
-def _judge(a, md=None, ctx=None, jfn=None, rules=_DEFAULT_RULES) -> dict:
+def _judge(a, md=None, ctx=None, jfn=None) -> dict:
     """یک داوریِ ساختگی → dump قطعی.
 
-    jfn تزریق‌شده (مسیر registry در test_plugins) قواعدِ خودش را دارد؛
-    مسیر مستقیم با `rules` صدا زده می‌شود: sentinel = DEFAULT_STRATEGY_RULES
-    (رفتارِ production از S3) و None = دروازه خاموش (رفتارِ v0.25).
-    """
     md_ = md if md is not None else make_md()
     ctx_ = ctx if ctx is not None else make_ctx()
     if jfn is not None:
         return judgment_dump(jfn(a, {}, md_, ctx_))
-    sr = DEFAULT_STRATEGY_RULES if rules is _DEFAULT_RULES else rules
-    return judgment_dump(judge_symbol(a, {}, md_, ctx_, strategy_rules=sr))
+    return judgment_dump(judge_symbol(a, {}, md_, ctx_))
 
 
 # ══════════════════════════════════════════════════════════════
@@ -511,7 +480,7 @@ def battery_judge_capped(jall=None) -> list:
         fn = jall
     else:
         def fn(lst, ds, c):
-            return judge_all(lst, ds, c, strategy_rules=DEFAULT_STRATEGY_RULES)
+            return judge_all(lst, ds, c)
     return [judgment_dump(j) for j in fn([a1, a2, a3], datasets, ctx)]
 
 
@@ -560,80 +529,12 @@ def battery_risk_math() -> dict:
 
 
 # ══════════════════════════════════════════════════════════════
-# ══════════════════════════════════════════════════════════════
-#  گروه S3 — دروازهٔ توافق استراتژی‌ها
-# ══════════════════════════════════════════════════════════════
-def battery_strategy_gate() -> dict:
-    """سناریوهای دروازهٔ توافق (S3) — همه با judge_symbol *مستقیم* و
-    strategy_rules صریح (نه jfn): موضوعِ خودِ دروازه است و قواعدِ هر
-    سناریو متفاوت است. مسیر registry به‌طور جدا در test_judge_rules/
-    test_plugins پین شده (judge_full/capped/mixed با تزریق registry).
-
-    پوشش: ردِ بدون پیشنهاددهنده (D1=R2) · تنها-carry · min_agree=2 ·
-    فهرست خالی = fail-closed (D3) · قاعدهٔ خطاداده (Failure Isolation) ·
-    opt-out با min_agree=0 · سیگنالِ سالم با توافق (strategies در signal/
-    journal).
-    """
-    out = {}
-    md_bull = make_md(last_dir="bull")
-    ctx_ok = make_ctx(cal=clean_cal(), news=good_news())
-
-    # ۱) ستاپ آماده (امتیاز ≥ ۷) ولی tp به‌خاطر RSI=25 (زیر منطقهٔ ۳۰–۴۵)
-    #    NONE است و lb/carry هم NONE → هیچ هم‌جهتی نیست → NO_STRATEGY
-    out["no_agreement"] = _judge(make_analysis(rsi=25.0), md=md_bull, ctx=ctx_ok)
-
-    # ۲) تنها-carry: USDJPY با اختلاف +2.63 → carry BUY (proposes=False)؛
-    #    tp NONE (rsi=25) → n_total=1 ولی n_prop=0 → NO_STRATEGY (پینِ D1=R2)
-    out["carry_only"] = _judge(
-        make_analysis(symbol="USDJPY", fa_name="دلار به ین ژاپن", base="USD",
-                      quote="JPY", price=150.00, pip=0.01, atr=0.10,
-                      support=149.96, resistance=150.60, rsi=25.0),
-        md=make_md(symbol="USDJPY", base=150.00, atr=0.10, last_dir="bull"),
-        ctx=make_ctx(cal=clean_cal(), news=None, tv={}))
-
-    # ۳) min_agree=2 — فقط tp هم‌جهت است (۱ < ۲) → NO_STRATEGY (پینِ config)
-    out["min_agree_2"] = _judge(make_analysis(), md=md_bull,
-                                ctx=make_ctx(cal=clean_cal(), news=good_news(),
-                                             scfg=dict(SCFG_ROOT, min_agree=2)))
-
-    # ۴) فهرست خالی (همهٔ استراتژی‌ها خاموش) → fail-closed صادقانه (D3)
-    out["fail_closed_empty"] = _judge(make_analysis(), md=md_bull, ctx=ctx_ok,
-                                      rules=[])
-
-    # ۵) قاعدهٔ خطاداده + tp سالم → placeholder صادقانه ثبت می‌شود ولی
-    #    مانعِ سیگنال نیست (Failure Isolation) → سیگنال با ۲ verdict
-    #    (tp پیشنهاددهنده توافق می‌کند؛ خطاداده «نظر ندارد» شمرده می‌شود)
-    out["broken_rule_isolated"] = _judge(
-        make_analysis(), md=md_bull, ctx=ctx_ok,
-        rules=[ThrowingRule(), StrategyAdapter("trend_pullback", CFG)])
-
-    # ۶) فقط قاعدهٔ خطاداده → هیچ نظرِ واقعی نیست → NO_STRATEGY با placeholder
-    out["broken_rule_only"] = _judge(make_analysis(), md=md_bull, ctx=ctx_ok,
-                                     rules=[ThrowingRule()])
-
-    # ۷) opt-out: min_agree=0 → دروازه خاموش، سیگنال با وجودِ صفر توافق؛
-    #    strategies صادقانه ارزیابی و ثبت می‌شوند (نمایش/ژورنال خالیِ موافق)
-    out["opt_out_min_agree_0"] = _judge(
-        make_analysis(rsi=25.0), md=md_bull,
-        ctx=make_ctx(cal=clean_cal(), news=good_news(),
-                     scfg=dict(SCFG_ROOT, min_agree=0)))
-
-    # ۸) مسیرِ سالم: tp توافق می‌کند → سیگنال + strategies پر + ژورنالِ
-    #    کلیدهای موافق (پینِ Signal.strategies و to_journal)
-    out["pass_full"] = _judge(make_analysis(), md=md_bull, ctx=ctx_ok)
-    return out
-
-
 def build_battery(judge_symbol_fn=None, judge_all_fn=None) -> dict:
     """کل باتری — خروجی کاملاً قطعی (بدون شبکه، بدون ساعت سیستم).
 
-    judge_symbol_fn/judge_all_fn: تزریق *اختیاری* مسیر داوری (پیش‌فرض =
-    توابع مستقیم scoring **با strategy_rules=DEFAULT_STRATEGY_RULES** —
-    رفتارِ production از S3؛ مسیر None با پینِ جدا در test_judge_rules).
-    برای طلاییِ مسیر rule-plugin در test_plugins.
+    judge_symbol_fn/judge_all_fn: تزریق اختیاری مسیر داوری برای آزمون parity.
     گروه‌های veto_clean/evidence_branches/risk_math عمداً همیشه مستقیم‌اند —
     parity آن‌ها با goldenهای «adapter == فراخوانی مستقیم» پوشش داده می‌شود.
-    گروه strategy_gate (S3) همیشه مستقیم با قواعدِ صریحِ هر سناریو است.
     """
     return {
         "veto_single": battery_veto_single(judge_symbol_fn),
@@ -646,7 +547,6 @@ def build_battery(judge_symbol_fn=None, judge_all_fn=None) -> dict:
         "judge_no_setup": battery_judge_no_setup(judge_symbol_fn),
         "judge_capped": battery_judge_capped(judge_all_fn),
         "judge_all_mixed": battery_judge_all_mixed(judge_all_fn),
-        "strategy_gate": battery_strategy_gate(),
         "risk_math": battery_risk_math(),
     }
 
