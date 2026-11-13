@@ -94,9 +94,6 @@ def make_md(symbol: str = "EURUSD", n: int = 300, base: float = 1.1490,
     high[-1] = close[-1] + half[-1] * last_spike * 6      # کندل آخر را پرنوسان کن
     low[-1] = close[-1] - half[-1] * last_spike * 6
     open_ = close + rng.normal(0, atr * 0.2, n)
-    # S3: جهتِ کندلِ آخر برای تأییدِ ادامهٔ trend_pullback باید *قطعی* باشد
-    # (پیش‌تر تصادفیِ seed بود و دروازهٔ توافق به شانس وابسته می‌شد).
-    # Open در TR/ATR نقشی ندارد → بقیهٔ سناریوها بایت‌به‌بایت دست‌نخورده.
     if last_dir == "bull":
         open_[-1] = close[-1] - 0.5 * atr
     elif last_dir == "bear":
@@ -248,8 +245,6 @@ def judgment_dump(j) -> dict:
 
 
 def _judge(a, md=None, ctx=None, jfn=None) -> dict:
-    """یک داوریِ ساختگی → dump قطعی.
-
     md_ = md if md is not None else make_md()
     ctx_ = ctx if ctx is not None else make_ctx()
     if jfn is not None:
@@ -497,8 +492,6 @@ def battery_judge_all_mixed(jall=None) -> list:
     a4 = make_analysis(symbol="AUDUSD", fa_name="دلار استرالیا به دلار آمریکا",
                        base="AUD", quote="USD", price=0.6600, rsi=55.0,
                        support=0.6500, resistance=0.6700)            # LOW_SCORE (۵/۱۱)
-    # S3: فقط a1 (سیگنال) به md نیاز دارد — a2/a3/a4 پیش از دروازه رد
-    # می‌شوند (VETO/NO_SETUP/LOW_SCORE) و datasets برایشان بی‌اثر است
     datasets = {"EURUSD": make_md(last_dir="bull")}
     ctx = make_ctx(cal=clean_cal(), news=None, min_score=7,
                    veto={**JCFG["veto"], "min_count": 1})
