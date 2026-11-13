@@ -389,8 +389,7 @@ function main() {
     + Object.keys(battery.judge_no_setup).length + battery.judge_capped.length
     + battery.judge_all_mixed.length;
   console.log('✅ طلاییِ قواعد داور JS ضبط شد — ' + path.basename(GOLDEN_PATH) + ': '
-    + n + ' سناریوی داوری + ' + Object.keys(battery.strategy_gate).length
-    + Object.keys(battery.risk_math).length + ' حالت ریاضی ریسک');
+    + n + ' سناریوی داوری + ' + Object.keys(battery.risk_math).length + ' حالت ریاضی ریسک');
   return 0;
 }
 
