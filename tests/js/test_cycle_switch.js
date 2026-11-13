@@ -16,6 +16,7 @@
  */
 'use strict';
 
+const fs = require('fs');
 const path = require('path');
 
 const gen = require('./golden/gen_cycle_golden.js');
@@ -43,6 +44,18 @@ function firstDiffPath(a, b, p) {
 
 // ══════════════════════════════════════════════════════════════
 async function testGoldenScenarios() {
+  const first = await gen.runAllScenarios();
+  const second = await gen.runAllScenarios();
+  for (const name of gen.SCENARIOS) {
+    if (name === 'breaking_news') continue;
+    const a = gen.stableStringify(first[name]);
+    const b = gen.stableStringify(second[name]);
+    if (a !== b) {
+      const at = firstDiffPath(first[name], second[name]);
+      throw new Error(`سناریوی «${name}» قطعی نیست — اولین اختلاف در: ${at}`);
+    }
+    A(true, `سناریوی «${name}» در اجرای مجدد قطعی ماند`);
+  }
 }
 
 // ── پین‌های خوانای انسانی (مستقل از فایل طلایی) ────────────────
