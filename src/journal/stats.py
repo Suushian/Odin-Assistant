@@ -113,6 +113,4 @@ def compute_stats(entries: list[Entry], now: datetime) -> Stats:
         st.by_score.setdefault(_score_bucket(e.score), Bucket()).add(e)
         for k in e.evidence_keys():
             st.by_evidence.setdefault(k, Bucket()).add(e)
-        for k in e.strategies:
-            st.by_strategy.setdefault(k, Bucket()).add(e)
     return st
