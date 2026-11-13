@@ -106,8 +106,7 @@ function arrEq(a, b) {
 group('۱) contracts — شناسه‌ها و اعتبارسنج ساختاری');
 {
   const ids = Object.keys(core.CONTRACTS);
-  // v0.26: odin.strategy@1 افزودنی شد (۱۵→۱۶) — قراردادِ استراتژی‌های ورود
-  ok(ids.length === 16, 'باید ۱۶ قرارداد باشد، ' + ids.length + ' است');
+  ok(ids.length === 15, 'باید ۱۵ قرارداد باشد، ' + ids.length + ' است');
   ok(ids.every((cid) => core.isValidContractId(cid)), 'همهٔ شناسه‌های قرارداد باید معتبر باشند');
   ok(!core.isValidContractId('odin.foo@1'), 'قرارداد ثبت‌نشده باید نامعتبر باشد');
   ok(core.isWellformedContractId('odin.foo@1'), 'شکل صحیح ولی ناشناخته → wellformed');
