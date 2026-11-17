@@ -19,6 +19,26 @@ vm.createContext(ctx);
 vm.runInContext(fs.readFileSync(path.join(WWW, 'license.js'), 'utf8'), ctx, { filename: 'license.js' });
 const O = ctx.ODIN;
 
+// ── ۰) قرارداد شناسهٔ اندروید: فقط SSAID، بدون UUID ناپایدار ──
+const ROOT = path.join(__dirname, '..', '..');
+const bridgeSource = fs.readFileSync(
+  path.join(ROOT, 'android', 'app', 'src', 'main', 'java', 'com', 'odin', 'assistant', 'Bridge.java'),
+  'utf8'
+);
+const methodStart = bridgeSource.indexOf('public String getDeviceId()');
+const methodEnd = bridgeSource.indexOf('\n    }\n', methodStart);
+assert(methodStart >= 0 && methodEnd > methodStart, 'Bridge.getDeviceId باید موجود باشد');
+const deviceIdMethod = bridgeSource.slice(methodStart, methodEnd);
+assert(deviceIdMethod.includes('Settings.Secure.ANDROID_ID'), 'شناسه باید از ANDROID_ID/SSAID بیاید');
+assert(!deviceIdMethod.includes('UUID.randomUUID') && !deviceIdMethod.includes('device.fallback'),
+  'شناسهٔ تصادفیِ پاک‌شونده با uninstall نباید fallback باشد');
+assert(deviceIdMethod.includes('aid.matches("(?i)[0-9a-f]{16}")'),
+  'SSAID باید به قالب ۶۴بیتی hex اعتبارسنجی شود');
+
+const appSource = fs.readFileSync(path.join(ROOT, 'android', 'app', 'src', 'main', 'assets', 'www', 'js', 'app.js'), 'utf8');
+assert(!appSource.includes('deadbeefcafebabedeadbeefcafebabe'),
+  'شناسهٔ ساختگی نباید در مسیر فعال‌سازی/بوت استفاده شود');
+
 // ── ۱) SHA-256/HMAC در برابر node:crypto (لبه‌های padding) ──
 for (const n of [0, 1, 54, 55, 56, 57, 63, 64, 65, 118, 119, 120, 1000]) {
   const s = 'x'.repeat(n);

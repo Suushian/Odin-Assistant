@@ -247,28 +247,11 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
-      # Publish the CI debug-signed APK to the existing development release when
-      # no private release keystore is configured. This is for fresh installs/testing;
-      # the ephemeral CI debug certificate may differ from previously installed builds.
-      - name: Publish debug APK to existing GitHub Release (unsigned-key fallback)
-        if: github.ref == 'refs/heads/main' && env.SIGNED != '1'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: v1.0.0
-        run: |
-          set -euo pipefail
-          SRC="android/app/build/outputs/apk/debug/app-debug.apk"
-          test -f "$SRC" || { echo "::error::Debug APK not found: $SRC"; exit 1; }
-          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null
-          gh release upload "$TAG" "$SRC#app-debug.apk" --repo "$GITHUB_REPOSITORY" --clobber
-          echo "::notice::Debug APK from $GITHUB_SHA uploaded to release $TAG. Fresh install may be required due to debug certificate rotation."
+      # Debug APKs use a CI-generated debug certificate and are intentionally
+      # artifact-only. Android_ID/SSAID is signing-certificate scoped, so publishing
+      # these APKs would rotate license device codes between CI runs. Only the
+      # stable production keystore (verified above) may produce a public Release APK.
 
-      # ── انتشار روی Release ──────────────────────────────────────────────
-      # فقط روی تگ‌ها و فقط وقتی APK با کلید رسمی امضا شده باشد.
-      # نام و متن ریلیز را ورک‌فلو ویندوز می‌سازد؛ ما فقط «فایل» اضافه می‌کنیم
-      # تا دو ورک‌فلو روی هم ننویسند. اگر ریلیز هنوز ساخته نشده باشد (اندروید
-      # معمولاً زودتر از PyInstaller تمام می‌شود)، خودمان با متن CHANGELOG
-      # می‌سازیمش — چون هر دو از یک منبع می‌خوانند، نتیجه یکی است.
       - name: Publish APK to GitHub Release
         if: startsWith(github.ref, 'refs/tags/') && env.SIGNED == '1'
         env:
