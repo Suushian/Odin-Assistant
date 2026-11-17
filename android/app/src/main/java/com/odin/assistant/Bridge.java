@@ -379,29 +379,36 @@ public class Bridge {
         }
     }
 
-    // ── شناسهٔ دستگاه برای لایسنس (v0.14.0) ──────────────────────
+    // ── شناسهٔ پایدار دستگاه برای لایسنس ─────────────────────────
     /**
-     * شناسهٔ یکتای دستگاه = SHA-256("android:" + ANDROID_ID) — همان طرح
-     * src/license.py دسکتاپ (هم‌نوع، ولی دامنهٔ مقدارها جداست). ANDROID_ID در
-     * اندروید ۸+ به کلید امضای اپ گره خورده و بین نصب‌ها (با همان امضا)
-     * پایدار است. اگر در دسترس نبود، UUID تصادفی در prefs ماندگار می‌شود.
+     * ANDROID_ID (SSAID) در اندرویدهای پشتیبانی‌شده به ترکیب دستگاه/کاربر،
+     * package و certificate امضای برنامه وابسته است. با حذف و نصب مجدد
+     * فقط وقتی همان package و همان certificate استفاده شود ثابت می‌ماند.
+     *
+     * عمداً UUID تصادفی جایگزین نمی‌سازیم: SharedPreferences با uninstall
+     * پاک می‌شود و fallback تصادفی دقیقاً باعث تغییر کد دستگاه می‌شد.
+     * شناسهٔ سخت‌افزاری عمومیِ قابل‌دسترسی برای اپ عادی در Android 10+ وجود
+     * ندارد؛ در نبود SSAID معتبر، فعال‌سازی باید متوقف شود نه اینکه کد ناپایدار
+     * به کاربر نمایش داده شود.
+     *
+     * پیشوند هش «android:» حفظ شده تا کدهای فعلیِ مبتنی بر SSAID تغییر نکنند.
      */
     @JavascriptInterface
     public String getDeviceId() {
         try {
             String aid = Settings.Secure.getString(
                     ctx.getContentResolver(), Settings.Secure.ANDROID_ID);
-            if (aid == null || aid.trim().isEmpty()) {
-                aid = prefs.getString("device.fallback", "");
-                if (aid.isEmpty()) {
-                    aid = "fallback-" + java.util.UUID.randomUUID();
-                    prefs.edit().putString("device.fallback", aid).apply();
-                }
+            if (aid == null) return "";
+            aid = aid.trim();
+            if (!aid.matches("(?i)[0-9a-f]{16}")
+                    || "9774d56d682e549c".equalsIgnoreCase(aid)) {
+                return "";
             }
+
             java.security.MessageDigest md = java.security.MessageDigest.getInstance("SHA-256");
             byte[] d = md.digest(("android:" + aid).getBytes("UTF-8"));
             StringBuilder sb = new StringBuilder(64);
-            for (byte b : d) sb.append(String.format("%02x", b));
+            for (byte b : d) sb.append(String.format(java.util.Locale.ROOT, "%02x", b & 0xff));
             return sb.toString();
         } catch (Exception e) {
             return "";
