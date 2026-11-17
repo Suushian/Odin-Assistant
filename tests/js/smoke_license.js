@@ -26,7 +26,7 @@ const bridgeSource = fs.readFileSync(
   'utf8'
 );
 const methodStart = bridgeSource.indexOf('public String getDeviceId()');
-const methodEnd = bridgeSource.indexOf('    }', methodStart);
+const methodEnd = bridgeSource.indexOf('\n    }\n', methodStart);
 assert(methodStart >= 0 && methodEnd > methodStart, 'Bridge.getDeviceId باید موجود باشد');
 const deviceIdMethod = bridgeSource.slice(methodStart, methodEnd);
 assert(deviceIdMethod.includes('Settings.Secure.ANDROID_ID'), 'شناسه باید از ANDROID_ID/SSAID بیاید');
