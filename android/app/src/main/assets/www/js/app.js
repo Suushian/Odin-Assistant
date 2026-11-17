@@ -1274,7 +1274,7 @@
               if (onDone) onDone();
             } else if (errEl) {
               errEl.textContent = !S.deviceId
-                ? 'شناسهٔ دستگاه در دسترس نیست — اپ را دوباره باز کن'
+                ? 'شناسهٔ پایدار دستگاه در دسترس نیست — نسخهٔ رسمی برنامه و کلید امضای آن را بررسی کن'
                 : 'این کلید نامعتبر است یا برای دستگاه دیگری ساخته شده';
             }
           }
@@ -1380,8 +1380,9 @@
       S.deviceId = (typeof ODINNative !== 'undefined' && ODINNative.getDeviceId)
         ? (ODINNative.getDeviceId() || '') : '';
     } catch (e) { S.deviceId = ''; }
-    if (!S.deviceId) S.deviceId = 'deadbeefcafebabedeadbeefcafebabe';  // حالت مرورگر/توسعه
-    S.deviceCode = O.deviceCodeFromId(S.deviceId);
+    // شناسهٔ ساختگی برای مرورگر/توسعه تولید نکن؛ کد لایسنس باید فقط از
+    // شناسهٔ واقعی و پایدار Bridge نیتیو مشتق شود.
+    S.deviceCode = S.deviceId ? O.deviceCodeFromId(S.deviceId) : '';
     S.licensed = O.licIsActive(S.storage, S.deviceId);
     // دورهٔ آزمایشی (v0.15.0): دسترسی = لایسنس معتبر یا تریال فعال
     S.trial = O.trialStatus(S.storage);
