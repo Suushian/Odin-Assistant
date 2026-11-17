@@ -25,12 +25,14 @@ const bridgeSource = fs.readFileSync(
   path.join(ROOT, 'android', 'app', 'src', 'main', 'java', 'com', 'odin', 'assistant', 'Bridge.java'),
   'utf8'
 );
-const deviceIdMethod = bridgeSource.match(/public String getDeviceId\\(\\)\\s*\\{([\\s\\S]*?)\\n    \\}/);
-assert(deviceIdMethod, 'Bridge.getDeviceId باید موجود باشد');
-assert(deviceIdMethod[1].includes('Settings.Secure.ANDROID_ID'), 'شناسه باید از ANDROID_ID/SSAID بیاید');
-assert(!/UUID\\.randomUUID|device\\.fallback|fallback-/.test(deviceIdMethod[1]),
+const methodStart = bridgeSource.indexOf('public String getDeviceId()');
+const methodEnd = bridgeSource.indexOf('    }', methodStart);
+assert(methodStart >= 0 && methodEnd > methodStart, 'Bridge.getDeviceId باید موجود باشد');
+const deviceIdMethod = bridgeSource.slice(methodStart, methodEnd);
+assert(deviceIdMethod.includes('Settings.Secure.ANDROID_ID'), 'شناسه باید از ANDROID_ID/SSAID بیاید');
+assert(!deviceIdMethod.includes('UUID.randomUUID') && !deviceIdMethod.includes('device.fallback'),
   'شناسهٔ تصادفیِ پاک‌شونده با uninstall نباید fallback باشد');
-assert(/aid\\.matches\\("\\(\\?i\\)\\[0-9a-f\\]\\{16\\}"\\)/.test(deviceIdMethod[1]),
+assert(deviceIdMethod.includes('aid.matches("(?i)[0-9a-f]{16}")'),
   'SSAID باید به قالب ۶۴بیتی hex اعتبارسنجی شود');
 
 const appSource = fs.readFileSync(path.join(ROOT, 'android', 'app', 'src', 'main', 'assets', 'www', 'js', 'app.js'), 'utf8');
