@@ -158,6 +158,19 @@ jobs:
       - name: Journal tracking, stats and report regression tests (آفلاین)
         run: python tests/manual/test_journal.py
 
+      # رگرسیون داور/ریسک/گزارش — آفلاین، دادهٔ مصنوعی و now تزریق‌شده.
+      # بخش‌های Qt این سوئیت‌ها در CI نیست؛ مسیر آفلاین همین است.
+      - name: Judge/risk/report offline regression (آفلاین)
+        run: python tests/manual/test_judge.py
+
+      - name: Veto + news-direction regression (آفلاین)
+        run: |
+          python tests/manual/test_veto_report.py
+          python tests/manual/test_news_direction.py
+
+      - name: Audit regression pins (آفلاین)
+        run: python tests/manual/test_audit_fixes.py
+
       - name: Share-card spec parity test (no Qt)
         run: python tests/test_sharecard_spec.py
 
