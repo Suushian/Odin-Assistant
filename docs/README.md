@@ -63,11 +63,11 @@
 | فرمان | چه می‌سنجد |
 |---|---|
 | `node tests/js/run_parity.js` | ۲۴ تست برابری موتور JS اندروید با پایتون (دادهٔ زندهٔ بازار) |
-| `node tests/js/smoke_onboarding.js` | ۷۲ بررسی: **نگهبانِ maxlength کلید لایسنس** (سرتاسری: تولید کلید → برش → اعتبارسنجی) + زنجیرهٔ خوش‌آمدگویی + متن‌های ایمنی |
+| `node tests/js/smoke_onboarding.js` | ۷۶ بررسی: **نگهبانِ maxlength کلید لایسنس** (سرتاسری: تولید کلید → برش → اعتبارسنجی) + زنجیرهٔ خوش‌آمدگویی + متن‌های ایمنی |
 | `node tests/js/smoke_theme_parity.js` | ۲۱۱ بررسی پاریتی تم، اجزا، نسخه |
 | `node tests/js/smoke_layout.js` | ۴۲ بررسی چیدمان: بودجهٔ عرض هدر، کنتراست، CSS مرده، بودجهٔ متن راهنما |
 | `node tests/js/smoke_icons.js` | ۱۸ رندر از ۸ صفحه — صفر ایموجی + markup اجزای Aurora |
-| `node tests/js/smoke_license.js` | لایسنس: HMAC مشترک پایتون↔JS، انقضا، قفل دستگاه، تریال، ضدتغییرساعت |
+| `node tests/js/smoke_license.js` | لایسنس: Ed25519 در برابر node:crypto + بُرِدهای مشترک پایتون↔JS، انقضا، قفل دستگاه، تریال، ضدتغییرساعت |
 | `node tests/js/smoke_{alerts,chart,share,about}.js` | هشدار قیمت · نمودار کندل · کارت اشتراک · دربارهٔ ما |
 | `node tests/js/smoke_service.js` | رصد پس‌زمینه end-to-end با چرخهٔ زندهٔ واقعی |
 | `python main.py --selftest` | تقویم، قطبیت شاخص‌ها، جهت‌دهی اخبار، وتوها، ریاضی SL/TP، ژورنال، لایسنس |

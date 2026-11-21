@@ -1,22 +1,28 @@
 /* لایسنس و قفل دستگاه — همزاد دقیقِ src/license.py برای اندروید.
- * v0.15.0: کلید زمان‌دار (انقضا در خود رشتهٔ کلید) + دورهٔ آزمایشی ۷ روزه
- * با high-water-mark ضدِ عقب‌کشیدن ساعت. کلیدهای دائمیِ v0.14 بدون تغییر معتبرند.
+ * v1.0.2: امضای نامتقارن Ed25519 (RFC 8032) به‌جای HMAC رازمشترک.
  *
- * طرح (یکسان در دو پلتفرم — یک ابزار تولید کلید برای هر دو کافی است):
+ * چرا: با HMAC رازِ ساختِ کلید باید داخلِ اپ باشد تا اپ بتواند اعتبارسنجی کند،
+ * یعنی هر کس می‌تواند keygen بسازد. اینجا اپ فقط «کلید عمومی» را دارد و فقط
+ * تأیید می‌کند؛ ساخت کلید به کلید خصوصی سازنده نیاز دارد که در اپ نیست.
+ *
+ * طرح (یکسان در دو پلتفرم):
  *   device_id   = SHA-256 هگز (۶۴ کاراکتر) — در اندروید از ANDROID_ID
  *                 (سمت Bridge.getDeviceId محاسبه می‌شود: sha256("android:"+id))
  *   device_code = ۱۲ رقم اولِ device_id، بالا‌حروف، جداکنندهٔ ۴تایی
- *   key         = HMAC-SHA256(SECRET, device_code) → ۱۶ هگز بالا‌حروف
+ *   message     = "ODIN1|" + device_code + "|" + YYYYMMDD   (دائمی: 00000000)
+ *   کلید        = Base32(امضای Ed25519 روی message)  → ۱۰۳ نویسه
+ *   کلید زمان‌دار = Base32 + "-" + YYMMDD
  *
- * SHA-256/HMAC بدون وابستگی پیاده‌سازی شده (offline، قطعی، تست‌پذیر در Node)
- * تا با hmac پایتون بایت‌به‌بایت برابر بماند — بُرِدهای آزمایشی مشترک در
+ * اعتبارسنجی: nacl.sign.detached.verify (TweetNaCl 1.0.3 — js/nacl.js) با
+ * کلید عمومی + انقضا + قفل device_id. همهٔ بُرِدهای آزمایشی مشترک در
  * tests/js/smoke_license.js و main.py --selftest قفلش کرده‌اند.
  */
 (function (O) {
   'use strict';
 
-  // ⚠️ همان _LICENSE_SECRET در src/license.py — دو طرف با هم عوض شوند
-  var SECRET = 'bd604d7cc90e8fe32184e8d6ddb5787c3389438b54156947541f772f61be7347';
+  // کلید عمومی امضای لایسنس — همان PUBLIC_KEY_HEX در src/license.py.
+  // این کلید عمومی است: فقط تأیید می‌کند و اجازهٔ ساخت کلید نمی‌دهد.
+  O.LICENSE_PUBLIC_KEY_HEX = '7F2CCF1F739C9FC4BC479A966FA1527CAC462BED99C3D7693B5B124BA8111591';
 
   var K = [
     0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1,
@@ -58,19 +64,24 @@
     return upper ? h.toUpperCase() : h;
   }
 
+  function hexBytes(hex) {
+    var s = String(hex == null ? '' : hex).replace(/[^0-9A-Fa-f]/g, '');
+    var out = [];
+    for (var i = 0; i + 1 < s.length; i += 2) out.push(parseInt(s.substr(i, 2), 16));
+    return out;
+  }
+
   /** SHA-256 روی آرایهٔ بایت → آرایهٔ ۳۲ بایت (FIPS 180-4) */
   function sha256(bytes) {
     var H = [0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,
       0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19];
     var l = bytes.length;
-    // بلوک‌بندی: l بایت داده + ۰x۸۰ + ۸ بایت طول باید در مضرب ۶۴ جا شود.
-    // (لنگهٔ l≡55 mod 64 دقیقاً یک بلوک است — آفست +8 نه +9)
     var total = (((l + 8) >> 6) + 1) << 6;
     var msg = bytes.slice();
     msg.push(0x80);
     while (msg.length < total) msg.push(0);
-    var bitHi = Math.floor(l / 536870912);       // (l*8) >> 32
-    var bitLo = (l << 3) >>> 0;                  // (l*8) & 0xffffffff
+    var bitHi = Math.floor(l / 536870912);
+    var bitLo = (l << 3) >>> 0;
     msg[total - 8] = (bitHi >>> 24) & 255; msg[total - 7] = (bitHi >>> 16) & 255;
     msg[total - 6] = (bitHi >>> 8) & 255;  msg[total - 5] = bitHi & 255;
     msg[total - 4] = (bitLo >>> 24) & 255; msg[total - 3] = (bitLo >>> 16) & 255;
@@ -111,7 +122,7 @@
     return out;
   }
 
-  /** HMAC-SHA256 (RFC 2104) — خروجی هگز کوچک */
+  /** HMAC-SHA256 (RFC 2104) — ابزار کمکی/تست (دیگر برای لایسنس به کار نمی‌رود) */
   function hmacSha256Hex(keyStr, msgStr) {
     var key = utf8Bytes(keyStr);
     if (key.length > 64) key = sha256(key);
@@ -125,9 +136,35 @@
     return toHex(sha256(opad.concat(inner)), false);
   }
 
+  // ── Base32 (RFC 4648، بالا‌حروف، بدون padding) ─────────────────
+  var B32 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+  function b32Encode(bytes) {
+    var out = '', val = 0, bits = 0;
+    for (var i = 0; i < bytes.length; i++) {
+      val = (val << 8) | bytes[i];
+      bits += 8;
+      while (bits >= 5) { bits -= 5; out += B32[(val >>> bits) & 31]; }
+    }
+    if (bits) out += B32[(val << (5 - bits)) & 31];
+    return out;
+  }
+  function b32Decode(s) {
+    var val = 0, bits = 0, out = [];
+    for (var i = 0; i < s.length; i++) {
+      var idx = B32.indexOf(s.charAt(i));
+      if (idx < 0) throw new Error('bad base32');
+      val = (val << 5) | idx;
+      bits += 5;
+      if (bits >= 8) { bits -= 8; out.push((val >>> bits) & 255); }
+    }
+    return out;
+  }
+
   // ── API هم‌نام با پایتون ─────────────────────────────────────
   O.sha256Hex = function (s) { return toHex(sha256(utf8Bytes(String(s == null ? '' : s))), false); };
   O.hmacSha256Hex = hmacSha256Hex;
+  O.b32Encode = function (bytes) { return b32Encode(bytes); };
+  O.b32Decode = function (s) { return b32Decode(s); };
 
   O.normalizeCode = function (s) {
     return String(s == null ? '' : s).replace(/[^0-9A-Fa-f]/g, '').toUpperCase();
@@ -135,10 +172,13 @@
   O.formatCode = function (raw) {
     return String(raw).replace(/(.{4})(?=.)/g, '$1-');
   };
+  // ⚠️ «خلاصه» همان کد است: device_id ۶۴ هگز است و کد = ۱۲ رقمِ اولِ آن.
+  //   اینجا همان کار را می‌کنیم (نه slice) تا پایتون/JS هم‌بُر بمانند.
   O.deviceCodeFromId = function (deviceId) {
-    return O.formatCode(String(deviceId || '').slice(0, 12).toUpperCase());
+    return O.formatCode(O.normalizeCode(deviceId).slice(0, 12));
   };
 
+  var SIG_B32_LEN = 103;
   O.LICENSE_TRIAL_DAYS = 7;
   var ROLLBACK_MS = 48 * 3600 * 1000;   // تلورانس عقب‌رفتن ساعت (مثل پایتون)
   var TOUCH_MS = 6 * 3600 * 1000;       // throttle به‌روزرسانی last_seen
@@ -146,48 +186,81 @@
   function pad2(n) { return (n < 10 ? '0' : '') + n; }
   function ymd8(d) { return '' + d.getFullYear() + pad2(d.getMonth() + 1) + pad2(d.getDate()); }
 
+  function keyMessage(code, expiry8) {
+    return utf8Bytes('ODIN1|' + code + '|' + expiry8);
+  }
+
   /**
-   * رشتهٔ کلید → {key:16hex, expiry8:'YYYYMMDD'|null} یا null اگر بدقالبه.
-   * دائمی: ۱۶ هگز · زمان‌دار: ۱۶ هگز + ۶ رقم YYMMDD (مثل parse_key_input پایتون)
+   * رشتهٔ کلید → {sig: Base32 ۱۰۳‌نویسه‌ای, expiry8:'YYYYMMDD'|null} یا null.
+   * دائمی: ۱۰۳ نویسه Base32 · زمان‌دار: ۱۰۳ نویسه + «-» + ۶ رقم YYMMDD.
    */
   O.parseKeyInput = function (raw) {
-    var s = String(raw == null ? '' : raw).replace(/[^0-9A-Fa-f]/g, '').toUpperCase();
-    if (s.length === 16) return { key: s, expiry8: null };
-    if (s.length === 22) {
-      var e = s.slice(16);
-      var yy = +e.slice(0, 2), mm = +e.slice(2, 4), dd = +e.slice(4, 6);
-      if (mm < 1 || mm > 12 || dd < 1 || dd > 31) return null;
-      var d = new Date(2000 + yy, mm - 1, dd);
-      if (d.getMonth() !== mm - 1 || d.getDate() !== dd) return null;   // مثلاً ۳۱ فوریه
-      return { key: s.slice(0, 16), expiry8: '20' + e };
+    var s = String(raw == null ? '' : raw).replace(/\s+/g, '').toUpperCase();
+    if (!s) return null;
+    var body = s, expiry8 = null;
+    var dash = s.lastIndexOf('-');
+    if (dash > 0) {
+      var tail = s.slice(dash + 1);
+      if (tail.length === 6 && /^[0-9]{6}$/.test(tail)) {
+        var yy = +tail.slice(0, 2), mm = +tail.slice(2, 4), dd = +tail.slice(4, 6);
+        if (mm < 1 || mm > 12 || dd < 1 || dd > 31) return null;
+        var d = new Date(2000 + yy, mm - 1, dd);
+        if (d.getMonth() !== mm - 1 || d.getDate() !== dd) return null;   // مثلاً ۳۱ فوریه
+        body = s.slice(0, dash);
+        expiry8 = '20' + tail;
+      }
     }
-    return null;
+    body = body.replace(/-/g, '');
+    // پسوند تاریخِ بدون خط‌تیره (تایپ دستی): ۱۰۹ نویسه که ۶ تای آخر رقم است.
+    if (expiry8 === null && body.length === SIG_B32_LEN + 6 &&
+        /^[0-9]{6}$/.test(body.slice(SIG_B32_LEN))) {
+      var nb = body.slice(SIG_B32_LEN);
+      var nyy = +nb.slice(0, 2), nmm = +nb.slice(2, 4), ndd = +nb.slice(4, 6);
+      if (nmm < 1 || nmm > 12 || ndd < 1 || ndd > 31) return null;
+      var nd = new Date(2000 + nyy, nmm - 1, ndd);
+      if (nd.getMonth() !== nmm - 1 || nd.getDate() !== ndd) return null;
+      expiry8 = '20' + nb;
+      body = body.slice(0, SIG_B32_LEN);
+    }
+    if (body.length !== SIG_B32_LEN || !new RegExp('^[A-Z2-7]{' + SIG_B32_LEN + '}$').test(body)) return null;
+    return { sig: body, expiry8: expiry8 };
   };
 
-  /** تولید کلید — expiry8 اختیاری ('YYYYMMDD'). هم‌فرمت با generate_license_key پایتون */
-  O.licenseKeyFor = function (deviceCode, expiry8) {
+  /** تولید کلید با کلید خصوصی سازنده — فقط ابزار/تست (اپ این را صدا نمی‌زند). */
+  O.licenseKeyFor = function (deviceCode, expiry8, seedHex) {
     var code = O.normalizeCode(deviceCode);
     if (code.length !== 12) return '';
-    var msg = expiry8 ? (code + '|' + expiry8) : code;
-    var mac = O.formatCode(hmacSha256Hex(SECRET, msg).toUpperCase().slice(0, 16));
-    return expiry8 ? (mac + '-' + expiry8.slice(2)) : mac;
+    if (typeof nacl === 'undefined' || !nacl.sign) return '';
+    var seed = hexBytes(seedHex);
+    if (seed.length !== 32) return '';
+    var kp = nacl.sign.keyPair.fromSeed(new Uint8Array(seed));
+    var sig = nacl.sign.detached(new Uint8Array(keyMessage(code, expiry8 || '00000000')),
+                                 kp.secretKey);
+    var b32 = b32Encode(Array.prototype.slice.call(sig));
+    return expiry8 ? (b32 + '-' + expiry8.slice(2)) : b32;
   };
 
-  /** اعتبارسنجی: HMAC + انقضا (تاریخ محلی دستگاه، مثل datetime.now پایتون) */
+  /** اعتبارسنجی: امضای Ed25519 با کلید عمومی + انقضا (تاریخ محلی دستگاه) */
   O.validateKey = function (key, deviceCode, nowMs) {
     var p = O.parseKeyInput(key);
     if (!p) return false;
-    var exp = O.licenseKeyFor(deviceCode, p.expiry8);
-    if (exp === '' || O.normalizeKey(exp) !== O.normalizeKey(key)) return false;
+    var code = O.normalizeCode(deviceCode);
+    if (code.length !== 12) return false;
     if (p.expiry8 && ymd8(new Date(nowMs || Date.now())) > p.expiry8) return false;
-    return true;
+    if (typeof nacl === 'undefined' || !nacl.sign) return false;
+    var sig;
+    try { sig = b32Decode(p.sig); } catch (e) { return false; }
+    return nacl.sign.detached.verify(
+      new Uint8Array(keyMessage(code, p.expiry8 || '00000000')),
+      new Uint8Array(sig),
+      new Uint8Array(hexBytes(O.LICENSE_PUBLIC_KEY_HEX)));
   };
 
-  /** کلید کاربر را به قالب فشردهٔ ذخیره‌سازی نرمال کن (بدون خط‌تیره) */
+  /** کلید کاربر را به قالب فشردهٔ ذخیره‌سازی نرمال کن */
   O.normalizeKey = function (key) {
     var p = O.parseKeyInput(key);
     if (!p) return '';
-    return p.key + (p.expiry8 ? p.expiry8.slice(2) : '');
+    return p.sig + (p.expiry8 ? '-' + p.expiry8.slice(2) : '');
   };
 
   function rolledBack(lastSeenIso, nowMs) {
@@ -206,14 +279,13 @@
     } catch (e) { return null; }
   };
 
-  /** قفل‌ها: device_id == دستگاه فعلی · HMAC درست · انقضا نگذشته · ساعت دستکاری نشده */
+  /** قفل‌ها: device_id == دستگاه فعلی · امضای درست · انقضا نگذشته · ساعت دستکاری نشده */
   O.licIsActive = function (storage, deviceId, nowMs) {
     var now = nowMs || Date.now();
     var d = O.licLoad(storage);
     if (!d || !deviceId || d.device_id !== deviceId) return false;
     if (rolledBack(d.last_seen, now)) return false;
     if (!O.validateKey(d.license_key, O.deviceCodeFromId(deviceId), now)) return false;
-    // last_seen را (با throttle) جلو ببر — مبنای تشخیص دستکاری ساعت
     try {
       if (!d.last_seen || now - Date.parse(d.last_seen) > TOUCH_MS) {
         d.last_seen = new Date(now).toISOString();
@@ -235,7 +307,7 @@
         expires_at: p ? p.expiry8 : null,
         activated_at: new Date(now).toISOString(),
         last_seen: new Date(now).toISOString(),
-        version: '2.1'
+        version: '3.0'
       }));
       return true;
     } catch (e) { return false; }

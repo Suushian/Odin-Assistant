@@ -2295,9 +2295,15 @@ def _selftest_body() -> int:
     onb._on_next_from_welcome()           # noqa: SLF001
     assert onb.stack.currentIndex() == 1, "گام فعال‌سازی باز نشد"
     assert onb.user_name == "تست‌کاربر"
-    onb.license_input.setText("ab12cd34ef56")   # فرم خودکار باید خط‌تیره بگذارد
-    assert onb.license_input.text() == "AB12-CD34-EF56", \
+    # قالب‌دهی خودکار کلید Ed25519: بزرگ‌سازی + پسوند تاریخ
+    _lk = "odglq6op5yoe22knkaf7s6glfbnfg7lvlrolg7zr4ntm3cp7fewyxzn2sxuwvzjioe3dl472xm4mla2wdrovnwej47ymhoh5cafiobq"
+    onb.license_input.setText(_lk)
+    assert onb.license_input.text() == _lk.upper(), \
         f"قالب‌دهی خودکار کلید: {onb.license_input.text()!r}"
+    _lt = _lk + "301231"
+    onb.license_input.setText(_lt)
+    assert onb.license_input.text() == _lk.upper() + "-301231", \
+        f"قالب‌دهی خودکار کلید زمان‌دار: {onb.license_input.text()!r}"
     act_btns = [b for b in onb.findChildren(QPushButton) if "فعال" in b.text()]
     assert len(act_btns) == 1 and DARK.on_ink.lower() in act_btns[0].styleSheet().lower() \
         and DARK.accent_ink.lower() in act_btns[0].styleSheet().lower(), \

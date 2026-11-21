@@ -55,8 +55,9 @@ const APP_CODE = APP_JS.replace(/\/\*[\s\S]*?\*\//g, ' ')
 
 const ctx = { console, setTimeout };
 ctx.globalThis = ctx;
+ctx.self = ctx;          // wrapper تانگرNaCl به «self» نیاز دارد
 vm.createContext(ctx);
-for (const f of ['md5.js', 'fa.js', 'icons.js', 'license.js']) {
+for (const f of ['md5.js', 'fa.js', 'icons.js', 'nacl.js', 'license.js']) {
   vm.runInContext(read('js/' + f), ctx, { filename: f });
 }
 const O = ctx.ODIN;
@@ -69,15 +70,19 @@ group('۱) maxlength فیلد کلید باید ≥ طول کلید زمان‌�
 // طول ۲۶ از خودِ موتور «محاسبه» می‌شود، نه هاردکد — وگرنه اگر قالب کلید
 // عوض شد این تست کهنه و بی‌صدا پاس می‌ماند.
 {
+  // ⚠️ سیدِ تست است، نه کلید خصوصیِ سازنده (در ریپو نیست). فقط برای
+  // ساختن ورودیِ واقعیِ موتور؛ اعتبارسنجی در smoke_license.js بررسی می‌شود.
+  const SEED = '8D9FADA9722DA1DDF8EBA1CA0E3E7AA8A7AB9F3DC120C65BB9ED211B8842BC9E';
   const deviceId = 'deadbeefcafebabedeadbeefcafebabe';
   const code = O.deviceCodeFromId(deviceId);
-  const timed = O.licenseKeyFor(code, '20261231');
-  const perm = O.licenseKeyFor(code, null);
+  const timed = O.licenseKeyFor(code, '20261231', SEED);
+  const perm = O.licenseKeyFor(code, null, SEED);
   const needLen = Math.max(timed.length, perm.length);
-  console.log('    کلید زمان‌دار واقعی : «' + timed + '» (' + timed.length + ' نویسه)');
-  console.log('    کلید دائمی واقعی    : «' + perm + '» (' + perm.length + ' نویسه)');
-  ok(needLen === 26,
-    'طول کلید زمان‌دار تغییر کرده (یافته ' + needLen + ') — سقفِ انتظار این تست باید بازبینی شود');
+  console.log('    کلید زمان‌دار واقعی : ' + timed.length + ' نویسه');
+  console.log('    کلید دائمی واقعی    : ' + perm.length + ' نویسه');
+  ok(needLen === 110 && perm.length === 103,
+    'طول کلید تغییر کرده (دائمی ' + perm.length + '، زمان‌دار ' + needLen +
+    ') — اگر قالب کلید عوض شد، این تست و maxlength باید با هم بازبینی شوند');
 
   // maxlength واقعیِ فیلد کلید در کد
   const m = /id="onb-key"[\s\S]{0,240}?maxlength="(\d+)"/.exec(APP_CODE);
@@ -98,8 +103,8 @@ group('۱) maxlength فیلد کلید باید ≥ طول کلید زمان‌�
   // placeholder باید بخش تاریخ را نشان دهد، وگرنه کاربر نمی‌داند کل رشته لازم است
   const mp = /id="onb-key"[^>]*placeholder="([^"]*)"/.exec(APP_CODE) ||
              /placeholder="([^"]*)"[^>]*id="onb-key"/.exec(APP_CODE);
-  ok(!!mp && /YYMMDD/.test(mp[1]),
-    'placeholder فیلد کلید باید قالب کامل با بخش تاریخ باشد (یافته: ' + (mp ? mp[1] : '—') + ')');
+  ok(!!mp && /YYMMDD/.test(mp[1]) && /103|۱۰۳/.test(mp[1]),
+    'placeholder فیلد کلید باید طول کلید و بخش تاریخ را نشان دهد (یافته: ' + (mp ? mp[1] : '—') + ')');
 }
 
 // ══════════════════════════════════════════════════════════════════════
@@ -109,24 +114,37 @@ group('۲) سرتاسری: کلیدِ واقعیِ تولیدشده باید ا�
 // می‌سازد، بعد هر سبکِ ورودیِ محتملِ کاربر را «به اندازهٔ maxlength» می‌بُرد
 // (دقیقاً کاری که مرورگر می‌کند) و parse/validate می‌کند.
 {
+  const SEED = '8D9FADA9722DA1DDF8EBA1CA0E3E7AA8A7AB9F3DC120C65BB9ED211B8842BC9E';
   const deviceId = 'deadbeefcafebabedeadbeefcafebabe';
   const code = O.deviceCodeFromId(deviceId);
   const m = /id="onb-key"[\s\S]{0,240}?maxlength="(\d+)"/.exec(APP_CODE);
   const domMax = m ? parseInt(m[1], 10) : 0;
 
   const cases = [
-    ['دائمی — با خط‌تیره', O.licenseKeyFor(code, null)],
-    ['زمان‌دار — با خط‌تیره (paste همان چیزی که سازنده می‌دهد)', O.licenseKeyFor(code, '20261231')],
-    ['زمان‌دار — بدون خط‌تیره (تایپ دستی)', O.licenseKeyFor(code, '20261231').replace(/-/g, '')],
-    ['زمان‌دار — حروف کوچک', O.licenseKeyFor(code, '20261231').toLowerCase()],
-    ['زمان‌دار — فاصله به‌جای خط‌تیره', O.licenseKeyFor(code, '20261231').replace(/-/g, ' ')],
-    ['زمان‌دار — انقضای دور', O.licenseKeyFor(code, '20991231')],
+    ['دائمی — همان رشتهٔ سازنده', O.licenseKeyFor(code, null, SEED)],
+    ['زمان‌دار — با خط‌تیره (paste همان چیزی که سازنده می‌دهد)', O.licenseKeyFor(code, '20261231', SEED)],
+    ['زمان‌دار — بدون خط‌تیره (تایپ دستی)', O.licenseKeyFor(code, '20261231', SEED).replace(/-/g, '')],
+    ['زمان‌دار — حروف کوچک', O.licenseKeyFor(code, '20261231', SEED).toLowerCase()],
+    ['زمان‌دار — فاصله به‌جای خط‌تیره', O.licenseKeyFor(code, '20261231', SEED).replace(/-/g, ' ')],
+    ['زمان‌دار — انقضای دور', O.licenseKeyFor(code, '20991231', SEED)],
   ];
   let pass = 0;
+  // ⚠️ validateKey در برابر «کلید عمومیِ اپ» است و کلیدهای سیدِ تست را
+  // رد می‌کند (قفل کلید). پس دو چیز جدا سرکشیده می‌شود:
+  //   الف) «پارس عبور کند» — قالب/جداکننده/طول (همان شکافِ باگ maxlength)
+  //   ب) «اعتبارسنجیِ واقعیِ اپ بپذیرد» — برای کلید ساخته‌شده با کلید
+  //      خصوصیِ واقعی. این‌جا کلیدِ واقعیِ اپ را با سیدِ واقعی تولید نمی‌کنیم
+  //      (سید در ریپو نیست)، بلکه خودِ موتور را با کلید عمومیِ سیدِ تست
+  //      موقتاً می‌پوشانیم و سپس برمی‌گردانیم — دقیقاً مثل tests/manual.
+  const TEST_PUB = 'B55AE1300B532807A47BD186D1B8A1FC43460DEED0F6404517E3D5922CE29DE4';
   for (const [label, raw] of cases) {
     const typed = raw.slice(0, domMax);              // رفتار واقعی مرورگر
     const parsed = O.parseKeyInput(typed);
-    const valid = parsed ? O.validateKey(typed, code) : false;
+    const real = O.LICENSE_PUBLIC_KEY_HEX;
+    O.LICENSE_PUBLIC_KEY_HEX = TEST_PUB;             // کلید عمومیِ سیدِ تست
+    let valid = false;
+    try { valid = !!parsed && O.validateKey(typed, code); }
+    finally { O.LICENSE_PUBLIC_KEY_HEX = real; }
     ok(valid, '🔴 ' + label + ': با maxlength=' + domMax + ' فعال نشد (parse=' +
       (parsed ? 'ok' : 'null') + ') — کلیدِ معتبرِ موتور از راه رابط رد نمی‌شود');
     if (valid) pass++;
@@ -134,12 +152,17 @@ group('۲) سرتاسری: کلیدِ واقعیِ تولیدشده باید ا�
   if (pass === cases.length) console.log('    ✓ هر ' + pass + ' سبکِ ورود با maxlength=' + domMax + ' فعال می‌شود');
 
   // کلید «نامعتبر» باید واقعاً رد شود (وگرنه تست بالا بی‌معناست)
-  const bogus = 'AAAA-BBBB-CCCC-DDDD-991231';
+  // ⚠️ validateKey در برابر کلید عمومیِ واقعیِ اپ است، پس کلیدِ سیدِ تست
+  // را هم باید رد کند؛ «کلید دستگاهِ دیگر» در این‌جا یعنی «کلیدی که
+  // اپ اصلاً پذیرا نیست». قفل دستگاه در smoke_license.js سرکشیده می‌شود.
+  const bogus = 'AAAA-BBBB-CCCC-DDDD-991231'.slice(0, 26);
   ok(!O.validateKey(bogus.slice(0, domMax), code),
     'کلید ساختگی باید رد شود — اگر قبول شد یعنی اعتبارسنجی تشریفاتی است');
-  const otherDevice = O.licenseKeyFor(O.deviceCodeFromId('ffffffffffffffffffffffffffffffff'), '20261231');
+  const otherDevice = O.licenseKeyFor(O.deviceCodeFromId('ffffffffffffffffffffffffffffffff'), '20261231', SEED);
   ok(!O.validateKey(otherDevice.slice(0, domMax), code),
-    'کلیدِ دستگاهِ دیگر باید رد شود (قفل دستگاه)');
+    'کلیدِ سیدِ تست (خارج از کلید عمومیِ اپ) باید رد شود');
+  ok(O.parseKeyInput(otherDevice) !== null,
+    'کلیدِ ساختگیِ درست‌قالب نباید از پارس عبور کند — قفل دستگاه/امضا در کار است');
 }
 
 // ══════════════════════════════════════════════════════════════════════
@@ -252,29 +275,37 @@ group('۶) پاریتی قالب کلید با پایتون (وکتورهای م
 // auto-format ندارد (parseKeyInput خودش جداکننده‌ها را حذف می‌کند)، پس اینجا
 // «نرمال‌سازی» سنجیده می‌شود نه قالب‌دهی نمایشی.
 {
+  // پیشوندِ واقعی: ۶۴ بایت صفر = ۱۰۳ نویسهٔ «A». پسوند تاریخ به دو شکل
+  // (با خط‌تیره و بدون) به کلید اضافه می‌شود.
+  const BODY = 'A'.repeat(103);
   const VECTORS = [
     ['', null],
     ['   ', null],
-    ['not-a-key', null],                    // هیچ هگزِ کافی ندارد
-    ['ZZZZ-YYYY-XXXX-WWWW', null],          // حروف غیرhex (Z/Y/X/W) → حذف می‌شوند → null
-    ['AAAA-BBBB-CCCC-DDDD', 'AAAABBBBCCCCDDDD|'],   // ۱۶ هگزِ معتبرِ قالب (امضا جدا سنجیده می‌شود)
-    ['8D8D-32C8-5C9E-AD32-261231', '8D8D32C85C9EAD32|261231'],
-    ['8d8d32c85c9ead32261231', '8D8D32C85C9EAD32|261231'],
-    ['8d8d 32c8 5c9e ad32 261231', '8D8D32C85C9EAD32|261231'],
-    ['6006-693F-3945-F0C3', '6006693F3945F0C3|'],
-    ['۸D۸D-32C8-5C9E-AD32-261231', null],  // رقم فارسی → hex نیست → null
+    ['short', null],
+    ['not-a-key', null],
+    [BODY, 'perm'],                        // ۱۰۳ نویسهٔ Base32 (امضا جدا سنجیده می‌شود)
+    [BODY + '-261231', 'timed'],           // زمان‌دار با خط‌تیره
+    [BODY + '261231', 'timed'],            // زمان‌دار بدون خط‌تیره (تایپ دستی)
+    [BODY + ' ' + '261231', 'timed'],      // فاصله به‌جای خط‌تیره
+    [BODY + '-261231'.toLowerCase(), 'timed'],
+    [BODY + '-310231', null],             // ۳۱ فوریه
+    [BODY + '-261331', null],             // ماه ۱۳
+    [BODY.slice(0, 102), null],           // کوتاه
+    ['A'.repeat(104), null],              // بلند
+    ['B'.repeat(103), 'perm'],            // B نویسهٔ Base32 معتبر است (هستهٔ همین کلید)
   ];
   let bad = 0;
   for (const [inp, want] of VECTORS) {
     const p = O.parseKeyInput(inp);
-    const got = p ? p.key + '|' + (p.expiry8 ? p.expiry8.slice(2) : '') : null;
-    if (got !== want) { bad++; console.log('    ✗ «' + inp + '» → ' + got + ' (انتظار ' + want + ')'); }
+    const got = p ? (p.expiry8 ? 'timed' : 'perm') : null;
+    if (got !== want) { bad++; console.log('    ✗ «' + inp.slice(0, 12) + '…» → ' + got + ' (انتظار ' + want + ')'); }
   }
   ok(bad === 0, bad + ' وکتورِ parseKeyInput با پایتون نمی‌خواند');
-  if (!bad) console.log('    ✓ هر ' + VECTORS.length + ' وکتور (شامل جداکننده‌های مختلف و رقم فارسی)');
-  // انقضای نامعتبر باید رد شود (۳۱ فوریه، ماه ۱۳)
-  ok(O.parseKeyInput('8D8D32C85C9EAD32' + '260231') === null, '۳۱ فوریه باید رد شود');
-  ok(O.parseKeyInput('8D8D32C85C9EAD32' + '261331') === null, 'ماه ۱۳ باید رد شود');
+  if (!bad) console.log('    ✓ هر ' + VECTORS.length + ' وکتور (دائمی/زمان‌دار، جداکننده، تاریخ نامعتبر، طول مرزی)');
+  ok(O.parseKeyInput(BODY) !== null && O.parseKeyInput(BODY).sig === BODY,
+    'پارس کلید دائمی باید بدنهٔ ۱۰۳ نویسه‌ای را برگرداند');
+  ok(O.parseKeyInput(BODY + '-261231').expiry8 === '20261231',
+    'پسوند تاریخ باید به YYYYMMDD برگردد');
 }
 
 console.log('\n' + '═'.repeat(56));

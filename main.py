@@ -349,23 +349,37 @@ def _selftest() -> int:
         assert loaded[0].is_win and not loaded[0].is_open
     assert _json.loads(_json.dumps(rec, ensure_ascii=False))["symbol"] == sg.symbol
 
-    # لایسنس (v0.14.0): طرح HMAC — قطعی، آفلاین، و هم‌بُر با ماژول JS اندروید
+    # لایسنس (v1.0.2): امضای نامتقارن Ed25519 — اپ فقط «کلید عمومی» را دارد و
+    # فقط تأیید می‌کند؛ ساخت کلید به کلید خصوصی سازنده نیاز دارد.
+    # سیدِ تست فقط همین‌جا و در smoke_license.js است (کلید عمومیِ اپ یکی دیگر است).
     from src import license as lic
+    _TEST_SEED = "8D9FADA9722DA1DDF8EBA1CA0E3E7AA8A7AB9F3DC120C65BB9ED211B8842BC9E"
+    _OTHER_SEED = "1111111111111111111111111111111111111111111111111111111111111111"
     did = lic.get_device_id()
     assert did == lic.get_device_id() and len(did) == 64, "شناسهٔ دستگاه باید قطعی و ۶۴ هگز باشد"
     code = lic.get_device_code(did)
     assert code == lic.format_code(did[:12].upper()) and code.count("-") == 2, \
         f"کد دستگاه بدقالبه: {code}"
-    key = lic.generate_license_key(code)
-    assert key == lic.generate_license_key(code), "کلید باید قطعی باشد"
-    assert lic.validate_license(key)[0], "کلید درست باید اعتبارسنجی شود"
-    assert lic.validate_license(key.lower().replace("-", " "))[0], "کلید باید به فاصله/حروف کوچک مقاوم باشد"
+    key = lic.generate_license_key(code, seed=_TEST_SEED)
+    assert key == lic.generate_license_key(code, seed=_TEST_SEED), "کلید باید قطعی باشد"
+    assert len(key) == 103 and key.isalnum(), \
+        f"کلید دائمی باید ۱۰۳ نویسهٔ Base32 باشد: {len(key)}"
+    # بُرِدهای مشترک با license.js اندروید (سیدِ تست یکی) — در smoke_license.js هم هست
+    assert lic.generate_license_key("AB12-CD34-EF56", seed=_TEST_SEED) == \
+        "SAYIKVXA2JU7SPMLWBA5OIEXNGDBR6OYM6AVJ2ZGUQYQYL22ZCL3YX35EXT2XOALBXXZVAAY7WZGCWH4FRUAU4CICLOVJUSHKCH6GCI", \
+        "بُرِد آزمایشی مشترک پایتون/JS تغییر کرده"
+    # کلید دائمیِ امضاشده با کلید خصوصیِ واقعی (کلید عمومیِ اپ) — مسیر اعتبارسنجی
+    _prod_perm = "ODGLQ6OP5YOE22KNKAF7S6GLFBNFG7LVLROLG7ZR4NTM3CP7FEWYXZN2SXUWVZJIOE3DL472XM4MLA2WDROVNWEJ47YMHOH5CAFIOBQ"
+    assert lic.validate_license(_prod_perm, "AB12-CD34-EF56")[0], "کلید درست باید اعتبارسنجی شود"
+    assert lic.validate_license(_prod_perm.lower(), "AB12-CD34-EF56")[0], "کلید باید به کوچک‌بزرگی مقاوم باشد"
     assert not lic.validate_license("AAAA-BBBB-CCCC-DDDD")[0], "کلید غلط باید رد شود"
     assert not lic.validate_license("short")[0], "کلید بدقالبه باید رد شود"
-    assert not lic.validate_license(key, "FF00-FF00-FF00")[0], "کلید دستگاه دیگر باید رد شود"
-    # بُرِد مشترک با license.js اندروید (همان secret، همان HMAC) — در smoke_license.js هم هست
-    assert lic.generate_license_key("AB12-CD34-EF56") == "6F1F-8540-078F-9898", \
-        "بُرِد آزمایشی مشترک پایتون/JS تغییر کرده — secret دو طرف باید یکی بماند"
+    assert not lic.validate_license(_prod_perm, "FF00-FF00-FF00")[0], "کلید دستگاه دیگر باید رد شود"
+    # کلیدی که با کلید خصوصیِ «دیگری» ساخته شده باید مردود شود — یعنی فقط کلید
+    # عمومیِ اپ امضا را می‌پذیرد و سیدِ درست به‌تنهایی کافی نیست.
+    assert not lic.validate_license(
+        lic.generate_license_key("AB12-CD34-EF56", seed=_OTHER_SEED))[0], \
+        "کلید ساخته‌شده با کلید خصوصیِ دیگر باید رد شود"
 
     # کارت تصویری سیگنال (v0.19.0) — spec پایتون == spec جاوااسکریپت (smoke_share.js)
     from src.report.sharecard import build_share_spec as _bss
@@ -398,18 +412,21 @@ def _selftest() -> int:
                 os.environ.pop("ODIN_DATA_DIR", None)
             else:
                 os.environ["ODIN_DATA_DIR"] = _prev
-    # کلید زمان‌دار (v0.15.0) — انقضا داخل رشتهٔ کلید؛ بُرِد مشترک با js/license.js
-    timed = lic.generate_license_key("AB12-CD34-EF56", until="2030-12-31")
-    assert timed == "19DB-2DFA-F0E7-0082-301231", f"بُرِد کلید زمان‌دار عوض شده: {timed}"
-    assert lic.validate_license(timed, "AB12-CD34-EF56")[0], "کلید زمان‌دار معتبر باید پاس شود"
-    assert not lic.validate_license(timed, "AB12-CD34-EF56", now=datetime(2031, 1, 1))[0], \
+    # کلید زمان‌دار — انقضا داخل رشتهٔ کلید؛ بُرِد مشترک با js/license.js
+    timed = lic.generate_license_key("AB12-CD34-EF56", until="2030-12-31", seed=_TEST_SEED)
+    assert timed == \
+        "CYU2HFS6GV2WLA2VFPGLLSYCX2BKIOUD3BSBBEXXEBZBOJZDQ6HIIFFLX2CUDY2A4ZIVWVNWV3SUKOWTGB7VMNEBAQBK7TG37IZKKAQ-301231", \
+        f"بُرِد کلید زمان‌دار عوض شده: {timed}"
+    _prod_timed = "IU5IBZ2PQNDY6YJBNKAQ4JE6FGHTTABGWXZWVEDUIS6FS3X7MEZ2J6BGTIHO25WAU4MJKNZB46NCRMA4SCGB7AIKQ52TCNZYGRWUADY-301231"
+    assert lic.validate_license(_prod_timed, "AB12-CD34-EF56")[0], "کلید زمان‌دار معتبر باید پاس شود"
+    assert not lic.validate_license(_prod_timed, "AB12-CD34-EF56", now=datetime(2031, 1, 1))[0], \
         "کلید زمان‌دار باید پس از انقضا رد شود"
-    assert not lic.validate_license("19DB-2DFA-F0E7-0082", "AB12-CD34-EF56")[0], \
+    assert not lic.validate_license(_prod_timed[:103], "AB12-CD34-EF56")[0], \
         "حذف پسوند تاریخ نباید کلید زمان‌دار را معتبر کند"
 
     print(f"SELFTEST OK — {len(evs)} رویداد پارس شد، {len(cases)} حالت جهت‌دهی، "
           f"{len(veto_cases)} وتو، سیگنال {sg.score}/{sg.max_score}، "
-          f"ریاضی SL/TP، ژورنال، لایسنس (HMAC) و کدگذاری کنسول سالم")
+          f"ریاضی SL/TP، ژورنال، لایسنس (Ed25519) و کدگذاری کنسول سالم")
     return 0
 
 

@@ -168,6 +168,11 @@ jobs:
           python tests/manual/test_veto_report.py
           python tests/manual/test_news_direction.py
 
+      # رگرسیون لایسنس (Ed25519): تولید/اعتبارسنجی، انقضا، قفل دستگاه،
+      # تریال ۷ روزه، ضدساعت و CLI — آفلاین و بدون کلید خصوصی (سیدِ تست).
+      - name: License regression (Ed25519 — آفلاین)
+        run: python tests/manual/test_license.py
+
       - name: Audit regression pins (آفلاین)
         run: python tests/manual/test_audit_fixes.py
 

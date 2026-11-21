@@ -387,7 +387,7 @@ QLabel#onb_chip {{
 
         self.license_input = QLineEdit()
         self.license_input.setObjectName("onb_license")
-        self.license_input.setPlaceholderText("XXXX-XXXX-XXXX-XXXX[-YYMMDD]")
+        self.license_input.setPlaceholderText("کلید ۱۰۳ نویسه‌ای سازنده (زمان‌دار: …-YYMMDD)")
         self.license_input.setLayoutDirection(Qt.LeftToRight)
         self.license_input.setAlignment(Qt.AlignCenter)
         self.license_input.textChanged.connect(self._fmt_license)
@@ -490,14 +490,18 @@ QLabel#onb_chip {{
         self._go_step(1)
 
     def _fmt_license(self, raw: str) -> None:
-        """بزرگ‌سازی + خط‌تیره‌گذاری خودکار XXXX-XXXX-XXXX-XXXX[-YYMMDD]."""
+        """بزرگ‌سازی خودکار + نگه‌داشتن پسوند تاریخ کلید Ed25519.
+
+        قالب کلید: ۱۰۳ نویسهٔ Base32 (بدون خط‌تیره) که نسخهٔ زمان‌دار با
+        «-» + ۶ رقم YYMMDD تمام می‌شود. خط‌تیرهٔ داخلی را هم می‌پذیریم
+        (parser پایتون/JS حذفش می‌کند)، ولی خروجی استاندارد است.
+        """
         clean = "".join(ch for ch in raw.upper()
-                        if ch.isalnum() and ch.isascii())
-        parts = [clean[i:i + 4] for i in range(0, min(len(clean), 16), 4)]
-        rest = clean[16:16 + 6]
-        out = "-".join(parts)
-        if rest:
-            out += "-" + rest
+                        if ch.isalnum() and ch.isascii())[:109]
+        body, rest = clean, ""
+        if len(clean) > 103:
+            body, rest = clean[:103], clean[103:]
+        out = body + ("-" + rest if rest else "")
         if out != raw:
             self.license_input.blockSignals(True)
             self.license_input.setText(out)
