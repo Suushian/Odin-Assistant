@@ -2,36 +2,44 @@
 # -*- coding: utf-8 -*-
 """سیستم لایسنس و قفل دستگاه برای ODIN Assistant.
 
-v0.15.0 — دو قابلیت تازه روی طرح HMAC (سازگار با کلیدهای دائمیِ قبلی):
-  ۱) **کلید زمان‌دار**: انقضا داخل خودِ رشتهٔ کلید کد می‌شود:
-       دائمی:   XXXX-XXXX-XXXX-XXXX                (۱۶ هگز)
-       زمان‌دار: XXXX-XXXX-XXXX-XXXX-YYMMDD          (۱۶ هگز + ۶ رقم تاریخ)
-     کلید = HMAC-SHA256(SECRET, device_code) برای دائمی، و
-     HMAC-SHA256(SECRET, device_code|YYYYMMDD) برای زمان‌دار.
-     اپ تاریخ را از خودِ کلید می‌خواند — فیلد جدا لازم نیست.
-  ۲) **دورهٔ آزمایشی ۷ روزه** با تمام امکانات (رصد پس‌زمینه شاملش می‌شود)،
-     از لحظهٔ «شروع» توسط کاربر. با high-water-mark زمانی نسبت به عقب‌کشیدن
-     ساعت مقاوم است.
+v1.0.2 — **امضای نامتقارن Ed25519** (RFC 8032) به‌جای HMAC رازمشترک.
 
-طرح device_id/device_code مثل قبل:
-  device_id  = SHA-256 از پایدارترین شناسهٔ سیستم (MachineGuid/machine-id/
-               IOPlatformUUID/ANDROID_ID)
-  device_code= ۱۲ رقم اولِ هگزِ device_id، بالا‌حروف، جداکنندهٔ ۴تایی
+چرا این تغییر: با HMAC، رازِ ساختِ کلید باید داخلِ اپ باشد تا اپ بتواند کلید را
+اعتبارسنجی کند؛ یعنی هر کس می‌تواند راز را از اپ/ریپو بردارد و keygen بسازد.
+با امضای نامتقارن، اپ فقط **کلید عمومی** را دارد و فقط «تأیید» می‌کند. ساختن
+کلید لایسنس به **کلید خصوصی** نیاز دارد که فقط در دست سازنده است و هرگز در
+اپ یا ریپو نیست (در `.gitignore` هم `*.secret` می‌گیرد).
 
-صداقت اول: لایسنس آفلاین است و secret داخل بسته قرار دارد؛ جلوی کپی/اشتراک
-روزمره را می‌گیرد اما در برابر کرکر حرفه‌ای مصون نیست (LICENSE_GUIDE.md).
+طرح:
+  device_id   = SHA-256 از پایدارترین شناسهٔ سیستم (MachineGuid/machine-id/
+                IOPlatformUUID/ANDROID_ID)
+  device_code = ۱۲ رقم اولِ هگزِ device_id، بالا‌حروف، جداکنندهٔ ۴تایی
+  message     = "ODIN1|" + device_code + "|" + YYYYMMDD   (دائمی: 00000000)
+  signature   = Ed25519_sign(message, کلید_خصوصی)        → ۶۴ بایت
+  کلید        = Base32(signature)                         → ۱۰۳ نویسه
+  کلید زمان‌دار = Base32 + "-" + YYMMDD
+
+اعتبارسنجی در اپ: Base32 → ۶۴ بایت → Ed25519_verify با کلید عمومی + انقضا +
+قفل device_id. بدون کلید خصوصی، ساخت کلید معتبر ممکن نیست.
+
+هشدار صداقت: این کار «ساختن keygen» را غیرممکن می‌کند، ولی مانعِ مهندسیِ معکوسِ
+کلِ اپ (patch کردن دروازهٔ اعتبارسنجی) نیست — هیچ لایسنس آفلاینی را از آن
+مصون نمی‌کند. برای صدور امن‌تر در آینده: فعال‌سازی آنلاین با سرور امضاکننده.
+
+کلید خصوصی سازنده (هرگز در گیت نیست):
+  installer/odin-license.secret   (الگوی *.secret در .gitignore)
+  python -m src.license gen CODE [--days N | --until YYYY-MM-DD]
 
 CLI (سمت سازنده):
     python -m src.license device                       # شناسه/کد این دستگاه
-    python -m src.license gen CODE                     # کلید دائمی
-    python -m src.license gen CODE --days 90           # کلید ۹۰ روزه
-    python -m src.license gen CODE --until 2027-03-20  # کلید تا تاریخ مشخص
+    python -m src.license public                       # کلید عمومی امضا
+    python -m src.license keypair                      # جفت کلید تازه (خروجی)
+    python -m src.license gen CODE [--days N | --until DATE] [--seed HEX|--seed-file PATH]
     python -m src.license check KEY CODE               # راستی‌آزمایی (با انقضا)
 """
 from __future__ import annotations
 
 import hashlib
-import hmac
 import json
 import os
 import platform
@@ -42,18 +50,57 @@ from datetime import date, datetime, timedelta
 from pathlib import Path
 
 from src import app_paths
+from src import license_ed25519 as ed25519
 
 # ══════════════════════════════════════════════════════════════
 #  ثابت‌های طرح
 # ══════════════════════════════════════════════════════════════
-# ⚠️ همین مقدار در android/app/src/main/assets/www/js/license.js و
-# license-tool.html هم هست. تغییر آن = باطل‌شدن همهٔ کلیدهای صادرشده.
-_LICENSE_SECRET = "bd604d7cc90e8fe32184e8d6ddb5787c3389438b54156947541f772f61be7347"
+# کلید عمومی امضای لایسنس — همان مقدار در js/license.js و LICENSE PANEL.html.
+# این کلید «عمومی» است: فقط تأیید می‌کند و اجازهٔ ساخت کلید نمی‌دهد.
+PUBLIC_KEY_HEX = "7F2CCF1F739C9FC4BC479A966FA1527CAC462BED99C3D7693B5B124BA8111591"
+
+# کلید خصوصی پیش‌فرض سازنده (اگر وجود داشته باشد). هرگز کامیت نمی‌شود.
+DEFAULT_SEED_FILE = Path(__file__).resolve().parents[1] / "installer" / "odin-license.secret"
 
 TRIAL_DAYS = 7                 # دورهٔ آزمایشی (روز)
 _ROLLBACK_TOLERANCE_H = 48     # عقب‌رفتن ساعت تا این حد = خطای مجاز، بیشتر = تقلب
 
+_MESSAGE_PREFIX = "ODIN1"
+_PERMANENT_EXPIRY = "00000000"
+_B32_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567"
+_SIG_B32_LEN = 103             # Base32 بدون padding از ۶۴ بایت
+_KEY_RE = re.compile(rf"^([A-Z2-7]{{{_SIG_B32_LEN}}})(?:-([0-9]{{6}}))?$")
 _HEX_RE = re.compile(r"^[0-9A-Fa-f]+$")
+
+PUBLIC_KEY = bytes.fromhex(PUBLIC_KEY_HEX)
+
+
+# ══════════════════════════════════════════════════════════════
+#  Base32 (RFC 4648، بالا‌حروف، بدون padding)
+# ══════════════════════════════════════════════════════════════
+def b32_encode(data: bytes) -> str:
+    out, val, bits = [], 0, 0
+    for byte in data:
+        val = (val << 8) | byte
+        bits += 8
+        while bits >= 5:
+            bits -= 5
+            out.append(_B32_ALPHABET[(val >> bits) & 31])
+    if bits:
+        out.append(_B32_ALPHABET[(val << (5 - bits)) & 31])
+    return "".join(out)
+
+
+def b32_decode(text: str) -> bytes:
+    val, bits = 0, 0
+    out = bytearray()
+    for ch in text:
+        val = (val << 5) | _B32_ALPHABET.index(ch)
+        bits += 5
+        if bits >= 8:
+            bits -= 8
+            out.append((val >> bits) & 0xFF)
+    return bytes(out)
 
 
 # ══════════════════════════════════════════════════════════════
@@ -141,17 +188,8 @@ def normalize_code(code: str) -> str:
 
 
 # ══════════════════════════════════════════════════════════════
-#  کلید لایسنس (HMAC) — دائمی و زمان‌دار
+#  کلید لایسنس (Ed25519) — دائمی و زمان‌دار
 # ══════════════════════════════════════════════════════════════
-def _hmac_key_hex(device_code: str, expiry8: str | None = None) -> str:
-    code = normalize_code(device_code)
-    if len(code) != 12 or not _HEX_RE.match(code):
-        raise ValueError("device_code must be 12 hex chars")
-    msg = code if not expiry8 else f"{code}|{expiry8}"
-    return hmac.new(_LICENSE_SECRET.encode("utf-8"), msg.encode("utf-8"),
-                    hashlib.sha256).hexdigest().upper()[:16]
-
-
 def expiry_to_8(until) -> str | None:
     """None | int(روز از امروز) | date/datetime | 'YYYY-MM-DD'/'YYYYMMDD' → 'YYYYMMDD'."""
     if until is None:
@@ -177,30 +215,90 @@ def expiry_to_8(until) -> str | None:
     return d.strftime("%Y%m%d")
 
 
-def generate_license_key(device_code: str, until=None) -> str:
-    """تولید کلید — ابزار سمت سازنده.
+def _key_message(device_code: str, expiry8: str) -> bytes:
+    return f"{_MESSAGE_PREFIX}|{device_code}|{expiry8}".encode("ascii")
 
-    until=None → کلید دائمی «XXXX-XXXX-XXXX-XXXX»
-    otherwise  → «XXXX-XXXX-XXXX-XXXX-YYMMDD» (انقضا پایانِ آن روز، UTC)
+
+def _vendor_seed(seed: str | None = None, seed_file: str | None = None) -> bytes:
+    """کلید خصوصی سازنده — فقط از ورودی صریح یا فایل/متغیر محیطی (هرگز از گیت)."""
+    if seed is not None:
+        s = re.sub(r"\s+", "", str(seed))
+        if len(s) != 64 or not _HEX_RE.match(s):
+            raise ValueError("seed must be 64 hex chars")
+        return bytes.fromhex(s)
+    path = None
+    if seed_file:
+        path = Path(seed_file)
+    elif os.environ.get("ODIN_LICENSE_SEED_FILE"):
+        path = Path(os.environ["ODIN_LICENSE_SEED_FILE"])
+    elif DEFAULT_SEED_FILE.exists():
+        path = DEFAULT_SEED_FILE
+    if path is not None:
+        text = path.read_text(encoding="utf-8")
+        m = re.search(r"[0-9A-Fa-f]{64}", text)
+        if not m:
+            raise ValueError(f"no 64-hex seed in {path}")
+        return bytes.fromhex(m.group(0))
+    env = os.environ.get("ODIN_LICENSE_SEED")
+    if env:
+        s = re.sub(r"\s+", "", env)
+        if len(s) == 64 and _HEX_RE.match(s):
+            return bytes.fromhex(s)
+    raise ValueError(
+        "کلید خصوصی سازنده در دسترس نیست — از --seed HEX، --seed-file PATH، "
+        "متغیر ODIN_LICENSE_SEED یا فایل installer/odin-license.secret استفاده کنید")
+
+
+def generate_license_key(device_code: str, until=None, seed: str | None = None,
+                         seed_file: str | None = None) -> str:
+    """تولید کلید — ابزار سمت سازنده (نیازمند کلید خصوصی).
+
+    until=None → کلید دائمی «Base32 ۱۰۳ نویسه»
+    otherwise  → «Base32-YYMMDD» (انقضا پایانِ آن روز، UTC)
     """
-    expiry8 = expiry_to_8(until)
-    key16 = format_code(_hmac_key_hex(device_code, expiry8))
-    return f"{key16}-{expiry8[2:]}" if expiry8 else key16
+    expiry8 = expiry_to_8(until) or _PERMANENT_EXPIRY
+    code = normalize_code(device_code)
+    if len(code) != 12 or not _HEX_RE.match(code):
+        raise ValueError("device_code must be 12 hex chars")
+    signature = ed25519.sign(_key_message(code, expiry8), _vendor_seed(seed, seed_file))
+    key = b32_encode(signature)
+    return f"{key}-{expiry8[2:]}" if expiry8 != _PERMANENT_EXPIRY else key
 
 
 def parse_key_input(raw: str) -> tuple[str, str | None]:
-    """رشتهٔ ورودی کاربر → (key16hex, expiry8|None). ValueError اگر بدقالبه."""
-    s = re.sub(r"[^0-9A-Fa-f]", "", str(raw or "")).upper()
-    if len(s) == 16 and _HEX_RE.match(s):
-        return s, None
-    if len(s) == 22:
-        key16, e = s[:16], s[16:]
-        try:
-            datetime.strptime(e, "%y%m%d")
-        except ValueError:
-            raise ValueError("bad expiry suffix")
-        return key16, "20" + e
-    raise ValueError("key must be 16 hex chars, or 16 hex + YYMMDD")
+    """رشتهٔ ورودی کاربر → (Base32 ۱۰۳‌نویسه‌ایِ امضا, expiry8|None).
+
+    Base32 بدون خط‌تیره است؛ خط‌تیره فقط جداکنندهٔ پسوند تاریخ است. اگر کاربر
+    خط‌تیره تایپ کرد، حذفش می‌کنیم — به‌شرطی که پسوند تاریخ همچنان روشن باشد.
+    """
+    s = re.sub(r"\s+", "", str(raw or "")).upper()
+    if not s:
+        raise ValueError("empty key")
+    expiry8 = None
+    body = s
+    if "-" in s:
+        head, _, tail = s.rpartition("-")
+        if head and len(tail) == 6 and tail.isdigit():
+            expiry8 = _validate_yy_mm_dd(tail)     # ۳۱ فوریه اینجا رد می‌شود
+            body = head
+        # خط‌تیرهٔ داخلی/زائد در بدنه بعداً حذف می‌شود
+    body = body.replace("-", "")
+    # پسوند تاریخِ بدون خط‌تیره (تایپ دستی): ۱۰۹ نویسه که ۶ تای آخر رقم است.
+    # کلید دائمی دقیقاً ۱۰۳ نویسه است، پس این حالت روی آن سرک نمی‌خورد.
+    if expiry8 is None and len(body) == _SIG_B32_LEN + 6 and body[_SIG_B32_LEN:].isdigit():
+        expiry8 = _validate_yy_mm_dd(body[_SIG_B32_LEN:])
+        body = body[:_SIG_B32_LEN]
+    if len(body) != _SIG_B32_LEN or not re.match(rf"^[A-Z2-7]{{{_SIG_B32_LEN}}}$", body):
+        raise ValueError("key body must be 103 base32 chars")
+    return body, expiry8
+
+
+def _validate_yy_mm_dd(yy_mm_dd: str) -> str:
+    try:
+        d = datetime.strptime("20" + yy_mm_dd, "%Y%m%d")
+    except ValueError:
+        raise ValueError("bad expiry suffix")
+    return d.strftime("%Y%m%d")
 
 
 def validate_license(license_key: str, device_code: str | None = None,
@@ -208,20 +306,28 @@ def validate_license(license_key: str, device_code: str | None = None,
     """اعتبارسنجی کلید (دائمی/زمان‌دار) در برابر کد دستگاه و تاریخ امروز."""
     now = now or datetime.now()
     try:
-        key16, expiry8 = parse_key_input(license_key)
+        body, expiry8 = parse_key_input(license_key)
     except ValueError:
         return False, ("فرمت کلید نادرست است — کلِ رشتهٔ دریافتی از سازنده را وارد کنید "
-                       "(کلیدهای زمان‌دار یک بخش تاریخ ۶ رقمی هم دارند)")
+                       "(کلیدها ۱۰۳ نویسه‌اند؛ کلیدهای زمان‌دار یک بخش تاریخ ۶ رقمی هم دارند)")
     try:
-        expected = _hmac_key_hex(device_code or get_device_code(), expiry8)
+        code = normalize_code(device_code) if device_code else normalize_code(get_device_code())
+        if len(code) != 12 or not _HEX_RE.match(code):
+            raise ValueError
     except ValueError:
         return False, "شناسهٔ دستگاه نامعتبر است"
-    if not hmac.compare_digest(key16, expected):
-        return False, "این کلید برای دستگاه دیگری ساخته شده — کد دستگاه را برای سازنده بفرستید و کلید همان دستگاه را بگیرید"
+    eff_expiry = expiry8 or _PERMANENT_EXPIRY
+    if expiry8 and now.strftime("%Y%m%d") > expiry8:
+        d = datetime.strptime(expiry8, "%Y%m%d").date()
+        return False, f"این کلید در {d.isoformat()} منقضی شده — برای تمدید با سازنده تماس بگیرید"
+    try:
+        signature = b32_decode(body)
+    except ValueError:
+        return False, "کلید نامعتبر است"
+    if not ed25519.verify(signature, _key_message(code, eff_expiry), PUBLIC_KEY):
+        return False, ("امضای این کلید نامعتبر است یا برای دستگاه دیگری صادر شده — "
+                       "کد دستگاه را برای سازنده بفرستید و کلید همان دستگاه را بگیرید")
     if expiry8:
-        if now.strftime("%Y%m%d") > expiry8:
-            d = datetime.strptime(expiry8, "%Y%m%d").date()
-            return False, f"این کلید در {d.isoformat()} منقضی شده — برای تمدید با سازنده تماس بگیرید"
         return True, f"لایسنس معتبر است (تا {expiry8[:4]}-{expiry8[4:6]}-{expiry8[6:]})"
     return True, "لایسنس معتبر است (دائمی)"
 
@@ -245,7 +351,7 @@ def save_license(license_key: str, device_id: str, user_name: str = "",
             "expires_at": expires_at,
             "activated_at": datetime.now().isoformat(),
             "last_seen": datetime.now().isoformat(),
-            "version": "2.1",
+            "version": "3.0",
         }
         f = get_license_file_path()
         with open(f, "w", encoding="utf-8") as fh:
@@ -426,9 +532,22 @@ def _cli(argv: list[str]) -> int:
         print(f"شناسهٔ کامل دستگاه : {did}")
         print(f"کد دستگاه (برای سازنده): {get_device_code(did)}")
         return 0
+    if cmd == "public":
+        print(f"کلید عمومی امضای لایسنس: {PUBLIC_KEY_HEX}")
+        print(f"پیش‌نمایش کلید عمومی (Base32): {b32_encode(PUBLIC_KEY)}")
+        return 0
+    if cmd == "keypair":
+        import secrets
+        seed = secrets.token_bytes(32)
+        print(f"کلید خصوصی (۶۴ هگز، راز بسازید و نگه دارید): {seed.hex().upper()}")
+        print(f"کلید عمومی  (همان کلید عمومی را در اپ بگذارید): "
+              f"{ed25519.public_key(seed).hex().upper()}")
+        return 0
     if cmd == "gen":
         args = argv[1:]
         until = None
+        seed = None
+        seed_file = None
         pos = []
         i = 0
         while i < len(args):
@@ -436,13 +555,18 @@ def _cli(argv: list[str]) -> int:
                 until = int(args[i + 1]); i += 2
             elif args[i] == "--until" and i + 1 < len(args):
                 until = args[i + 1]; i += 2
+            elif args[i] == "--seed" and i + 1 < len(args):
+                seed = args[i + 1]; i += 2
+            elif args[i] == "--seed-file" and i + 1 < len(args):
+                seed_file = args[i + 1]; i += 2
             else:
                 pos.append(args[i]); i += 1
         if not pos:
-            print("کاربرد: python -m src.license gen <DEVICE-CODE> [--days N | --until YYYY-MM-DD]")
+            print("کاربرد: python -m src.license gen <DEVICE-CODE> "
+                  "[--days N | --until YYYY-MM-DD] [--seed HEX | --seed-file PATH]")
             return 2
         try:
-            print(generate_license_key(pos[0], until))
+            print(generate_license_key(pos[0], until, seed=seed, seed_file=seed_file))
         except ValueError as e:
             print(f"نامعتبر: {e}")
             return 2

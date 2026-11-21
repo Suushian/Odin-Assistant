@@ -83,12 +83,17 @@ const realMarketStatus = O.marketStatus;
   assert.strictEqual(calls.stopBg, 0, 'trial grants background access — service must not stop');
   console.log('  ✅ فاز ۰.۵ — با تریال ۷ روزه، رصد پس‌زمینه بدون کلید کار می‌کند');
 
-  // فعال‌سازی با کلید دائمی درست (همان طرح HMAC پایتون)
+  // فعال‌سازی با کلید دائمی درست (Ed25519). کلید عمومیِ اپ سیدِ تست را
+  // نمی‌پذیرد، پس موقتاً کلید عمومی را به کلید عمومیِ سیدِ تست می‌زنیم.
   const code = O.deviceCodeFromId(DEVICE_ID);
-  const key = O.licenseKeyFor(code);
+  const TEST_SEED = '8D9FADA9722DA1DDF8EBA1CA0E3E7AA8A7AB9F3DC120C65BB9ED211B8842BC9E';
+  const TEST_PUB = 'B55AE1300B532807A47BD186D1B8A1FC43460DEED0F6404517E3D5922CE29DE4';
+  const key = O.licenseKeyFor(code, null, TEST_SEED);
+  const realPub = O.LICENSE_PUBLIC_KEY_HEX;
+  O.LICENSE_PUBLIC_KEY_HEX = TEST_PUB;
   prefs.set('license.dat', JSON.stringify({
     license_key: O.normalizeKey(key), device_id: DEVICE_ID,
-    user_name: 'تستر', activated_at: new Date().toISOString(), version: '2.1'
+    user_name: 'تستر', activated_at: new Date().toISOString(), version: '3.0'
   }));
   calls.stopBg = 0;
   ctx.ODIN.S.svcReady = false;      // init دوباره تا لایسنس اعمال شود
@@ -160,6 +165,7 @@ const realMarketStatus = O.marketStatus;
     'exactly one cycle must complete despite triple tick');
   console.log('  ✅ busy-guard — تیک دوباره وسط چرخه بی‌اثر است (دقیقاً یک چرخه)');
 
+  O.LICENSE_PUBLIC_KEY_HEX = realPub;   // بازگرداندن کلید عمومیِ واقعیِ اپ
   console.log('SMOKE SERVICE OK — رصد پس‌زمینه end-to-end سالم است');
   process.exit(0);                // چرخهٔ معلقِ busy-guard منتظر نمی‌مانیم
 })().catch(e => { console.error('❌', e && e.message || e); process.exit(1); });

@@ -1240,15 +1240,12 @@
       note +
       '<div class="set-sub" style="margin-bottom:10px">«کد دستگاه» زیر را برای سازنده (Sushian Khoshkhani — تلگرام <span dir="ltr">@Khode_Sushian</span>) بفرست و کلید اختصاصی‌ات را دریافت کن. هر کلید فقط روی همان دستگاه کار می‌کند. کلیدهای زمان‌دار یک بخش تاریخ هم دارند — <b>کل رشتهٔ دریافتی</b> را وارد کن.</div>' +
       '<input id="onb-code" class="text-input" readonly value="' + O.esc(S.deviceCode || '') + '" style="letter-spacing:2px;text-align:center;font-weight:700;direction:ltr">' +
-      // ⚠️ maxlength=26 عمدی است و «باید» بماند (باگ v0.15.0→v0.22.0):
-      //   کلید زمان‌دار = XXXX-XXXX-XXXX-XXXX-YYMMDD = ۲۶ نویسه. با ۲۴ کاربر
-      //   نمی‌توانست همان کلیدی را که سازنده می‌دهد paste کند (۲ نویسهٔ آخرِ
-      //   تاریخ می‌افتاد) → parseKeyInput فقط ۲۰ هگز می‌دید → null →
-      //   «این کلید نامعتبر است». یعنی مدل اشتراکی ۸ نسخه روی اندروید شکسته بود.
-      //   placeholder هم عمداً بخش تاریخ را نشان می‌دهد تا کاربر بداند کل
-      //   رشته لازم است. parseKeyInput جداکننده‌ها را خودش حذف می‌کند، پس
-      //   تایپِ بدون خط‌تیره هم کار می‌کند (auto-format لازم نیست).
-      '<input id="onb-key" class="text-input" placeholder="XXXX-XXXX-XXXX-XXXX-YYMMDD" maxlength="26" autocomplete="off" autocorrect="off" spellcheck="false" style="margin-top:8px;text-align:center;letter-spacing:1px;direction:ltr">' +
+      // ⚠️ maxlength=120 عمدی است و «باید» بماند (باگ v0.15.0→v0.22.0 تکرار نشود):
+      //   کلید Ed25519 در v1.0.2 ۱۰۳ نویسه‌ای است و نسخهٔ زمان‌دار ۱۱۰ نویسه
+      //   (۱۰۳ + «-» + YYMMDD). با maxlength کوتاه، کاربر نمی‌توانست کلید را
+      //   paste کند و «کلید نامعتبر» می‌گرفت. خط‌تیره‌های داخلی را parser
+      //   حذف می‌کند، پس تایپِ بدون خط‌تیره هم کار می‌کند (auto-format لازم نیست).
+      '<input id="onb-key" class="text-input" placeholder="کلید ۱۰۳ نویسه‌ای سازنده (زمان‌دار: …-YYMMDD)" maxlength="120" autocomplete="off" autocorrect="off" spellcheck="false" style="margin-top:8px;text-align:center;letter-spacing:1px;direction:ltr">' +
       '<div id="onb-err" class="hint" style="color:var(--red-text);min-height:20px;margin-top:6px"></div>',
       [
         { label: 'کپی کد', cls: 'ghost', keepOpen: true, fn: function () { copyDeviceCode(); } },

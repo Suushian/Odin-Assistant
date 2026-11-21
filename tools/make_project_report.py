@@ -416,7 +416,7 @@ SL هوشمند (سطح کلیدی + بافر ATR با سقف/کف فاصله) �
 <tr><td class="mono">smoke_theme_parity.js</td><td><b>۲۰۸ بررسی</b> پاریتی تم، اجزا، نسخه و صفر-ایموجی</td></tr>
 <tr><td class="mono">smoke_icons.js</td><td>۱۸ رندر از ۸ صفحه (پر/خالی/خطا) + markup اجزای Aurora</td></tr>
 <tr><td class="mono">smoke_service.js</td><td>رصد پس‌زمینه end-to-end با چرخهٔ زندهٔ واقعی + busy-guard</td></tr>
-<tr><td class="mono">smoke_license.js</td><td>HMAC مشترک پایتون↔JS، انقضا، قفل دستگاه، تریال، ضدتغییرساعت</td></tr>
+<tr><td class="mono">smoke_license.js</td><td>Ed25519 در برابر node:crypto + بُرِدهای مشترک پایتون↔JS، انقضا، قفل دستگاه، تریال، ضدتغییرساعت</td></tr>
 <tr><td class="mono">smoke_alerts/chart/share/about</td><td>هشدار قیمت · نمودار کندل · کارت اشتراک · دربارهٔ ما</td></tr>
 </table></div>
 <div class="card"><h3 style="margin-top:0;font-size:14px">سوئیت‌های پایتون</h3><table>

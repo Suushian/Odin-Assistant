@@ -236,7 +236,7 @@ input[type=file] { display:none; }
       </svg>
     </span>
     <h1>ساخت کلید لایسنس</h1>
-    <div class="sub">ابزار رسمی سازنده · کاملاً آفلاین · HMAC-SHA256</div>
+    <div class="sub">ابزار رسمی سازنده · کاملاً آفلاین · امضای Ed25519 (RFC 8032)</div>
     <div id="selftest" class="selftest-pill">در حال خودآزمایی…</div>
   </div>
 
@@ -266,6 +266,14 @@ input[type=file] { display:none; }
         <option value="custom">تا تاریخ دلخواه…</option>
       </select>
       <input id="until" class="text-input hidden" type="date" style="flex:0 0 46%;direction:ltr;text-align:center;letter-spacing:0;font-size:12.5px">
+    </div>
+
+    <label class="fl" for="seed">سید خصوصی سازنده (۶۴ رقم هگز — از installer/odin-license.secret)</label>
+    <input id="seed" class="text-input code mono" placeholder="۶۴ رقم هگز؛ در ریپو نیست، همین‌جا وارد کن" maxlength="64" autocomplete="off" autocorrect="off" spellcheck="false">
+    <div class="hint" style="margin-top:6px;text-align:right">
+      سید در این فایل و در ریپو <b>نیست</b>. کلید عمومیِ اپ فقط امضای همین سید را می‌پذیرد.
+      سید را در همین صفحه وارد کن و پس از ساخت، آن را پاک کن. کلید عمومیِ همین سید:
+      <span id="seed-pub" class="mono" style="font-size:10px;direction:ltr"></span>
     </div>
 
     <button id="gen" class="btn primary">
@@ -338,7 +346,7 @@ input[type=file] { display:none; }
   </div>
 
   <div class="hint" style="text-align:center;padding:2px 10px 10px">
-    ساخته‌شده برای Sushian Khoshkhani · ODIN ASSISTANT · کلید = HMAC-SHA256(secret, device_code) ·
+    ساخته‌شده برای Sushian Khoshkhani · ODIN ASSISTANT · کلید = Base32(Ed25519(سید سازنده، «ODIN1|CODE|YYYYMMDD»)) ·
     همان الگوریتم <span class="mono" style="font-size:10px">src/license.py</span> و <span class="mono" style="font-size:10px">js/license.js</span>
   </div>
 </div>
@@ -347,65 +355,161 @@ input[type=file] { display:none; }
 
 <script>
 'use strict';
-/* ════════ هستهٔ رمزنگاری — کپی دقیق js/license.js اپ ════════ */
-var SECRET = 'bd604d7cc90e8fe32184e8d6ddb5787c3389438b54156947541f772f61be7347';
-var K = [
-  0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,
-  0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,
-  0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,
-  0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,
-  0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,
-  0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,
-  0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,
-  0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2];
-function rotr(x,n){return ((x>>>n)|(x<<(32-n)))>>>0;}
+/* ════════ هستهٔ رمزنگاری — هم‌بُر با js/license.js و src/license.py ════════
+ *
+ * ⚠️ در این فایل هیچ کلید خصوصی‌ای نیست (عمداً).
+ *    کلید عمومیِ اپ در src/license.py تعبیه شده و فقط امضای سیدِ درست
+ *    را می‌پذیرد. بنابراین سید باید همین‌جا، از کاربر/سازنده خواسته شود
+ *    و هرگز در ریپو یا در این ابزار ذخیره نشود. نسخهٔ سید در
+ *    installer/odin-license.secret (پروانه‌ای، gitignored) است.
+ *
+ * طرح: کلید = Base32(امضای Ed25519 روی «ODIN1|CODE|YYYYMMDD»)
+ *   دائمی:  ۱۰۳ نویسه · زمان‌دار: ۱۰۳ نویسه + «-» + ۶ رقم YYMMDD
+ * */
+var P = (1n << 255n) - 19n;
+var L = (1n << 252n) + 27742317777372353535851937790883648493n;
+var D = mod(-121665n * modInv(121666n, P), P);
+
 function utf8Bytes(s){var o=[];for(var i=0;i<s.length;i++){var c=s.charCodeAt(i);
   if(c<0x80)o.push(c);else if(c<0x800)o.push(0xc0|(c>>6),0x80|(c&63));
   else if(c>=0xd800&&c<=0xdbff&&i+1<s.length){var c2=s.charCodeAt(++i);var cp=0x10000+((c&0x3ff)<<10)+(c2&0x3ff);
     o.push(0xf0|(cp>>18),0x80|((cp>>12)&63),0x80|((cp>>6)&63),0x80|(cp&63));}
   else o.push(0xe0|(c>>12),0x80|((c>>6)&63),0x80|(c&63));}return o;}
 function toHex(b){var h='';for(var i=0;i<b.length;i++)h+=(b[i]<16?'0':'')+b[i].toString(16);return h;}
-function sha256(bytes){
-  var H=[0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19];
-  var l=bytes.length; var total=(((l+8)>>6)+1)<<6;
-  var m=bytes.slice(); m.push(0x80); while(m.length<total)m.push(0);
-  var bHi=Math.floor(l/536870912), bLo=(l<<3)>>>0;
-  m[total-8]=(bHi>>>24)&255;m[total-7]=(bHi>>>16)&255;m[total-6]=(bHi>>>8)&255;m[total-5]=bHi&255;
-  m[total-4]=(bLo>>>24)&255;m[total-3]=(bLo>>>16)&255;m[total-2]=(bLo>>>8)&255;m[total-1]=bLo&255;
-  var W=new Array(64);
-  for(var off=0;off<total;off+=64){
-    for(var i=0;i<16;i++)W[i]=((m[off+i*4]<<24)|(m[off+i*4+1]<<16)|(m[off+i*4+2]<<8)|m[off+i*4+3])>>>0;
-    for(i=16;i<64;i++){var x=W[i-15],y=W[i-2];
-      var s0=(rotr(x,7)^rotr(x,18)^(x>>>3))>>>0, s1=(rotr(y,17)^rotr(y,19)^(y>>>10))>>>0;
-      W[i]=(W[i-16]+s0+W[i-7]+s1)>>>0;}
+function hexBytes(s){var o=[];s=String(s==null?'':s).replace(/[^0-9a-fA-F]/g,'');
+  for(var i=0;i+1<s.length;i+=2)o.push(parseInt(s.slice(i,i+2),16));return o;}
+
+var K512 = [
+  0x428a2f98d728ae22n,0x7137449123ef65cdn,0xb5c0fbcfec4d3b2fn,0xe9b5dba58189dbbcn,
+  0x3956c25bf348b538n,0x59f111f1b605d019n,0x923f82a4af194f9bn,0xab1c5ed5da6d8118n,
+  0xd807aa98a3030242n,0x12835b0145706fben,0x243185be4ee4b28cn,0x550c7dc3d5ffb4e2n,
+  0x72be5d74f27b896fn,0x80deb1fe3b1696b1n,0x9bdc06a725c71235n,0xc19bf174cf692694n,
+  0xe49b69c19ef14ad2n,0xefbe4786384f25e3n,0x0fc19dc68b8cd5b5n,0x240ca1cc77ac9c65n,
+  0x2de92c6f592b0275n,0x4a7484aa6ea6e483n,0x5cb0a9dcbd41fbd4n,0x76f988da831153b5n,
+  0x983e5152ee66dfabn,0xa831c66d2db43210n,0xb00327c898fb213fn,0xbf597fc7beef0ee4n,
+  0xc6e00bf33da88fc2n,0xd5a79147930aa725n,0x06ca6351e003826fn,0x142929670a0e6e70n,
+  0x27b70a8546d22ffcn,0x2e1b21385c26c926n,0x4d2c6dfc5ac42aedn,0x53380d139d95b3dfn,
+  0x650a73548baf63den,0x766a0abb3c77b2a8n,0x81c2c92e47edaee6n,0x92722c851482353bn,
+  0xa2bfe8a14cf10364n,0xa81a664bbc423001n,0xc24b8b70d0f89791n,0xc76c51a30654be30n,
+  0xd192e819d6ef5218n,0xd69906245565a910n,0xf40e35855771202an,0x106aa07032bbd1b8n,
+  0x19a4c116b8d2d0c8n,0x1e376c085141ab53n,0x2748774cdf8eeb99n,0x34b0bcb5e19b48a8n,
+  0x391c0cb3c5c95a63n,0x4ed8aa4ae3418acbn,0x5b9cca4f7763e373n,0x682e6ff3d6b2b8a3n,
+  0x748f82ee5defb2fcn,0x78a5636f43172f60n,0x84c87814a1f0ab72n,0x8cc702081a6439ecn,
+  0x90befffa23631e28n,0xa4506cebde82bde9n,0xbef9a3f7b2c67915n,0xc67178f2e372532bn,
+  0xca273eceea26619cn,0xd186b8c721c0c207n,0xeada7dd6cde0eb1en,0xf57d4f7fee6ed178n,
+  0x06f067aa72176fban,0x0a637dc5a2c898a6n,0x113f9804bef90daen,0x1b710b35131c471bn,
+  0x28db77f523047d84n,0x32caab7b40c72493n,0x3c9ebe0a15c9bebcn,0x431d67c49c100d4cn,
+  0x4cc5d4becb3e42b6n,0x597f299cfc657e2an,0x5fcb6fab3ad6faecn,0x6c44198c4a475817n];
+function rotr64(x,n){n=BigInt(n);return ((x>>n)|(x<<(64n-n)))&0xFFFFFFFFFFFFFFFFn;}
+function sha512(bytes){
+  var H=[0x6a09e667f3bcc908n,0xbb67ae8584caa73bn,0x3c6ef372fe94f82bn,0xa54ff53a5f1d36f1n,
+           0x510e527fade682d1n,0x9b05688c2b3e6c1fn,0x1f83d9abfb41bd6bn,0x5be0cd19137e2179n];
+  var l=bytes.length, total=(((l+16)>>7)+1)<<7, i;
+  var m=Array.prototype.slice.call(bytes); m.push(128); while(m.length<total)m.push(0);
+  var bHi=Math.floor(l/0x20000000), bLo=(l<<3)>>>0;
+  var hiHex=('0000000000000000'+bHi.toString(16)).slice(-16);
+  var loHex=('0000000000000000'+bLo.toString(16)).slice(-16);
+  for(i=0;i<8;i++)m[total-16+i]=parseInt(hiHex.slice(i*2,i*2+2),16);
+  for(i=0;i<8;i++)m[total-8+i]=parseInt(loHex.slice(i*2,i*2+2),16);
+  var W=new Array(80);
+  for(var off=0;off<total;off+=128){
+    for(i=0;i<16;i++){var v=0n;for(var j=0;j<8;j++)v=(v<<8n)|BigInt(m[off+i*8+j]);W[i]=v;}
+    for(i=16;i<80;i++){var x=W[i-15],y=W[i-2];
+      var s0=(rotr64(x,1)^rotr64(x,8)^(x>>7n))&0xFFFFFFFFFFFFFFFFn;
+      var s1=(rotr64(y,19)^rotr64(y,61)^(y>>6n))&0xFFFFFFFFFFFFFFFFn;
+      W[i]=(W[i-16]+s0+W[i-7]+s1)&0xFFFFFFFFFFFFFFFFn;}
     var a=H[0],b=H[1],c=H[2],d=H[3],e=H[4],f=H[5],g=H[6],h=H[7];
-    for(i=0;i<64;i++){
-      var S1=(rotr(e,6)^rotr(e,11)^rotr(e,25))>>>0, ch=((e&f)^(~e&g))>>>0;
-      var t1=(h+S1+ch+K[i]+W[i])>>>0;
-      var S0=(rotr(a,2)^rotr(a,13)^rotr(a,22))>>>0, maj=((a&b)^(a&c)^(b&c))>>>0;
-      var t2=(S0+maj)>>>0;
-      h=g;g=f;f=e;e=(d+t1)>>>0;d=c;c=b;b=a;a=(t1+t2)>>>0;}
-    H[0]=(H[0]+a)>>>0;H[1]=(H[1]+b)>>>0;H[2]=(H[2]+c)>>>0;H[3]=(H[3]+d)>>>0;
-    H[4]=(H[4]+e)>>>0;H[5]=(H[5]+f)>>>0;H[6]=(H[6]+g)>>>0;H[7]=(H[7]+h)>>>0;}
-  var out=[];for(i=0;i<8;i++)out.push((H[i]>>>24)&255,(H[i]>>>16)&255,(H[i]>>>8)&255,H[i]&255);
+    for(i=0;i<80;i++){
+      var S1=(rotr64(e,14)^rotr64(e,18)^rotr64(e,41))&0xFFFFFFFFFFFFFFFFn;
+      var ch=((e&f)^(~e&g))&0xFFFFFFFFFFFFFFFFn;
+      var t1=(h+S1+ch+K512[i]+W[i])&0xFFFFFFFFFFFFFFFFn;
+      var S0=(rotr64(a,28)^rotr64(a,34)^rotr64(a,39))&0xFFFFFFFFFFFFFFFFn;
+      var maj=((a&b)^(a&c)^(b&c))&0xFFFFFFFFFFFFFFFFn;
+      var t2=(S0+maj)&0xFFFFFFFFFFFFFFFFn;
+      h=g;g=f;f=e;e=(d+t1)&0xFFFFFFFFFFFFFFFFn;d=c;c=b;b=a;a=(t1+t2)&0xFFFFFFFFFFFFFFFFn;}
+    H[0]=(H[0]+a)&0xFFFFFFFFFFFFFFFFn;H[1]=(H[1]+b)&0xFFFFFFFFFFFFFFFFn;
+    H[2]=(H[2]+c)&0xFFFFFFFFFFFFFFFFn;H[3]=(H[3]+d)&0xFFFFFFFFFFFFFFFFn;
+    H[4]=(H[4]+e)&0xFFFFFFFFFFFFFFFFn;H[5]=(H[5]+f)&0xFFFFFFFFFFFFFFFFn;
+    H[6]=(H[6]+g)&0xFFFFFFFFFFFFFFFFn;H[7]=(H[7]+h)&0xFFFFFFFFFFFFFFFFn;}
+  var out=[];for(i=0;i<8;i++)for(j=7;j>=0;j--)out.push(Number((H[i]>>BigInt(j*8))&0xFFn));
   return out;}
-function hmacHex(key,msg){
-  var k=utf8Bytes(key); if(k.length>64)k=sha256(k);
-  var ip=new Array(64),op=new Array(64);
-  for(var i=0;i<64;i++){var b=i<k.length?k[i]:0;ip[i]=b^0x36;op[i]=b^0x5c;}
-  return toHex(sha256(op.concat(sha256(ip.concat(utf8Bytes(msg))))));}
+
+function mod(a,m){var r=a%m;return r<0n?r+m:r;}
+function modInv(a,m){var g=m,x=0n,y=1n,b=mod(a,m),q,t,u;
+  while(b!==0n){q=g/b;t=g-q*b;g=b;b=t;u=x-q*y;x=y;y=u;}return mod(x,m);}
+function modPow(b,e,m){var r=1n;b=mod(b,m);
+  while(e>0n){if(e&1n)r=(r*b)%m;b=(b*b)%m;e>>=1n;}return r;}
+function recoverX(y,sign){
+  var xx=mod((y*y-1n)*modInv(mod(D*y*y+1n,P),P),P);
+  var x=modPow(xx,(P+3n)/8n,P);
+  var I=modPow(2n,(P-5n)/8n,P);
+  if(mod(x*x-xx,P)!==0n)x=mod(x*I,P);
+  if(mod(x*x-xx,P)!==0n)return null;
+  if((x&1n)!==(sign&1n))x=P-x;
+  return x;}
+var BY=mod(4n*modInv(5n,P),P);
+var B=[recoverX(BY,0n),BY];
+function pointAdd(p,q){
+  var x1=p[0],y1=p[1],x2=q[0],y2=q[1];
+  var t=mod(D*x1*x2*y1*y2,P);
+  return [mod((x1*y2+x2*y1)*modInv(1n+t,P),P), mod((y1*y2+x1*x2)*modInv(1n-t,P),P)];}
+function pointMul(k,p){
+  var r=[0n,1n];
+  while(k>0n){if(k&1n)r=pointAdd(r,p);p=pointAdd(p,p);k>>=1n;}
+  return r;}
+function pointCompress(p){
+  var y=p[1]&((1n<<255n)-1n), out=[], i;
+  for(i=0;i<32;i++)out.push(Number((y>>BigInt(i*8))&0xFFn));
+  if(p[0]&1n)out[31]|=0x80;
+  return out;}
+function bytesToBig(b){var n=0n;
+  for(var i=b.length-1;i>=0;i--)n=(n<<8n)|BigInt(b[i]);return n;}
+function bigToBytes(n,len){var o=[];
+  for(var i=0;i<len;i++){o.push(Number(n&0xFFn));n>>=8n;}return o;}
+function b32Encode(bytes){
+  var A='ABCDEFGHIJKLMNOPQRSTUVWXYZ234567', bits=0, val=0, out='';
+  for(var i=0;i<bytes.length;i++){val=(val<<8)|bytes[i];bits+=8;
+    while(bits>=5){bits-=5;out+=A[(val>>>bits)&31];}}
+  if(bits>0)out+=A[(val<<(5-bits))&31];
+  return out;}
+function edSecretScalar(h){
+  var a=bytesToBig(h.slice(0,32));
+  a&=~7n; a&=(1n<<255n)-1n; a|=(1n<<254n);
+  return a;}
+function edPublic(seedBytes){
+  return pointCompress(pointMul(edSecretScalar(sha512(seedBytes)),B));}
+function edSign(seedBytes,msgBytes){
+  var h=sha512(seedBytes), a=edSecretScalar(h), prefix=h.slice(32);
+  var A=pointCompress(pointMul(a,B));
+  var r=mod(bytesToBig(sha512(prefix.concat(msgBytes))),L);
+  var R=pointCompress(pointMul(r,B));
+  var k=mod(bytesToBig(sha512(R.concat(A).concat(msgBytes))),L);
+  var S=mod(r+k*a,L);
+  return R.concat(bigToBytes(S,32));}
+
 function normalize(s){return String(s==null?'':s).replace(/[^0-9A-Fa-f]/g,'').toUpperCase();}
 function fmt4(s){return String(s).replace(/(.{4})(?=.)/g,'$1-');}
-function licenseKeyFor(code, expiry8){
+function keyMessage(code,expiry8){return utf8Bytes('ODIN1|'+code+'|'+expiry8);}
+/**
+ * تولید کلید. seedHex = سید خصوصی ۶۴ هگز (از installer/odin-license.secret).
+ * اگر سید خالی/نامعتبر باشد، '' برمی‌گردد — یعنی «ساخت ممکن نیست».
+ */
+function licenseKeyFor(code,expiry8,seedHex){
   var c=normalize(code);
   if(c.length!==12)return '';
-  var msg=expiry8?(c+'|'+expiry8):c;
-  var mac=fmt4(hmacHex(SECRET,msg).toUpperCase().slice(0,16));
-  return expiry8?(mac+'-'+expiry8.slice(2)):mac;}
+  var seed=hexBytes(seedHex);
+  if(seed.length!==32)return '';
+  var msg=keyMessage(c,expiry8||'00000000');
+  var sig=b32Encode(edSign(seed,msg));
+  return expiry8?(sig+'-'+expiry8.slice(2)):sig;}
+/** کلید عمومیِ سید (برای نمایش/تایید) — همان کلیدی که در اپ تعبیه شده. */
+function publicKeyOf(seedHex){var seed=hexBytes(seedHex);
+  return seed.length===32?toHex(edPublic(seed)):'';}
 
 /* ════════ لایهٔ داده (قابل تست در Node — بدون DOM) ════════ */
 var LT = (typeof globalThis !== 'undefined') ? (globalThis.LT = {}) : {};
 LT.licenseKeyFor = licenseKeyFor;
+LT.publicKeyOf = publicKeyOf;
 LT.normalize = normalize;
 
 var STORE_KEY = 'odin.sales.v1';
@@ -430,9 +534,9 @@ LT.find = function(rows, code){
   for (var i=0;i<rows.length;i++) if (normalize(rows[i].code) === c) return rows[i];
   return null;
 };
-/** ثبت/به‌روزرسانی یک دستگاه. برگشت: {row, updated, key} */
-LT.register = function(name, code, expiry8){
-  var key = licenseKeyFor(code, expiry8 || null);
+/** ثبت/به‌روزرسانی یک دستگاه. برگشت: {row, updated, key} یا null اگر سید نامعتبر باشد. */
+LT.register = function(name, code, expiry8, seedHex){
+  var key = licenseKeyFor(code, expiry8 || null, seedHex);
   if (!key) return null;
   var rows = LT.load();
   var now = new Date().toISOString();
@@ -627,6 +731,12 @@ if (typeof document !== 'undefined' && document.getElementById) {
     } else fb();
   }
 
+  // ── نمایش کلید عمومیِ سید (تا سازنده بفهمد سیدِ درست را وارد کرده) ──
+  $('seed').addEventListener('input', function(){
+    var pub = publicKeyOf($('seed').value.trim());
+    $('seed-pub').textContent = pub ? pub.toUpperCase() : '';
+  });
+
   // ── ساخت + ثبت ──
   var lastResult = null;
   $('gen').addEventListener('click', function(){
@@ -635,15 +745,21 @@ if (typeof document !== 'undefined' && document.getElementById) {
     if (!name) { toast('اول نام مشتری را بنویس', false); $('name').focus(); return; }
     var expiry8 = expiryFromUI();
     if (expiry8 === undefined) return;
-    var key = licenseKeyFor(code, expiry8);
-    if (!key) { toast('کد دستگاه نامعتبر است — ۱۲ رقم هگز (خط‌تیره مهم نیست)', false); $('code').focus(); return; }
+    var seed = $('seed').value.trim();
+    var key = licenseKeyFor(code, expiry8, seed);
+    if (!key) {
+      var c = normalize(code);
+      if (c.length !== 12) { toast('کد دستگاه نامعتبر است — ۱۲ رقم هگز (خط‌تیره مهم نیست)', false); $('code').focus(); }
+      else { toast('سید سازنده نامعتبر است — ۶۴ رقم هگز وارد کن', false); $('seed').focus(); }
+      return;
+    }
 
     // حالت «در حال ساخت» — محاسبه آنی است، این فقط برای حس اپ است
     var btn = $('gen'), lbl = $('gen-label');
     btn.disabled = true;
     lbl.innerHTML = '<span style="display:inline-flex;align-items:center;gap:8px"><span class="spinner"></span> در حال ساخت کلید…</span>';
     setTimeout(function(){
-      var res = LT.register(name, code, expiry8);
+      var res = LT.register(name, code, expiry8, $('seed').value.trim());
       btn.disabled = false;
       lbl.textContent = 'ساخت و ثبت کلید';
       if (!res) { toast('خطا در ثبت', false); return; }
@@ -743,16 +859,37 @@ if (typeof document !== 'undefined' && document.getElementById) {
     }
   });
 
-  // ── خودآزمایی بُرِد مشترک با پایتون ──
+  // ── خودآزمایی: RFC 8032 + بُرِدهای مشترک با پایتون/JS ──
   (function(){
-    var ok = licenseKeyFor('AB12-CD34-EF56') === '6F1F-8540-078F-9898'
-          && licenseKeyFor('D9AC-5560-5559') === 'B26E-AA4A-E4A2-4641'
-          && licenseKeyFor('AB12-CD34-EF56', '20301231') === '19DB-2DFA-F0E7-0082-301231';
+    var ok = true, why = '';
+    function eq(a, b, tag){ if (a !== b) { ok = false; why = tag; } }
+    // ۱) RFC 8032 TEST 1 (وکتور عمومی — رازی نیست)
+    var s1 = hexBytes('9d61b19deffd5a60ba844af492ec2cc44449c5697b326919703bac031cae7f60');
+    eq(toHex(edPublic(s1)), 'd75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a', 'RFC8032-pub');
+    eq(toHex(edSign(s1, [])),
+       'e5564300c360ac729086e2cc806e828a84877f1eb8e5d974d873e06522490155' +
+       '5fb8821590a33bacc61e39701cf9b46bd25bf5f0595bbe24655141438e7a100b', 'RFC8032-sig');
+    // ۲) SHA-512 در برابر وکتور استاندارد
+    eq(toHex(sha512(utf8Bytes('abc'))),
+       'ddaf35a193617abacc417349ae20413112e6fa4e89a97ea20a9eeee64b55d39a' +
+       '2192992a274fc1a836ba3c23a3feebbd454d4423643ce80e2a9ac94fa54ca49f', 'SHA512-abc');
+    // ۳) بُرِدهای مشترک با src/license.py و js/license.js (سیدِ تست عمومی)
+    var T = '8D9FADA9722DA1DDF8EBA1CA0E3E7AA8A7AB9F3DC120C65BB9ED211B8842BC9E';
+    eq(licenseKeyFor('AB12-CD34-EF56', null, T),
+       'SAYIKVXA2JU7SPMLWBA5OIEXNGDBR6OYM6AVJ2ZGUQYQYL22ZCL3YX35EXT2XOALBXXZVAAY7WZGCWH4FRUAU4CICLOVJUSHKCH6GCI', 'b32-perm');
+    eq(licenseKeyFor('D9AC-5560-5559', null, T),
+       '7TAHMUJW7ODWGPFYNQ3INXTI7XE2BXNAV5PRYTQ373D2BSVFHXKY723OYNYXLWDFTIQEMKJ3TRKBZPKSBGVRTCWJEREPC3I6APLKSCQ', 'b32-perm2');
+    eq(licenseKeyFor('AB12-CD34-EF56', '20301231', T),
+       'CYU2HFS6GV2WLA2VFPGLLSYCX2BKIOUD3BSBBEXXEBZBOJZDQ6HIIFFLX2CUDY2A4ZIVWVNWV3SUKOWTGB7VMNEBAQBK7TG37IZKKAQ-301231', 'b32-timed');
+    // ۴) بدون سید، ساخت باید ممکن نباشد
+    eq(licenseKeyFor('AB12-CD34-EF56', null, ''), '', 'no-seed');
+    // ۵) هیچ رازِ هاردکدشده‌ای در این فایل نیست
+    if (typeof SECRET !== 'undefined') { ok = false; why = 'hardcoded-secret'; }
     var el = $('selftest');
     el.className = 'selftest-pill' + (ok ? '' : ' bad');
     el.innerHTML = ok
       ? '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4.8 12.4 9.6 17.2 19.2 6.8"/></svg> خودآزمایی پاس — هم‌خروجی با python -m src.license gen'
-      : '✗ خودآزمایی شکست خورد — استفاده نکن!';
+      : ('✗ خودآزمایی شکست خورد (' + why + ') — استفاده نکن!');
   })();
 
   renderList();
