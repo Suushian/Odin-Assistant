@@ -511,7 +511,7 @@ def run_cycle(cfg: Optional[dict] = None, on_log: LogFn = _noop,
                 judge_summary = _safe_render(
                     caps, "judge_summary",
                     {"judgments": judgments,
-                     "min_score": int(jcfg.get("min_score", 7)),
+                     "min_score": int(jcfg.get("min_score", 5)),
                      "now": C["now"]}, log)
         else:
             log("[i] داور امتیازدهی در تنظیمات غیرفعال است")

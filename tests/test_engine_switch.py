@@ -82,8 +82,18 @@ def test_golden_cycle() -> None:
            "sent_messages": gen.normalize_sent_messages(sent)}
     result_now = {k: v for k, v in got["result"].items() if k != "signals"}
     result_golden = {k: v for k, v in golden["result"].items() if k != "signals"}
-    stable_got = {"result": result_now, "logs": got["logs"], "sent_messages": got["sent_messages"]}
-    if stable_got != golden:
+    stable_got = {"result": result_now, "logs": got["logs"],
+                  "sent_messages": got["sent_messages"],
+                  "signals": got["result"]["signals"]}
+    # هم‌«signals» هم از طلایی حذف شود؛ وگرنه کلیدِ «signals» نامتقارن در
+    # مقایسهٔ == تفاوتِ بی‌معنایی می‌سازد (سیگنال‌ها جداگانه زیر آزمایه می‌شوند).
+    golden_stable = {"result": result_golden, "logs": golden["logs"],
+                     "sent_messages": golden["sent_messages"],
+                     # لایهٔ درجِ سیگنال در «result» توجه به‌جایی: در طلاییِ
+                     # بازتولیدشده کلید «signals» در result هست و در اوراکل
+                     # نیست، پس برای مقایسهٔ رفتارِ پایدار حذفش می‌کنیم.
+                     "signals": golden["result"].get("signals", [])}
+    if stable_got != golden_stable:
         # تفاوت را قابل‌تشخیص کن (کمک به دیباگ)
         diffs = []
         if got["logs"] != golden["logs"]:

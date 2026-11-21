@@ -85,7 +85,7 @@ def build_share_spec(sig, version: str = "dev") -> dict:
 # ══════════════════════════════════════════════════════════════
 def render_card_pixmap(spec: dict):
     from PySide6.QtCore import QPointF, Qt, QRectF
-    from PySide6.QtGui import (QBrush, QColor, QFont, QFontDatabase, QLinearGradient,
+    from PySide6.QtGui import (QBrush, QColor, QFont, QLinearGradient,
                                QPainter, QPainterPath, QPen, QPixmap, QRadialGradient)
 
     W, H = int(spec.get("w") or CW), int(spec.get("h") or CH)

@@ -127,6 +127,7 @@ jobs:
           node tests/js/smoke_onboarding.js
           node tests/js/smoke_core.js
           node tests/js/smoke_plugins.js
+          node tests/js/smoke_service.js
           node tests/js/test_external_url.js
           node tests/js/test_news_render_xss.js
           node tests/js/test_source_freshness.js
@@ -139,6 +140,11 @@ jobs:
       # (tests/js/golden/cycle_core_golden.json — FakeDate ثابت، بدون شبکه).
       - name: JS engine behavior pins + golden cycle (آفلاین)
         run: node tests/js/test_cycle_switch.js
+
+      # میخ‌های توالی رویدادهای پایپ‌لاین JS (createPipelineAsync) — آینهٔ
+      # test_pipeline_switch پایتون؛ آفلاین و بدون شبکه.
+      - name: JS pipeline event ordering (آفلاین)
+        run: node tests/js/test_pipeline_events.js
 
       # فاز ۶b معماری پلاگین: میخ‌های رفتاری قواعد داور JS (۷ وتو + ۸ شاهد
       # + ریاضی ریسک — ۵۸ سناریوی طلایی) قبل از rule-plugin شدن نوشته و سبز
