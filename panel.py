@@ -45,12 +45,11 @@ from pathlib import Path
 
 from PySide6.QtCore import QSize, Qt, QTimer
 from PySide6.QtGui import QColor, QFont, QFontDatabase, QIcon, QPainter, QPixmap
-from PySide6.QtWidgets import (QApplication, QCheckBox, QFrame, QHBoxLayout, QLabel,
-                               QLineEdit, QListWidget, QListWidgetItem, QMenu,
-                               QMainWindow, QMessageBox, QPlainTextEdit,
-                               QPushButton, QScrollArea, QStackedWidget,
-                               QSystemTrayIcon, QVBoxLayout, QWidget, QDialog,
-                               QDialogButtonBox, QFormLayout, QComboBox)
+from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QDialog,
+                               QFrame, QHBoxLayout, QLabel, QLineEdit, QMainWindow,
+                               QMenu, QMessageBox, QPlainTextEdit, QPushButton,
+                               QScrollArea, QStackedWidget, QSystemTrayIcon,
+                               QVBoxLayout, QWidget)
 
 from src import app_paths
 from src.config import load_config, prune_local_config, save_local_config
@@ -58,17 +57,16 @@ from src.engine import BotLoop, check_event_alerts, run_briefing, run_cycle
 from src.fa import fa_countdown
 from src.notify import telegram
 from src.ui import dwm, effects, icons
-from src.ui.backdrop import paint_glass, render_aurora, render_backdrop
+from src.ui.backdrop import paint_glass, render_aurora
 from src.ui.splash import WelcomeSplash
 from src.ui.onboarding import OnboardingDialog
 from src.ui.theme import DARK, Space, build_qss
 from src.ui.widgets import (CandleChart, Card, Chip, ConsoleCard, DashedCard,
                             IconChip, InkCard, KpiCard, LineChart, NavRail,
                             RingGauge, SectionHeader, SegmentedControl, SignalCard,
-                            StatTile, Stars, StatusPill, Stepper, Toast, ToggleSwitch)
-from src.license import (check_and_enforce_license, activate_program,
-                         get_device_id, get_device_code, is_activated,
-                         deactivate_program, start_trial, trial_status)
+                            StatTile, StatusPill, Stepper, Toast, ToggleSwitch)
+from src.license import (check_and_enforce_license, is_activated,
+                         trial_status)
 
 _FA_DIGITS = str.maketrans("0123456789", "۰۱۲۳۴۵۶۷۸۹")
 T = DARK
@@ -1805,13 +1803,6 @@ class MainWindow(QMainWindow):
         if getattr(self, "toast", None) is not None:
             self.toast._place()             # noqa: SLF001
 
-    def closeEvent(self, event) -> None:    # noqa: N802
-        try:
-            self.loop.stop()
-        except Exception:
-            pass
-        super().closeEvent(event)
-
     # ── صفحهٔ ورود / فعال‌سازی لایسنس (v0.20.0 — Onboarding جوهری) ──
     def _show_activation_dialog(self) -> bool:
         """نمایش صفحهٔ ورود (OnboardingDialog): نام → فعال‌سازی/تریال → موفقیت.
@@ -1913,7 +1904,6 @@ class AlertsDialog(QDialog):
 
     def refresh(self) -> None:
         from src import alerts as alert_store
-        from src.fa import fa_num
         _clear_layout(self.rows_lay)
         items = list(alert_store.load_alerts())
         if not items:
@@ -1949,7 +1939,7 @@ class AlertsDialog(QDialog):
             del_btn.setIcon(icons.icon("x", 14, self._t.red_text))
             del_btn.setCursor(Qt.PointingHandCursor)
             del_btn.setToolTip("حذف این هشدار")
-            del_btn.clicked.connect(lambda _=False, i=a.get("id"): self._del_id(i))
+            del_btn.clicked.connect(lambda _=False, i=a.get("id"): self._del_id(i))  # noqa: B008
             rl.addWidget(del_btn)
             self.rows_lay.addWidget(row)
 

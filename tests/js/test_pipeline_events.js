@@ -320,20 +320,20 @@ async function testCycleSequences() {
     && ['collect_fundamental', 'judge', 'render', 'archive_notify'].indexOf(x[1]) >= 0),
     'پس از stop هیچ مرحلهٔ بعدی شروع نشد (آینهٔ پایتون)');
 
-  // چرخهٔ دروازه‌دار (S3/S4) هم از pipeline کامل رد می‌شود — stop ندارد،
-  // فقط judge سیگنال نمی‌سازد: توالی رویدادها مثل چرخهٔ کامل منهای
-  // signal.created/signal.sent
+  // چرخهٔ «بدون سیگنال» هم از pipeline کامل رد می‌شود — stop ندارد، فقط
+  // judge سیگنال نمی‌سازد (فیچرهای فاندامنتال/اخبار/TV خاموش → امتیاز ناکافی):
+  // توالی رویدادها مثل چرخهٔ کامل منهای signal.created/signal.sent
   const sink3 = [];
-  await gen.runScenario('svc_gated_no_strategy', sink3);
+  await gen.runScenario('features_disabled', sink3);
   const names3 = sink3.map((x) => x[0]);
   A(names3.indexOf('signal.created') < 0 && names3.indexOf('signal.sent') < 0
     && names3[names3.length - 1] === 'stage.done'
     && names3.indexOf('cycle.end') === names3.length - 2,
-    'چرخهٔ NO_STRATEGY: بدون رویداد سیگنال، cycle.end سرِ جایش (stop نخورده)');
+    'چرخهٔ بدون سیگنال: بدون رویداد سیگنال، cycle.end سرِ جایش (stop نخورده)');
   const done3 = sink3.filter((x) => x[0] === 'stage.done').map((x) => x[1]);
   A(done3.length === 11 && done3.every((x, i) => x === FULL_EXPECTED
     .filter((e) => e[0] === 'stage.done').map((e) => e[1])[i]),
-    '۱۱ stage.done به ترتیب کانونیکال در چرخهٔ دروازه‌دار');
+    '۱۱ stage.done به ترتیب کانونیکال در چرخهٔ بدون سیگنال');
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -342,8 +342,8 @@ async function main() {
   await testCycleSequences();
   console.log('✅ PIPELINE-EVENTS TESTS OK — ' + COUNT + ' بررسی پاس؛ '
     + 'createPipelineAsync آینهٔ رفتاریِ createPipeline است (ترتیب/stop/unavailable/'
-    + 'قرنطینه/هم‌رفتاری بایت‌به‌بایت) + توالی رویدادهای چرخه (۳۱ کامل · ۷ early-exit) '
-    + 'آینهٔ test_pipeline_switch.py سبز است');
+    + 'قرنطینه/هم‌رفتاری بایت‌به‌بایت) + توالی رویدادهای چرخه (۳۱ کامل · ۷ early-exit · '
+    + '۲۸ بدون سیگنال) آینهٔ test_pipeline_switch.py سبز است');
   process.exit(0);
 }
 

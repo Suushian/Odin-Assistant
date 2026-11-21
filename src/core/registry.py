@@ -9,7 +9,7 @@ data-yahoo و data-twelvedata و data-auto برای odin.data.market@1) — ای
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional
 
 from .lifecycle import PluginState

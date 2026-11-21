@@ -101,7 +101,7 @@ def render_signal(s: Signal, include_footer: bool = True) -> str:
 # ══════════════════════════════════════════════════════════════
 #  بخش «داور» در گزارش دوره‌ای
 # ══════════════════════════════════════════════════════════════
-def _reason_short(j: Judgment, min_score: int = 7) -> str:
+def _reason_short(j: Judgment, min_score: int = 5) -> str:
     """دلیل کوتاه رد شدن — برای جدول خلاصه."""
     if j.signal:
         return "سیگنال صادر شد ✅"
@@ -120,7 +120,7 @@ def _reason_short(j: Judgment, min_score: int = 7) -> str:
     return j.reject_detail or "—"
 
 
-def render_judge_summary(judgments: list[Judgment], min_score: int = 7,
+def render_judge_summary(judgments: list[Judgment], min_score: int = 5,
                          now: Optional[datetime] = None) -> str:
     """خلاصهٔ داوری همهٔ نمادها — «حلقهٔ صداقت»: چرا سیگنال ندادیم هم مهم است."""
     if not judgments:

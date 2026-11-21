@@ -321,7 +321,6 @@ def build(d: dict) -> str:
 </div></section>""")
 
     # ── ۳ محصول چه کار می‌کند ────────────────────────────────────────
-    vet = " · ".join(d["vetoes"])
     a(f"""<section><h2><span class="n">۳</span>محصول چه کار می‌کند</h2>
 <div class="h2sub">منطق داور مستقیم از <span style="direction:ltr;display:inline-block">src/judge/scoring.py</span> و <span style="direction:ltr;display:inline-block">config.yaml</span> خوانده شده</div>
 <div class="card">

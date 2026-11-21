@@ -18,7 +18,7 @@ sys.path.insert(0, str(ROOT))
 
 from src.core import (CONTRACTS, STAGES, CircularDependencyError, EventBus,  # noqa: E402
                       Events, InvalidManifestError, InvalidTransitionError,
-                      LifecycleManager, PipelineRunner, PluginFailure,
+                      LifecycleManager, PipelineRunner,
                       PluginManifest, PluginRegistry, PluginState, StageResult,
                       is_valid_contract_id, is_wellformed_contract_id,
                       plugin_config, plugin_enabled, resolve)

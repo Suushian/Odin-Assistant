@@ -20,7 +20,9 @@ from src.data.base import MarketData
 from src.fundamental.calendar import CalendarEvent, CalendarSnapshot
 from src.fundamental.news import NewsItem, NewsSnapshot
 from src.data.tradingview import TVSnapshot
-from src.judge.scoring import JudgeContext, compute_levels, judge_symbol, judge_all
+from src.judge.scoring import (JudgeContext, _VETO_RULES, compute_levels, judge_all,  # noqa: E402
+                              judge_symbol, veto_range, veto_tf_conflict, veto_vol_spike,
+                              veto_weekend)
 from src.judge.session import market_status
 from src.report.signal import render_judge_summary, render_signal
 from src.config import load_config
@@ -139,27 +141,43 @@ check(txt.count("نه دستور معامله") == 1,
 
 print()
 print("=" * 78)
-print("۳) دروازه‌های وتو — هرکدام باید جداگانه سیگنال را متوقف کنند")
+print("۳) دروازه‌های وتو — سیاست «تجمعی» (veto.min_count=2): یک وتو تنها هنوز رد نمی‌کند")
 print("=" * 78)
+# سیاست Unreleased ۱.۰.۱: وتو «تجمعی» است — به‌تنهایی سیگنال را متوقف
+# نمی‌کند (WEEKEND استثنا نیست: روز بسته در واقع سشن بسته است و همین‌جا هم
+# در ۴.۴ رد می‌شود). برای سنجش هر دروازه به‌تنهایی هم‌راستایی‌های زیر لازم
+# است: همان وتوی گزارنهامه + یک وتوی دوم مصنوعی که ثابت روی مسیر می‌چسبد.
+# وتوهای «نرم» (یک‌تایی رد نمی‌کنند — سیاست تجمعی) و وتوهای «سخت»
+# (DATA/CALENDAR_UNAVAILABLE همیشه می‌بندند).
 CASES = [
-    ("WEEKEND", dict(now=SAT), dict(),
-     "شنبه — بازار بسته"),
-    ("TF_CONFLICT", dict(), dict(h1_agrees=False),
-     "تضاد تایم‌فریم"),
-    ("RANGE", dict(), dict(adx=14.0),
-     "ADX زیر آستانه"),
-    ("DATA", dict(), dict(verdict="DATA"),
-     "دادهٔ ناکافی"),
-    ("VOL_SPIKE", dict(md=make_md(last_spike=9.0)), dict(),
-     "جهش نوسان"),
+    ("WEEKEND", dict(now=SAT), dict(), "شنبه — بازار بسته"),
+    ("TF_CONFLICT", dict(), dict(h1_agrees=False), "تضاد تایم‌فریم"),
+    ("RANGE", dict(), dict(adx=14.0), "ADX زیر آستانه"),
+    ("VOL_SPIKE", dict(md=make_md(last_spike=9.0)), dict(), "جهش نوسان"),
 ]
+# وتوی دوم برای هر سناریو: VOL_SPIKE ثابت است مگر آن‌که خودش وتوی اصلی باشد.
+SECOND = {"WEEKEND": "VOL_SPIKE", "TF_CONFLICT": "VOL_SPIKE",
+          "RANGE": "VOL_SPIKE", "VOL_SPIKE": "TF_CONFLICT"}
+
 for key, ctxkw, akw, label in CASES:
     md = ctxkw.pop("md", make_md())
     aa = make_analysis(**akw)
     jj = judge_symbol(aa, {}, md, make_ctx(cal=clean_cal(), news=good_news(), **ctxkw))
     keys = [v.key for v in jj.vetoes]
-    check(jj.signal is None and key in keys, f"{label}: وتوی {key} فعال (vetoes={keys})")
-    check(jj.reject_reason == "VETO", f"   → reject_reason={jj.reject_reason}")
+    check(key in keys, f"{label}: وتوی {key} فعال (vetoes={keys})")
+    # سیاست تجمعی: یک وتو به‌تنهایی هنوز سیگنال را متوقف نمی‌کند
+    check(jj.reject_reason == "" and jj.signal is not None,
+          f"{label}: با یک وتو تنها سیگنال همچنان صادر می‌شود (reason={jj.reject_reason or '—'})")
+    # دو وتو → رد می‌شود: همان وتوی اصلی را دو بار تزریق می‌کنیم تا شمارش
+    # به ۲ برسد. قاعدهٔ تزریق‌شده باید برای همان سناریو شلیک شود، پس خود
+    # وتوی اصلی است (شمارش وتو مهم است، نه تنوع کلید).
+    jj2 = judge_symbol(aa, {}, md, make_ctx(cal=clean_cal(), news=good_news(), **ctxkw),
+                       veto_rules=list(_VETO_RULES) + [
+                           dict(WEEKEND=veto_weekend, TF_CONFLICT=veto_tf_conflict,
+                                RANGE=veto_range, VOL_SPIKE=veto_vol_spike)[key]])
+    keys2 = [v.key for v in jj2.vetoes]
+    check(jj2.signal is None and jj2.reject_reason == "VETO" and len(keys2) == 2,
+          f"{label}: دو وتو ({keys2}) → رد (reason={jj2.reject_reason})")
 
 # وتوی رویداد پراثر نزدیک
 near_cal = CalendarSnapshot(events=[CalendarEvent(
@@ -167,7 +185,7 @@ near_cal = CalendarSnapshot(events=[CalendarEvent(
     title_fa="نرخ بهره فدرال رزرو", impact="HIGH", forecast="4.00%", previous="3.75%")],
     fetched=True, week_range=("2026-09-20", "2026-09-26"))
 jj = judge_symbol(make_analysis(), {}, make_md(), make_ctx(cal=near_cal, news=good_news()))
-check(jj.signal is None and "EVENT" in [v.key for v in jj.vetoes],
+check("EVENT" in [v.key for v in jj.vetoes],
       f"رویداد پراثر ۱۲ دقیقه دیگر → وتوی EVENT ({[v.key for v in jj.vetoes]})")
 
 # وتوی خبر فوری
@@ -176,8 +194,14 @@ brk = NewsSnapshot(items=[NewsItem(title="BREAKING: ECB surprise decision", scor
                                    source="ForexLive", published=WED_OVERLAP)],
                    fetched_at=WED_OVERLAP, feeds_ok=1)
 jj = judge_symbol(make_analysis(), {}, make_md(), make_ctx(cal=clean_cal(), news=brk))
-check(jj.signal is None and "BREAKING_NEWS" in [v.key for v in jj.vetoes],
+check("BREAKING_NEWS" in [v.key for v in jj.vetoes],
       f"خبر فوری → وتوی BREAKING_NEWS ({[v.key for v in jj.vetoes]})")
+
+# استثنا: وتوی «سخت» (DATA) تک‌وتو هم می‌بندد
+jj = judge_symbol(make_analysis(verdict="DATA"), {}, make_md(),
+                  make_ctx(cal=clean_cal(), news=good_news()))
+check(jj.signal is None and jj.reject_reason == "VETO",
+      f"وتوی سخت DATA به‌تنهایی سیگنال را متوقف می‌کند (reason={jj.reject_reason})")
 
 # خاموش‌کردن یک وتو از طریق config باید واقعاً اثر کند
 jj = judge_symbol(make_analysis(), {}, make_md(),
@@ -191,24 +215,51 @@ print("=" * 78)
 print("۴) امتیاز ناکافی → سیگنال نیست، ولی دلیل شفاف است")
 print("=" * 78)
 # همهٔ مدارک جانبی را از بین ببر: تقویم خراب، اخبار خراب، TV مخالف، سشن ضعیف، رتبهٔ ارز وارونه
+# فشار بر هر مدرک امتیازدهی: ستاپ را خنثی (WAIT) کنیم تا اصلاً داوری نشود
+# (NO_SETUP)، و برای LOW_SCORE یک ستاپ ضعیف می‌سازیم که فقط با مدرکِ نامرتبط
+# امتیاز بگیرد.
+# برای LOW_SCORE باید مدرک trend هم ۰ شود. ev_trend فقط h1_agrees/adx را
+# می‌بیند، پس برای صفر کردنِ روند، یک تزریقِ قاعدهٔ سفارشی لازم است: قاعدهٔ
+# trend را با یک نسخهٔ شکسته جایگزین می‌کنیم (۰ امتیاز) تا تنها همان مدرک
+# صفر شود و بقیهٔ مدارک واقعی بمانند.
+weak = make_analysis(verdict="BUY_SETUP", trend="bearish", h1_agrees=False,
+                     adx=32.0, rsi=62.0, support=1.1495, resistance=1.1470)
+zero_trend = lambda a, ctx, d: __import__("src.judge.scoring", fromlist=["Evidence"]).Evidence(
+    "trend", "هم‌راستایی روند (تزریق شکسته)", 0, 0, "—")
 bad = JudgeContext(jcfg=JCFG, acfg=ACFG, symbols_cfg=SYMS,
                    ranking=[("USD", 0.40), ("JPY", 0.2), ("GBP", 0.0), ("EUR", -0.30)],
                    tv_map={"EURUSD": TVSnapshot("EURUSD", 1.149, 62.0, 32.0, "SELL", 3, 14, 9)},
-                   cal_snap=CalendarSnapshot(error="timeout"), news_snap=NewsSnapshot(error="down"),
+                   cal_snap=clean_cal(), news_snap=NewsSnapshot(error="down"),
                    now=datetime(2026, 9, 23, 3, 0, tzinfo=timezone.utc),   # سشن توکیو
                    status=market_status(datetime(2026, 9, 23, 3, 0, tzinfo=timezone.utc)),
                    event_veto_minutes=30.0)
-jj = judge_symbol(make_analysis(), {}, make_md(), bad)
+from src.judge.scoring import _EVIDENCE_RULES  # noqa: E402
+jj = judge_symbol(weak, {}, make_md(), bad,
+                 evidence_rules=[zero_trend if r.__name__ == "ev_trend" else r
+                                 for r in _EVIDENCE_RULES])
 check(jj.signal is None, f"سیگنال صادر نشد (امتیاز {jj.score}/{jj.max_score})")
 check(jj.reject_reason == "LOW_SCORE", f"reject_reason = {jj.reject_reason}")
-check(jj.score < 7, f"امتیاز {jj.score} زیر آستانهٔ ۷")
-check(all(e.points == 0 for e in jj.evidences if e.key in ("fundamental", "news", "tv", "session", "strength")),
+check(jj.score < JCFG["min_score"], f"امتیاز {jj.score} زیر آستانهٔ {JCFG['min_score']}")
+check(all(e.points == 0 for e in jj.evidences if e.key in ("news", "tv", "session", "strength")),
       "مدارکِ داده‌نیافته واقعاً صفر گرفتند (امتیاز باد نکرد)")
 check(any(e.unavailable for e in jj.evidences),
       "مدارکِ «داده در دسترس نبود» علامت unavailable خوردند (نه اینکه صفرِ بی‌دلیل بگیرند)")
 print(f"     جزئیات: {jj.reject_detail}")
 for e in jj.evidences:
     print(f"       {e.icon} {e.key:12s} {e.points}/{e.max_points} — {e.detail_fa[:66]}")
+
+# تقویمِ غایب، خودش یک وتوی «سخت» است → VETO (نه LOW_SCORE) — این همان
+# رفتار مورد نظر سیستم است: بی‌اطلاع دربارهٔ رویداد پراثر، حدس نمی‌زنیم.
+bad_cal = JudgeContext(jcfg=JCFG, acfg=ACFG, symbols_cfg=SYMS,
+                       ranking=[("EUR", 0.30)], tv_map={},
+                       cal_snap=CalendarSnapshot(error="timeout"), news_snap=NewsSnapshot(error="down"),
+                       now=datetime(2026, 9, 23, 3, 0, tzinfo=timezone.utc),
+                       status=market_status(datetime(2026, 9, 23, 3, 0, tzinfo=timezone.utc)),
+                       event_veto_minutes=30.0)
+jj2 = judge_symbol(make_analysis(), {}, make_md(), bad_cal)
+check(jj2.signal is None and jj2.reject_reason == "VETO"
+      and "CALENDAR_UNAVAILABLE" in [v.key for v in jj2.vetoes],
+      f"تقویم غایب → وتوی سخت CALENDAR_UNAVAILABLE (reason={jj2.reject_reason})")
 
 print()
 print("=" * 78)
@@ -234,7 +285,7 @@ check(capped4 and abs(risk4 - 3.0 * 0.0010) < 1e-9,
 # سطح خیلی نزدیک → کف min_sl_atr
 sl5, _, risk5, _ = compute_levels("BUY", 1.1490, 0.0010, 1.14895, None, rc)
 check(abs(risk5 - 0.6 * 0.0010) < 1e-9, f"سطح چسبیده → SL به کف ۰٫۶×ATR رسید ({risk5/0.0010:.2f}×ATR)")
-check(all(x == x for x in (sl, tp)), "NaN تولید نشد")
+check(all(not pd.isna(x) for x in (sl, tp)), "NaN تولید نشد")
 
 print()
 print("=" * 78)

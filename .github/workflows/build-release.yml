@@ -127,6 +127,7 @@ jobs:
           node tests/js/smoke_onboarding.js
           node tests/js/smoke_core.js
           node tests/js/smoke_plugins.js
+          node tests/js/smoke_service.js
           node tests/js/test_external_url.js
           node tests/js/test_news_render_xss.js
           node tests/js/test_source_freshness.js
@@ -140,6 +141,11 @@ jobs:
       - name: JS engine behavior pins + golden cycle (آفلاین)
         run: node tests/js/test_cycle_switch.js
 
+      # میخ‌های توالی رویدادهای پایپ‌لاین JS (createPipelineAsync) — آینهٔ
+      # test_pipeline_switch پایتون؛ آفلاین و بدون شبکه.
+      - name: JS pipeline event ordering (آفلاین)
+        run: node tests/js/test_pipeline_events.js
+
       # فاز ۶b معماری پلاگین: میخ‌های رفتاری قواعد داور JS (۷ وتو + ۸ شاهد
       # + ریاضی ریسک — ۵۸ سناریوی طلایی) قبل از rule-plugin شدن نوشته و سبز
       # شده‌اند؛ بعد از سوییچ باید بدون تغییر سبز بمانند.
@@ -151,6 +157,19 @@ jobs:
 
       - name: Journal tracking, stats and report regression tests (آفلاین)
         run: python tests/manual/test_journal.py
+
+      # رگرسیون داور/ریسک/گزارش — آفلاین، دادهٔ مصنوعی و now تزریق‌شده.
+      # بخش‌های Qt این سوئیت‌ها در CI نیست؛ مسیر آفلاین همین است.
+      - name: Judge/risk/report offline regression (آفلاین)
+        run: python tests/manual/test_judge.py
+
+      - name: Veto + news-direction regression (آفلاین)
+        run: |
+          python tests/manual/test_veto_report.py
+          python tests/manual/test_news_direction.py
+
+      - name: Audit regression pins (آفلاین)
+        run: python tests/manual/test_audit_fixes.py
 
       - name: Share-card spec parity test (no Qt)
         run: python tests/test_sharecard_spec.py

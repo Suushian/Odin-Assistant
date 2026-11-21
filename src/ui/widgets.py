@@ -1182,9 +1182,9 @@ class ConsoleCard(SoftCard):
             elif s.startswith("❌") or "خطا" in s[:6]:
                 out.append(f"<span style='color:{t.console_red};font-weight:600'>{esc}</span>")
             else:
-                out.append(f"<span style='color:{t.console_text}'>{esc}</span>")
+                out.append(f"<span style='color:{t.console_text}'>{esc}</span>")  # noqa: F541
         return ("<div style='font-family:Vazirmatn,Consolas,monospace;"
-                f"font-size:12.5px;line-height:1.7;direction:rtl'>"
+                "font-size:12.5px;line-height:1.7;direction:rtl'>"
                 + "<br>".join(out) + "</div>")
 
     def append_line(self, html_line: str) -> None:
@@ -1252,7 +1252,6 @@ class SignalCard(SoftCard):
         self.sig = dict(sig or {})
         buy = str(self.sig.get("direction", "")).upper().startswith("B")
         self._buy = buy
-        acc = t.green_text if buy else t.red_text
         pip = float(self.sig.get("pip") or (1.0 if self.sig.get("is_gold") else 0.0001))
 
         from src.report.signal import fmt_price

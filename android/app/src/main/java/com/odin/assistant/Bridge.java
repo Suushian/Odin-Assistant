@@ -53,7 +53,7 @@ public class Bridge {
 
     private static final String UA =
             "Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) "
-                    + "Chrome/126.0.0.0 Mobile Safari/537.36 ODINAssistant/0.28.0";
+                    + "Chrome/126.0.0.0 Mobile Safari/537.36 ODINAssistant/1.0.1";
 
     private final Context ctx;          // همیشه غیرnull (application context ترجیحاً)
     private final Activity act;         // در حالت سرویس null است
@@ -280,7 +280,10 @@ public class Bridge {
         try {
             return ctx.getPackageManager().getPackageInfo(ctx.getPackageName(), 0).versionName;
         } catch (Exception e) {
-            return "0.28.0";
+            // نسخهٔ پشتیبان فقط وقتی پرس‌وجوی PackageManager خطا دهد؛ باید با
+            // APP_VERSION در src/app_paths.py (منبع حقیقت) یکی باشد تا UA و
+            // UI نسخهٔ اشتباه نشان ندهند.
+            return "1.0.1";
         }
     }
 
@@ -517,10 +520,25 @@ public class Bridge {
     }
 
     // ── ذخیرهٔ فایل در پوشهٔ دانلودها ────────────────────────────
+    /**
+     * نام فایلِ امن: فقط نام پایه (بدون مسیر/پوشه) و فقط نویسه‌های مجاز.
+     * JS محلی و قابل‌اعتماد است، ولی این لایه دفاعی است تا اگر روزی نامی
+     * با «../» یا نویسهٔ نامرئی رسید، مسیر خارج از پوشهٔ مقصد ساخته نشود.
+     */
+    private static String sanitizeFileName(String name, String fallback) {
+        if (name == null) return fallback;
+        String base = new File(name).getName();          // همهٔ مسیرها حذف می‌شوند
+        base = base.replaceAll("[\\/:*?\"<>|\\x00-\\x1f]", "_");
+        base = base.trim();
+        if (base.isEmpty() || base.equals(".") || base.equals("..")) return fallback;
+        return base.length() > 80 ? base.substring(base.length() - 80) : base;
+    }
+
     /** «ok» یا «permission» یا شرح خطا برمی‌گرداند (JS ترجمه می‌کند). */
     @JavascriptInterface
     public String saveDownload(String name, String content) {
         try {
+            name = sanitizeFileName(name, "odin-journal.jsonl");
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 // API 29+: MediaStore — بدون هیچ مجوزی
                 ContentValues cv = new ContentValues();
@@ -582,6 +600,7 @@ public class Bridge {
         try {
             byte[] png = decodeDataUrl(dataUrl);
             if (png == null || png.length == 0) return "decode-failed";
+            name = sanitizeFileName(name, "odin-signal.png");
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 ContentValues cv = new ContentValues();
                 cv.put(MediaStore.Images.Media.DISPLAY_NAME, name);

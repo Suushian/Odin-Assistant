@@ -553,7 +553,6 @@ def test_delegation_network() -> None:
 
 
 def test_golden_journal_alerts() -> None:
-    import json
     from src.journal.stats import compute_stats
     from src.journal.store import Journal
     from src.journal.tracker import resolve_open_signals

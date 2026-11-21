@@ -231,7 +231,6 @@ QLabel#onb_chip {{
 
     # ── ستون گام‌ها ────────────────────────────────────────────
     def _build_steps_column(self) -> QWidget:
-        t = self._t
         w = QWidget()
         outer = QVBoxLayout(w)
         outer.setContentsMargins(Space.XL, Space.LG, Space.XXL, Space.XL)
