@@ -388,6 +388,30 @@ def _sends_today(state: dict, now: datetime) -> dict:
     return {"total": total, "by_symbol": by_symbol}
 
 
+def _apply_capacity(sig, go: bool, free: int, enforce: bool, limit: int) -> int:
+    """صندلی پوزیشن باز را به یک سیگنال بدهد/ندهد؛ خروجی: صندلی‌های آزادِ مانده.
+
+    ⚠️ نسخهٔ ۱.۱.۱ — باگِ کشف‌شده در بک‌تست ۲۰۲۳–۲۰۲۴:
+    پیش از این، صندلی *قبل* از دانستن «ارسال می‌شود یا نه» مصرف می‌شد؛ پس
+    سیگنالی که cooldown سرکوبش می‌کرد هم صندلی می‌گرفت و سیگنالِ سالمِ بعدی
+    بی‌دلیل «فقط پیگیری» می‌شد. در ۲۴٬۸۲۰ چرخهٔ آن بک‌تست ۱٬۰۹۰ بار رخ داد.
+    حالا صندلی فقط با ارسال واقعی مصرف می‌شود، و سیگنالِ ارسال‌نشده
+    `actionable=False` می‌گیرد تا در ژورنال هم «قابل اقدام» شمرده نشود.
+    """
+    if not enforce:
+        return free
+    if not go:
+        sig.actionable, sig.capacity_note = False, ""
+        return free
+    if free > 0:
+        sig.actionable, sig.capacity_note = True, ""
+        return free - 1
+    sig.actionable = False
+    sig.capacity_note = (f"سقف {fa_num(limit)} پوزیشن باز پر است — "
+                         f"این سیگنال فقط برای پیگیری است، ورود نکن")
+    return free
+
+
 def _daily_cap_block(sig, today: dict, pcfg: dict) -> str:
     """سقف روزانه — «سیگنال بیشتر» نباید به «اسپم» تبدیل شود."""
     limit = int(pcfg.get("max_signals_per_day", 0) or 0)
@@ -696,14 +720,7 @@ def run_cycle(cfg: Optional[dict] = None, on_log: LogFn = _noop,
                 go, why = should_send_signal(state, sig, C["jcfg"], now=C["now"])
                 if go and block:
                     go, why = False, block
-                if enforce:
-                    if free > 0:
-                        sig.actionable, sig.capacity_note = True, ""
-                        free -= 1
-                    else:
-                        sig.actionable = False
-                        sig.capacity_note = (f"سقف {fa_num(limit)} پوزیشن باز پر است — "
-                                             f"این سیگنال فقط برای پیگیری است، ورود نکن")
+                free = _apply_capacity(sig, go, free, enforce, limit)
                 text = _safe_render(caps, "signal", {"s": sig}, log)
                 sent = False
                 if go:

@@ -32,6 +32,12 @@
   };
   O.STRATEGY_PRIORITY = { trend_pullback: 3, breakout: 2, range_reversion: 1 };
 
+  // نسخهٔ ۱.۱.۱ — «قیمت همین حالا» (کلوز آخرین کندل بستهٔ M15). `price` عمداً
+  // همان کلوز H1 مانده (برابری بایت‌به‌بایت با ۱.۰)؛ فقط ستاپ‌های مومنتومی از
+  // این مرجع استفاده می‌کنند (بک‌تست ۲۰۲۳–۲۰۲۴: شکست با قیمت کهنه −۰٫۱۴R).
+  O.ENTRY_AT_MARKET = { breakout: true };
+  O.entryAtMarket = function (key) { return !!O.ENTRY_AT_MARKET[key]; };
+
   function sNum(cfg, key, dflt) {
     var v = cfg ? cfg[key] : undefined;
     if (v === undefined || v === null) return dflt;
@@ -226,6 +232,7 @@
     if (h4.length < emaSlowN + 10 || h1.length < emaSlowN + 10 || m15.length < rsiN + 10) {
       return Object.assign(common, {
         price: h1.length ? h1[h1.length - 1].c : 0,
+        entry_ref: m15.length ? m15[m15.length - 1].c : 0,
         trend: 'none', h1_agrees: false, adx: 0, rsi: 50, rsi_rising: false,
         atr: 0, support: null, resistance: null,
         last_candle: lastTs(m15), verdict: 'DATA',
@@ -273,6 +280,7 @@
       price: price, trend: trend, h1_agrees: h1Agrees,
       adx: adxV, rsi: rsiV, rsi_rising: rsiRising, atr: atrV,
       support: lv.support, resistance: lv.resistance,
+      entry_ref: m15.length ? m15[m15.length - 1].c : 0,
       last_candle: lastTs(m15), verdict: verdict,
       setups: setups, strategy: setups.length ? setups[0].key : ''
     });

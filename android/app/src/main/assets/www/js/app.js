@@ -483,14 +483,7 @@
         var dec = jn.shouldSendSignal(sentState, sig, S.cfg.judge, nowMs);
         var block = O.dailyCapBlock(sig, today, pcfg);
         if (dec.go && block) dec = { go: false, why: block };
-        if (enforce) {
-          if (free > 0) { sig.actionable = true; sig.capacity_note = ''; free--; }
-          else {
-            sig.actionable = false;
-            sig.capacity_note = 'سقف ' + O.faNum(limit) +
-              ' پوزیشن باز پر است — این سیگنال فقط برای پیگیری است، ورود نکن';
-          }
-        }
+        free = O.applyCapacity(sig, dec.go, free, enforce, limit);
         // sent یعنی «اعلان واقعاً قابل نمایش بود»، نه «تکراری نبود» (پاریتی با پایتون).
         var delivered = !!(dec.go && S.settings.notify_enabled !== false
           && O.native.notificationsEnabled());

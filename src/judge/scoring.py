@@ -48,7 +48,7 @@ from datetime import datetime, timezone
 from typing import Callable, Optional
 
 from ..analysis import indicators as ind
-from ..analysis.strategies import STRATEGY_FA, best_setup
+from ..analysis.strategies import STRATEGY_FA, best_setup, entry_at_market
 from ..analysis.technical import SymbolAnalysis
 from ..data.base import MarketData
 from ..fundamental.calendar import CalendarSnapshot, upcoming_events, veto_for_symbol
@@ -865,13 +865,19 @@ def judge_symbol(a: SymbolAnalysis, sym_cfg: dict, md: Optional[MarketData],
     _levels = compute_levels if risk_fn is None else risk_fn
     # سطح مرجع حد ضرر: اگر ستاپ یک لبهٔ مشخص داد (مثلاً لبهٔ شکسته‌شدهٔ دامنه)،
     # حد ضرر آن‌سوی همان لبه می‌نشیند — نه آن‌سوی یک سطح دوردست H4.
+    # نسخهٔ ۱.۱.۱ — قیمت مرجع ورود. برای ستاپ‌های مومنتومی («شکست تازه») کلوز
+    # H1 تا ۴۵ دقیقه کهنه است و در بک‌تست ۲۰۲۳–۲۰۲۴ همین کهنگی، +۰٫۱۲R سود
+    # ناخالص را به −۰٫۱۴R تبدیل کرد؛ پس مرجع ورود برای آن‌ها کلوز M15 است.
+    price_ref = a.price
+    if chosen is not None and entry_at_market(chosen.key) and getattr(a, "entry_ref", 0) > 0:
+        price_ref = float(a.entry_ref)
     sl_support, sl_resist = a.support, a.resistance
     if chosen is not None and chosen.stop_ref is not None:
         if j.direction == "BUY":
             sl_support = chosen.stop_ref
         else:
             sl_resist = chosen.stop_ref
-    sl, tp, risk, capped = _levels(j.direction, a.price, a.atr,
+    sl, tp, risk, capped = _levels(j.direction, price_ref, a.atr,
                                    sl_support, sl_resist, rcfg)
     rr = float(rcfg.get("reward_risk", 2.0))
     if capped:
@@ -879,7 +885,7 @@ def judge_symbol(a: SymbolAnalysis, sym_cfg: dict, md: Optional[MarketData],
         j.warnings.append(f"حد ضرر از سطح کلیدی دور بود و به سقف "
                           f"{fa_num(f'{cap:.1f}')}×ATR محدود شد")
     opp = a.resistance if j.direction == "BUY" else a.support
-    if opp is not None and abs(opp - a.price) < abs(tp - a.price):
+    if opp is not None and abs(opp - price_ref) < abs(tp - price_ref):
         kind = "مقاومت" if j.direction == "BUY" else "حمایت"
         j.warnings.append(f"{kind} {opp:.5g} سر راه هدف است — رسیدن به هدف سخت‌تر "
                           f"از چیزی است که نسبت ۱:{fa_ratio(rr)} "
@@ -901,8 +907,8 @@ def judge_symbol(a: SymbolAnalysis, sym_cfg: dict, md: Optional[MarketData],
         sid=f"{a.symbol}-{j.direction}-{ctx.now:%Y%m%d%H%M%S}-{round(a.price, 6)}",
         score=j.score, max_score=j.max_score,
         stars=max(1, min(5, round(j.score / j.max_score * 5))) if j.max_score else 1,
-        entry=a.price, sl=sl, tp=tp, pip=pip, atr=a.atr,
-        risk_pips=risk / pip, reward_pips=abs(tp - a.price) / pip,
+        entry=price_ref, sl=sl, tp=tp, pip=pip, atr=a.atr,
+        risk_pips=risk / pip, reward_pips=abs(tp - price_ref) / pip,
         rr=rr,
         is_gold=bool(pip >= 0.5), session_fa=ctx.status.label, now=ctx.now,
         evidences=j.evidences, warnings=j.warnings, sl_capped=capped,

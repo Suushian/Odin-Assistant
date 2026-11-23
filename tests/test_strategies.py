@@ -204,7 +204,7 @@ print("=" * 74)
 print("۴) داور با ستاپ: استثنای وتو، جهت از ستاپ، حد ضرر روی لبهٔ شکست")
 print("=" * 74)
 
-from src.analysis.strategies import Setup  # noqa: E402
+from src.analysis.strategies import Setup, entry_at_market  # noqa: E402
 
 # ستاپ رنج روی نمادی که ADX پایین دارد → وتوی «بازار رنج» نباید شلیک شود
 range_analysis = gen.make_analysis(adx=14.0, h1_agrees=False, verdict="RANGE", rsi=28.0,
@@ -226,6 +226,26 @@ j = judge_symbol(bo, {}, None, gen.make_ctx(tiers=TIERS_ON))
 A(j.direction == "BUY" and j.strategy == "breakout", "جهت از ستاپ شکست گرفته شد")
 A(j.signal is None or (1.1040 <= j.signal.sl < 1.1050),
   f"حد ضرر شکست زیر لبهٔ 1.1050 و نه دورتر: {j.signal.sl if j.signal else None}")
+
+# ── نسخهٔ ۱.۱.۱ — قیمت مرجع ورود: شکست با کلوز M15، پولبک با کلوز H1
+A(entry_at_market("breakout") is True, "شکست: قیمت مرجع لحظه‌ای")
+A(entry_at_market("trend_pullback") is False and entry_at_market("range_reversion") is False,
+  "پولبک و رنج: قیمت مرجع همان H1 (سازگاری با ۱.۰)")
+
+bo2 = gen.make_analysis(verdict="WAIT", adx=28.0, rsi=62.0, price=1.1060,
+                        support=1.1000, resistance=1.1060)
+bo2.entry_ref = 1.1075                     # کلوز M15 جلوتر از کلوز H1
+bo2.setups = [Setup("breakout", "EURUSD", "BUY", 3, 1.1075, 1.1050, ["شکست سقف دامنه"])]
+j = judge_symbol(bo2, {}, None, gen.make_ctx(tiers=TIERS_ON))
+A(j.signal is not None and abs(j.signal.entry - 1.1075) < 1e-9,
+  f"ورود سیگنال شکست از کلوز M15 (نه H1): {j.signal.entry if j.signal else None}")
+
+pb2 = gen.make_analysis(price=1.1000)
+pb2.entry_ref = 1.1010
+pb2.setups = [Setup("trend_pullback", "EURUSD", "BUY", 2, 1.1000, 0.9990, ["پولبک"])]
+j = judge_symbol(pb2, {}, None, gen.make_ctx(tiers=TIERS_ON))
+A(j.signal is not None and abs(j.signal.entry - 1.1000) < 1e-9,
+  "ورود سیگنال پولبک همان کلوز H1 است (سازگاری کامل)")
 
 # ستاپ خاموش در config → داور به verdict قدیمی برمی‌گردد
 j = judge_symbol(gen.make_analysis(), {}, None,
@@ -368,6 +388,28 @@ A(engine._open_positions(_Journal([_Entry(sent=False), _Entry()])) == 1,
 A(engine._open_positions(_Journal([_Entry(actionable=False)])) == 0,
   "سیگنال «فقط پیگیری» ظرفیت نمی‌گیرد")
 A(engine._open_positions(None) == 0, "ژورنال ناموجود → صفر (بدون استثنا)")
+
+
+# ── صندلی ظرفیت: فقط سیگنالِ ارسال‌شده صندلی می‌گیرد (باگِ کشف‌شده در بک‌تست)
+class _CapSig:
+    def __init__(self):
+        self.actionable = True
+        self.capacity_note = ""
+
+
+sig = _CapSig()
+A(engine._apply_capacity(sig, True, 2, True, 2) == 1 and sig.actionable,
+  "سیگنالِ ارسال‌شده صندلی می‌گیرد")
+sig = _CapSig()
+A(engine._apply_capacity(sig, False, 2, True, 2) == 2 and not sig.actionable,
+  "سیگنالِ سرکوب‌شده (cooldown) صندلی نمی‌گیرد")
+sig = _CapSig()
+free = engine._apply_capacity(sig, True, 0, True, 2)
+A(free == 0 and not sig.actionable and "پوزیشن باز پر است" in sig.capacity_note,
+  "صندلی تمام‌شده → «فقط پیگیری» با توضیح")
+sig = _CapSig()
+A(engine._apply_capacity(sig, True, 0, False, 0) == 0 and sig.actionable,
+  "ظرفیت خاموش → دست‌نخورده")
 
 # ── config واقعی: نمادها، سهمیه، کلیدها
 print()

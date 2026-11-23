@@ -501,6 +501,10 @@
     }
 
     var rcfg = ctx.jcfg.risk;
+    // نسخهٔ ۱.۱.۱ — قیمت مرجع ورود: برای ستاپ‌های مومنتومی کلوز M15 (تازه)،
+    // برای بقیه همان کلوز H1 (سازگاری کامل با ۱.۰).
+    var priceRef = a.price;
+    if (chosen && O.entryAtMarket(chosen.key) && a.entry_ref > 0) priceRef = +a.entry_ref;
     // سطح مرجع حد ضرر: اگر ستاپ لبهٔ مشخصی داد (مثلاً لبهٔ شکسته‌شدهٔ دامنه)
     // حد ضرر آن‌سوی همان لبه می‌نشیند.
     var slSupport = a.support, slResist = a.resistance;
@@ -508,13 +512,13 @@
       if (j.direction === 'BUY') slSupport = chosen.stop_ref;
       else slResist = chosen.stop_ref;
     }
-    var lv = (riskFn || O.computeLevels)(j.direction, a.price, a.atr, slSupport, slResist, rcfg);
+    var lv = (riskFn || O.computeLevels)(j.direction, priceRef, a.atr, slSupport, slResist, rcfg);
     var rr = +rcfg.reward_risk;
     if (lv.capped) {
       j.warnings.push('حد ضرر از سطح کلیدی دور بود و به سقف ' + O.faNum(O.pyFixed(+rcfg.max_sl_atr, 1)) + '×ATR محدود شد');
     }
     var opp = j.direction === 'BUY' ? a.resistance : a.support;
-    if (opp != null && Math.abs(opp - a.price) < Math.abs(lv.tp - a.price)) {
+    if (opp != null && Math.abs(opp - priceRef) < Math.abs(lv.tp - priceRef)) {
       var kind = j.direction === 'BUY' ? 'مقاومت' : 'حمایت';
       j.warnings.push(kind + ' ' + O.fmtG(opp) + ' سر راه هدف است — رسیدن به هدف سخت‌تر از چیزی است که نسبت ۱:' + O.faRatio(rr) + ' پیشنهاد می‌دهد');
     }
@@ -534,14 +538,14 @@
     }
 
     var pip = a.pip || 0.0001;
-    var risk = Math.abs(a.price - lv.sl);
+    var risk = Math.abs(priceRef - lv.sl);
     j.signal = {
       symbol: a.symbol, fa_name: a.fa_name, direction: j.direction,
       sid: a.symbol + '-' + j.direction + '-' + sidStamp(new Date(ctx.nowMs)) + '-' + (Math.round(a.price * 1e6) / 1e6),
       score: j.score, max_score: j.max_score,
       stars: j.max_score ? Math.max(1, Math.min(5, pyRound(j.score / j.max_score * 5))) : 1,
-      entry: a.price, sl: lv.sl, tp: lv.tp, pip: pip, atr: a.atr,
-      risk_pips: risk / pip, reward_pips: Math.abs(lv.tp - a.price) / pip,
+      entry: priceRef, sl: lv.sl, tp: lv.tp, pip: pip, atr: a.atr,
+      risk_pips: risk / pip, reward_pips: Math.abs(lv.tp - priceRef) / pip,
       rr: rr,
       is_gold: pip >= 0.5, session_fa: ctx.status.label, now: ctx.nowMs,
       evidences: j.evidences, warnings: j.warnings, sl_capped: lv.capped,

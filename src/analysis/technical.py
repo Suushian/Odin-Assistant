@@ -44,6 +44,10 @@ class SymbolAnalysis:
     # مصرف‌کننده‌های قدیمی بدون تغییر معتبر بمانند (سازگاری کامل).
     setups: list = field(default_factory=list)   # list[Setup] — بهترین اول
     strategy: str = ""                           # کلید ستاپ برتر ("" = ستاپ قدیمی)
+    # نسخهٔ ۱.۱.۱ — «قیمت همین حالا»: کلوز آخرین کندل بستهٔ M15. `price` عمداً
+    # همان کلوز H1 مانده است (سازگاری بایت‌به‌بایت با ۱.۰ و گلدن‌ها)؛ فقط
+    # ستاپ‌هایی که در بک‌تست آسیب دیدند (شکست) از این مرجع استفاده می‌کنند.
+    entry_ref: float = 0.0
 
 
 def analyze_symbol(sym_cfg: dict, md: MarketData, acfg: dict,
@@ -75,6 +79,7 @@ def analyze_symbol(sym_cfg: dict, md: MarketData, acfg: dict,
     if len(h4) < ema_slow_n + 10 or len(h1) < ema_slow_n + 10 or len(m15) < rsi_n + 10:
         return SymbolAnalysis(
             **common, price=float(h1["Close"].iloc[-1]) if len(h1) else 0.0,
+            entry_ref=float(m15["Close"].iloc[-1]) if len(m15) else 0.0,
             trend="none", h1_agrees=False, adx=0.0, rsi=50.0, rsi_rising=False,
             atr=0.0, support=None, resistance=None,
             last_candle=_last_ts(m15), verdict="DATA",
@@ -122,6 +127,7 @@ def analyze_symbol(sym_cfg: dict, md: MarketData, acfg: dict,
         **common, price=price, trend=trend, h1_agrees=h1_agrees,
         adx=adx_v, rsi=rsi_v, rsi_rising=rsi_rising, atr=atr_v,
         support=support, resistance=resistance,
+        entry_ref=float(m15["Close"].iloc[-1]),
         last_candle=_last_ts(m15), verdict=verdict,
         setups=setups, strategy=(setups[0].key if setups else ""),
     )
