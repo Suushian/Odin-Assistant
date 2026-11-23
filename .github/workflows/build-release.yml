@@ -6,8 +6,8 @@ name: Tests (Python + Android JS)
 # قابل‌توزیع، APK است (ورک‌فلو build-android.yml).
 #
 # ⚠️ این ورک‌فلو عمداً «نگه داشته» شده و فقط job تست را می‌دود، چون:
-#   ۱) موتور پایتون هنوز اوراکلِ تستِ اپ اندروید است — tests/js/gen_fixtures.py
-#      دوازده ماژول آن را import می‌کند تا فیکسچرِ ۲۴ تست برابری ساخته شود.
+#   ۱) موتور پایتون هنوز اوراکلِ تستِ اپ اندروید است — گلدن‌های
+#      test_judge_switch/test_cycle_switch از خروجی پایتون ساخته شده‌اند.
 #      بدون این job، هیچ‌چیز درستیِ محاسبات موتور JS اندروید را نمی‌سنجد.
 #   ۲) src/ui/theme.py هنوز منبع حقیقتِ ۴۱ توکن رنگ اندروید است
 #      (smoke_theme_parity.js — ۲۰۸ بررسی).
@@ -58,7 +58,7 @@ jobs:
         # دریافت داده در تست‌ها mock می‌شود؛ Yahoo/yfinance دیگر وابستگی اجرایی نیست.
         run: |
           python -m pip install --upgrade pip
-          pip install pandas numpy PyYAML requests feedparser
+          pip install -r requirements-test.txt
 
       - name: Backend selftest (offline — تقویم، اخبار، وتو، گزارش)
         run: python main.py --selftest
@@ -132,6 +132,7 @@ jobs:
           node tests/js/test_news_render_xss.js
           node tests/js/test_source_freshness.js
           node tests/js/test_market_data_quality.js
+          node tests/js/test_news_dedupe_order.js
           node tests/js/test_twelvedata.js
 
       # فاز ۶ معماری پلاگین: میخ‌های رفتاری موتور JS (svcTick/cycleCore/

@@ -13,6 +13,8 @@ const pyIcons = read('src/ui/icons.py');
 const pyTheme = read('src/ui/theme.py');
 const css = read('android/app/src/main/assets/www/style.css');
 const generator = read('assets/make_icon.py');
+const manifest = read('android/app/src/main/AndroidManifest.xml');
+const adaptive = read('android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml');
 
 assert(svg.includes('<circle cx="54" cy="54" r="25"/>') && svg.includes('<path d="M25 83 83 25"/>'), 'canonical SVG must contain the Ø ring and slash');
 assert(launcher.includes('M54,29 a25,25 0,1 1,0 50') && launcher.includes('M25,83 L83,25'), 'Android launcher must use the same Ø geometry');
@@ -24,6 +26,8 @@ assert(generator.includes('d.ellipse') && generator.includes('d.line([start, end
 assert(pyTheme.includes('brand: str = "#101013"') && pyTheme.includes('brand_tint: str = "#EDEDF0"'), 'Python brand tokens must be monochrome');
 assert(css.includes('--brand: #101013;') && css.includes('--brand-tint: #EDEDF0;'), 'Android CSS brand tokens must match Python');
 assert(!svg.includes('chat bubble') && !launcher.includes('#1685F8') && !html.includes('M24 4v8'), 'legacy blue chat/sun symbols must not remain in brand surfaces');
+assert(manifest.includes('android:icon="@mipmap/ic_launcher"'), 'manifest must use the adaptive launcher resource');
+assert(adaptive.includes('<adaptive-icon') && adaptive.includes('odin_launcher_foreground'), 'adaptive icon must use the Ø foreground');
 
 const png = fs.readFileSync(path.join(root, 'assets/icon.png'));
 assert(png.subarray(0, 8).equals(Buffer.from([137,80,78,71,13,10,26,10])), 'desktop PNG signature invalid');

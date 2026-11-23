@@ -495,6 +495,28 @@ group('۷) شمارهٔ نسخهٔ هاردکد در منابع اندروید �
     'عدد نسخهٔ هاردکد در منابع اندروید (' + offenders.length + '): ' + offenders.join(' | ') +
     ' — باید از APP_VERSION بیاید یا fallback غیرعددی مثل «dev» باشد');
   if (!offenders.length) console.log('    ✓ هیچ عدد نسخهٔ هاردکدی در www/ نیست');
+
+  // Bridge.java هم نباید UA/نسخه را هاردکد کند (BuildConfig منبع حقیقت است).
+  const bridge = read(path.join(ROOT, 'android', 'app', 'src', 'main', 'java',
+    'com', 'odin', 'assistant', 'Bridge.java'), 'Bridge.java');
+  ok(!/ODINAssistant\/\d/.test(bridge),
+    'UA در Bridge.java نسخهٔ هاردکد دارد؛ باید از BuildConfig.VERSION_NAME بیاید');
+  ok(!/return\s+"\d+\.\d+\.\d+"/.test(bridge),
+    'getVersion در Bridge.java نسخهٔ هاردکد برمی‌گرداند؛ باید BuildConfig.VERSION_NAME باشد');
+  if (!/ODINAssistant\/\d/.test(bridge) && !/return\s+"\d+\.\d+\.\d+"/.test(bridge)) {
+    console.log('    ✓ Bridge.java نسخه را از BuildConfig می‌خواند');
+  }
+
+  // نصب‌کننده/بیچ ویندوز هم باید همان نسخه را بگیرند.
+  const batch = read(path.join(ROOT, 'build_exe.bat'), 'build_exe.bat');
+  const iss = read(path.join(ROOT, 'installer', 'odin.iss'), 'odin.iss');
+  ok(batch.includes('/DAppVersion=' + appVersion),
+    'build_exe.bat باید /DAppVersion=' + appVersion + ' بدهد');
+  ok(iss.includes('/DAppVersion=' + appVersion),
+    'installer/odin.iss باید نمونهٔ /DAppVersion=' + appVersion + ' داشته باشد');
+  if (batch.includes('/DAppVersion=' + appVersion) && iss.includes('/DAppVersion=' + appVersion)) {
+    console.log('    ✓ build_exe.bat/odin.iss هم‌نسخه‌اند');
+  }
 }
 
 console.log('\n' + '═'.repeat(56));

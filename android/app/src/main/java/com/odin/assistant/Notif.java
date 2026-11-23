@@ -21,7 +21,9 @@ public final class Notif {
 
     public static final String CH_SIGNALS = "signals";
     public static final String CH_MONITOR = "monitor";
+    // یک اعلان سیگنالِ زنده (جدید جای قبلی را می‌گیرد)؛ تاریخچه در ژورنال است.
     public static final int SIGNALS_ID = 1001;
+    // اعلان ماندگار FGS — مستقل از اعلان سیگنال.
     public static final int MONITOR_ID = 1002;
 
     private static final long[] VIB = {0, 250, 150, 250};
@@ -78,11 +80,15 @@ public final class Notif {
         return PendingIntent.getService(ctx, 1, stop, piFlags());
     }
 
-    /** اعلان سیگنال/خبر فوری — اهمیت بالا + لرزش. اگر اعلان‌ها خاموش باشند بی‌صدا رد می‌شود. */
-    public static void signal(Context ctx, String title, String body) {
+    /** اعلان سیگنال/خبر فوری — اهمیت بالا + لرزش. اگر اعلان‌ها خاموش باشند بی‌صدا رد می‌شود.
+     *  خروجی: آیا اعلان واقعاً در NotificationManager ثبت شد؟ (برای ژورنال صادق) */
+    public static boolean signal(Context ctx, String title, String body) {
         try {
             NotificationManager nm = (NotificationManager) ctx.getSystemService(Context.NOTIFICATION_SERVICE);
-            if (nm == null || !nm.areNotificationsEnabled()) return;
+            if (nm == null || !nm.areNotificationsEnabled()) return false;
+            if (Build.VERSION.SDK_INT >= 33
+                    && ctx.checkSelfPermission("android.permission.POST_NOTIFICATIONS")
+                    != android.content.pm.PackageManager.PERMISSION_GRANTED) return false;
             Notif.ensureChannels(ctx);
 
             Notification.Builder b = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
@@ -99,7 +105,9 @@ public final class Notif {
                 b.setDefaults(Notification.DEFAULT_SOUND);
             }
             nm.notify(SIGNALS_ID, b.build());
+            return true;
         } catch (Exception ignored) {
+            return false;
         }
     }
 
@@ -125,6 +133,9 @@ public final class Notif {
 
     public static void postMonitor(Context ctx, String title, String body) {
         try {
+            // اگر کاربر اعلان‌ها را خاموش کرده، به‌روزرسانی هم نگذار (اعلان
+            // FGS اولیه را سیستم لازم دارد، ولی متن تازه نباید ساخته شود).
+            if (!enabled(ctx)) return;
             NotificationManager nm = (NotificationManager) ctx.getSystemService(Context.NOTIFICATION_SERVICE);
             if (nm == null) return;
             nm.notify(MONITOR_ID, monitor(ctx, title, body == null ? "" : body));

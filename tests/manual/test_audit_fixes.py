@@ -172,6 +172,19 @@ check(first is True and second is False,
 import time as _t
 _t.sleep(0.3)
 
+# F-12: bypass لایسنس در EXE frozen نباید کار کند.
+from src import license as _lic  # noqa: E402
+with mock.patch.object(_lic.sys, "frozen", True, create=True), \
+        mock.patch.dict(_lic.os.environ, {"ODIN_SKIP_LICENSE": "1"}):
+    check(_lic.license_bypassed() is False,
+          "ODIN_SKIP_LICENSE در build frozen نادیده گرفته می‌شود")
+
+# F-13: توکن تلگرام در متن خطا redact شود.
+from src.notify.telegram import _scrub  # noqa: E402
+_tok = "123456:ABC-SECRET"
+check(_tok not in _scrub(RuntimeError("GET https://api.telegram.org/bot" + _tok + "/getMe failed"), _tok),
+      "توکن تلگرام از متن خطا حذف می‌شود")
+
 print()
 print("=" * 78)
 if FAILS:

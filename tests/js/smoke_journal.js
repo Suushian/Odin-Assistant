@@ -47,4 +47,27 @@ const resolved = O.resolveOpenSignals(journal, { EURUSD: { m15: candles } },
 assert.strictEqual(resolved.length, 1);
 assert.strictEqual(stored.outcome, O.SL);
 assert.strictEqual(stored.note, '');
-console.log('SMOKE JOURNAL OK — calendar weeks, score bucket, first-exit double-touch');
+
+// storage.append (پل نیتیو اتمیک) باید همان نتیجهٔ set را بدهد و سقف نرم کار کند.
+{
+  const mem = {};
+  const storage = {
+    get: (k) => mem[k] || '',
+    set: (k, v) => { mem[k] = String(v); },
+    append: (k, v) => { mem[k] = (mem[k] || '') + String(v); },
+    del: (k) => { delete mem[k]; }
+  };
+  const j = new O.Journal(storage);
+  j.appendRec({ id: 'a', kind: 'signal' });
+  j.appendRec({ id: 'b', kind: 'signal' });
+  assert.strictEqual(j.load().length, 2);
+  assert.ok(/\n$/.test(j.raw()), 'هر رکورد باید با newline تمام شود');
+  const oldMax = O.Journal.MAX_BYTES;
+  O.Journal.MAX_BYTES = 160;
+  for (let i = 0; i < 10; i++) j.appendRec({ id: 'x' + i, note: 'x'.repeat(20) });
+  assert.ok(j.raw().length <= 400, 'ژورنال باید پس از عبور از سقف چرخش کند');
+  O.Journal.MAX_BYTES = oldMax;
+  console.log('    ✓ journal append + soft rotation');
+}
+
+console.log('SMOKE JOURNAL OK — calendar weeks, score bucket, first-exit double-touch, append/rotation');

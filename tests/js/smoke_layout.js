@@ -439,6 +439,23 @@ group('۵) محافظِ سرریز روی مقدارهای کوتاه');
   console.log('    ✓ ' + NOWRAP.length + ' عنصر nowrap + clamp برای متن بلند');
 }
 
+// ══════════════════════════════════════════════════════════════════════
+group('۶) CSP باید style attribute را مجاز کند و script را سخت نگه دارد');
+// ══════════════════════════════════════════════════════════════════════
+{
+  const html = read('index.html');
+  const m = html.match(/http-equiv="Content-Security-Policy"[\s\S]*?content="([^"]*)"/);
+  const csp = m ? m[1] : '';
+  ok(/default-src 'none'/.test(csp), 'CSP باید default-src none داشته باشد');
+  ok(/style-src[^;]*'unsafe-inline'/.test(csp),
+    'style-src باید unsafe-inline داشته باشد (۱۲۷ style attribute در JS)');
+  ok(!/script-src[^;]*'unsafe-inline'/.test(csp),
+    'script-src نباید unsafe-inline داشته باشد');
+  ok(!/script-src[^;]*'unsafe-eval'/.test(csp),
+    'script-src نباید unsafe-eval داشته باشد');
+  console.log('    ✓ CSP: style inline مجاز، script inline/eval ممنوع');
+}
+
 console.log('\n' + '═'.repeat(56));
 if (failures) {
   console.log('✗ SMOKE LAYOUT FAILED — ' + failures + ' از ' + checks + ' بررسی شکست خورد');

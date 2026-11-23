@@ -516,9 +516,26 @@ def test_cumulative_veto_threshold() -> None:
       "وتوی DATA مستقل از شمارندهٔ وتوهای عادی باقی می‌ماند")
 
 
+def test_breaking_news_is_scoped_to_gold_pairs() -> None:
+    """خبر فوری طلا نباید سیگنال جفت‌ارزهای غیرطلا را وتو کند."""
+    from types import SimpleNamespace
+    from src.judge.scoring import _breaking_news_for
+
+    def item(direction):
+        return SimpleNamespace(title='Gold spikes on safe-haven bid', breaking=True,
+                               score=6, direction=direction)
+
+    snap = SimpleNamespace(ok=True, items=[item({'XAU': 1, 'USD': -1})])
+    A(_breaking_news_for(snap, 'EUR', 'USD', 5) == [],
+      'خبر طلا نباید EURUSD را وتو کند')
+    A(bool(_breaking_news_for(snap, 'XAU', 'USD', 5)),
+      'خبر طلا باید XAUUSD را وتو کند')
+
+
+
 # ══════════════════════════════════════════════════════════════
 def main() -> int:
-    tests = [test_golden_battery, test_veto_single, test_five_point_signal_threshold, test_cumulative_veto_threshold, test_veto_order,
+    tests = [test_golden_battery, test_veto_single, test_breaking_news_is_scoped_to_gold_pairs, test_five_point_signal_threshold, test_cumulative_veto_threshold, test_veto_order,
              test_veto_toggles_and_clean, test_evidence_branches,
              test_judge_full_paths, test_low_score, test_no_setup,
              test_capped, test_judge_all_mixed, test_risk_math,

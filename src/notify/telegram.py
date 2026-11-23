@@ -36,6 +36,14 @@ def _chunks(text: str, size: int = _MAX_LEN) -> list[str]:
     return out
 
 
+def _scrub(text: object, token: str) -> str:
+    """حذف توکن از متن خطا قبل از نمایش/لاگ (توکن در path URL است)."""
+    out = str(text)
+    if token:
+        out = out.replace(token, "<redacted>")
+    return out[:80]
+
+
 def validate_token(token: str) -> tuple[bool, str]:
     """اعتبار توکن بات را بررسی می‌کند. خروجی: (موفقیت، نام‌کاربری یا پیام خطا)."""
     try:
@@ -45,7 +53,7 @@ def validate_token(token: str) -> tuple[bool, str]:
             return True, "@" + d["result"].get("username", "?")
         return False, str(d.get("description", "توکن نامعتبر است"))
     except Exception as e:
-        return False, f"خطای اتصال: {str(e)[:70]}"
+        return False, f"خطای اتصال: {_scrub(e, token)}"
 
 
 def get_chat_id(token: str) -> tuple[str | None, str]:
@@ -68,7 +76,7 @@ def get_chat_id(token: str) -> tuple[str | None, str]:
         return None, ("پیامی یافت نشد — اول در تلگرام بات خودت را باز کن و یک بار "
                       "/start بفرست، سپس دوباره این دکمه را بزن")
     except Exception as e:
-        return None, f"خطای اتصال: {str(e)[:70]}"
+        return None, f"خطای اتصال: {_scrub(e, token)}"
 
 
 def send_message(token: str, chat_id: str, text: str, timeout: int = 15) -> tuple[bool, str]:
@@ -91,5 +99,5 @@ def send_message(token: str, chat_id: str, text: str, timeout: int = 15) -> tupl
                 return False, f"تلگرام خطا داد: {d.get('description', f'HTTP {r.status_code}')}"
             sent += 1
         except Exception as e:
-            return False, f"خطای اتصال به تلگرام: {str(e)[:80]}"
+            return False, f"خطای اتصال به تلگرام: {_scrub(e, token)}"
     return True, f"{sent} پیام ارسال شد ✅"

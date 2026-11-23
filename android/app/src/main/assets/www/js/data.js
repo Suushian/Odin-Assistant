@@ -27,6 +27,18 @@
     p({ status: status, text: text });
   };
 
+  /** در بستن صفحه، Promiseهای معلق را آزاد کن تا نقشهٔ callback نشت نکند. */
+  O.httpCancelAll = function () {
+    Object.keys(pending).forEach(function (id) {
+      var p = pending[id];
+      delete pending[id];
+      try { p({ status: -1, text: 'cancelled' }); } catch (e) { }
+    });
+  };
+  if (typeof window !== 'undefined' && window.addEventListener) {
+    window.addEventListener('pagehide', O.httpCancelAll);
+  }
+
   O.http = function (url, opts) {
     opts = opts || {};
     return new Promise(function (resolve) {
@@ -45,9 +57,24 @@
           init.body = opts.body;
           init.headers['Content-Type'] = opts.contentType || 'application/json';
         }
+        // مرورگر/Node تایم‌اوت ذاتی ندارد؛ ۳۰ ثانیه بعد شکست صادقانه.
+        var settled = false;
+        var timer = setTimeout(function () {
+          if (settled) return;
+          settled = true;
+          resolve({ status: -1, text: 'timeout' });
+        }, 30000);
         fetch(url, init).then(function (r) {
-          return r.text().then(function (t) { resolve({ status: r.status, text: t }); });
-        }).catch(function (e) { resolve({ status: -1, text: String(e && e.message || e) }); });
+          return r.text().then(function (t) {
+            if (settled) return;
+            settled = true; clearTimeout(timer);
+            resolve({ status: r.status, text: t });
+          });
+        }).catch(function (e) {
+          if (settled) return;
+          settled = true; clearTimeout(timer);
+          resolve({ status: -1, text: String(e && e.message || e) });
+        });
       } catch (e2) {
         resolve({ status: -1, text: String(e2 && e2.message || e2) });
       }
@@ -60,6 +87,12 @@
       return {
         get: function (k) { try { return ODINNative.getPref(k) || ''; } catch (e) { return ''; } },
         set: function (k, v) { try { ODINNative.setPref(k, v == null ? '' : String(v)); } catch (e) { } },
+        append: function (k, v) {
+          try {
+            if (ODINNative.appendPref) ODINNative.appendPref(k, v == null ? '' : String(v));
+            else ODINNative.setPref(k, (ODINNative.getPref(k) || '') + (v == null ? '' : String(v)));
+          } catch (e) { }
+        },
         del: function (k) { try { ODINNative.removePref(k); } catch (e) { } }
       };
     }
@@ -67,6 +100,7 @@
     return {
       get: function (k) { return mem[k] || ''; },
       set: function (k, v) { mem[k] = String(v); },
+      append: function (k, v) { mem[k] = (mem[k] || '') + String(v); },
       del: function (k) { delete mem[k]; }
     };
   };

@@ -1646,7 +1646,7 @@ class MainWindow(QMainWindow):
                 if s is not None:
                     s.setChecked(on)
             self.set_steppers["min_score"].setValue(
-                int(j.get("min_score", 7)), silent=True)
+                int(j.get("min_score", 5)), silent=True)
             self.set_steppers["max_signals_per_cycle"].setValue(
                 int(j.get("max_signals_per_cycle", 3)), silent=True)
             self.set_steppers["interval_minutes"].setValue(
@@ -2280,7 +2280,7 @@ def _selftest_body() -> int:
     save_local_config({"telegram": {"bot_token": "TOKEN-BAYAD-BEMUNAD"}})
     win._reset_settings_now()               # noqa: SLF001
     cfg3 = load_config()
-    assert cfg3["judge"]["enabled"] is True and cfg3["judge"]["min_score"] == 7
+    assert cfg3["judge"]["enabled"] is True and cfg3["judge"]["min_score"] == 5
     assert cfg3["judge"]["veto"]["weekend"] is True
     assert cfg3["ui"]["user_name"] == base_cfg["ui"]["user_name"]
     assert win.user_name == base_cfg["ui"]["user_name"], "هدر باید به نام پیش‌فرض برگردد"

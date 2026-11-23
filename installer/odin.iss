@@ -2,8 +2,8 @@
 ;  ODIN Assistant — نصب‌کنندهٔ رسمی ویندوز (Inno Setup 6)
 ;
 ;  ساخت محلی (ویندوز + Inno Setup نصب):
-;      iscc /DAppVersion=1.0.1 installer\odin.iss
-;  خروجی: installer\Output\ODINAssistant-v1.0.1-windows-setup.exe
+;      iscc /DAppVersion=1.0.2 installer\odin.iss
+;  خروجی: installer\Output\ODINAssistant-v1.0.2-windows-setup.exe
 ;
 ;  CI (GitHub Actions روی windows-latest) همین فایل را بعد از PyInstaller
 ;  کامپایل می‌کند؛ مسیر ISCC در workflow پیدا/نصب می‌شود.
@@ -22,7 +22,7 @@
 #define MyAppName      "ODIN Assistant"
 #define MyAppExeName   "ODINAssistant.exe"
 #define MyAppPublisher "Sushian Khoshkhani"
-#define MyAppURL       "https://github.com/KhodeSushianm/Trading-Bot"
+#define MyAppURL       "https://github.com/Suushian/Odin-Assistant"
 #define MyAppID        "{74e8ad44-fe2e-467e-8c97-7d6aac62d2d5}"
 
 [Setup]

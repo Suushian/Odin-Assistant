@@ -678,6 +678,32 @@
       html += '</div></div>';
     }
 
+    // تفکیک امتیاز/جهت — پاسخ به «آیا آستانهٔ ۵ درست است؟» (F-32)
+    var scoreKeys = Object.keys(stats.by_score || {});
+    if (scoreKeys.length) {
+      var scoreOrder = ['۵', '۶', '۷', '۸', '۹', '۱۰–۱۱', '≤۴'];
+      html += '<div class="card"><div class="card-title">' + ct('chart-bar', 'تفکیک بر اساس امتیاز پشتوانه') + '</div><div style="margin-top:6px">';
+      scoreOrder.forEach(function (k) {
+        var b = stats.by_score[k];
+        if (!b) return;
+        html += '<div class="j-entry"><div class="j-sym"><div class="s1">امتیاز ' + esc(k) + '</div>' +
+          '<div class="s2">بسته ' + O.faNum(b.closed) + ' · برد ' + O.faNum(b.wins) + ' · باخت ' + O.faNum(b.losses) + '</div></div>' +
+          '<span class="r-chip ' + ((b.avg_r || 0) >= 0 ? 'win' : 'loss') + '">' + O.faPct(b.hit_rate) + '</span></div>';
+      });
+      html += '</div></div>';
+    }
+    var dirKeys = Object.keys(stats.by_direction || {});
+    if (dirKeys.length) {
+      html += '<div class="card"><div class="card-title">' + ct('activity', 'تفکیک جهت') + '</div><div style="margin-top:6px">';
+      dirKeys.forEach(function (k) {
+        var b = stats.by_direction[k];
+        html += '<div class="j-entry"><div class="j-sym"><div class="s1">' + (k === 'BUY' ? 'خرید' : 'فروش') + '</div>' +
+          '<div class="s2">بسته ' + O.faNum(b.closed) + ' · میانگین R ' + O.rFmt(b.avg_r) + '</div></div>' +
+          '<span class="r-chip ' + ((b.avg_r || 0) >= 0 ? 'win' : 'loss') + '">' + O.faPct(b.hit_rate) + '</span></div>';
+      });
+      html += '</div></div>';
+    }
+
     html += '<div class="action-row" style="margin-top:4px">' +
       '<button class="btn ghost sm" data-action="journal-save" style="flex:1">' + O.ico('save', 13) + ' ذخیره در دانلودها</button>' +
       '<button class="btn ghost sm" data-action="journal-export" style="flex:1">' + O.ico('share', 13) + ' کپی JSONL</button>' +

@@ -227,6 +227,9 @@ check(len(st.by_week) == 1, f"یک هفتهٔ ISO ({sorted(st.by_week)})")
 check(st.this_week_key == "2026-W39", f"هفتهٔ جاری از تاریخ now محاسبه شد ({st.this_week_key})")
 check(st.last_week_key == "2026-W38", f"هفتهٔ قبل در مرز تقویمی درست محاسبه شد ({st.last_week_key})")
 check(_score_bucket(10) == "۱۰–۱۱", "امتیاز ۱۰ در بازهٔ ۱۰–۱۱ قرار می‌گیرد")
+check(_score_bucket(5) == "۵" and _score_bucket(6) == "۶" and _score_bucket(7) == "۷",
+      "امتیازهای ۵/۶/۷ در سطل جداگانه می‌مانند (نه ادغام در ۷)")
+check(_score_bucket(4) == "≤۴", "امتیاز زیر آستانه سطل ≤۴ دارد")
 check("trend" in st.by_evidence and st.by_evidence["trend"].wins == 2,
       "همبستگی مدرک trend↔برد محاسبه شد")
 

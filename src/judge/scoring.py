@@ -273,10 +273,18 @@ def _breaking_news_for(news_snap, base: str, quote: str, min_score: int) -> list
     if news_snap is None or not news_snap.ok:
         return []
     out = []
+    gold_pair = base == "XAU" or quote == "XAU"
     for it in news_snap.items:
         if not it.breaking or it.score < min_score:
             continue
-        if base in it.direction or quote in it.direction or "XAU" in it.direction:
+        # خبر طلا فقط برای جفت‌طلا وتو است. پیش‌تر «XAU» در جهتِ هر خبر،
+        # سیگنال همهٔ جفت‌ارزها را وتو می‌کرد (باگ داور). خبری که XAU دارد
+        # حتی اگر USD هم داشته باشد، فقط به جفت‌طلا مربوط است.
+        if "XAU" in it.direction:
+            if gold_pair:
+                out.append(it)
+            continue
+        if base in it.direction or quote in it.direction:
             out.append(it)
     return out
 
