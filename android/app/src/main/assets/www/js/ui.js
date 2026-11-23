@@ -867,7 +867,7 @@
     html += '<div class="card"><div class="section-title" style="margin-top:0">' + ct('refresh', 'تازه‌سازی و اعلان‌ها', 13) + '</div>' +
       '<div class="set-row"><div><div class="set-label">تازه‌سازی خودکار تحلیل</div></div>' + switchHtml('auto_refresh_enabled', set.auto_refresh_enabled !== false) + '</div>' +
       '<div class="set-row"><div><div class="set-label">فاصلهٔ تازه‌سازی</div></div>' +
-      '<span class="stepper"><button data-step="auto_refresh_min:-1">−</button><span class="val">' + O.faNum(set.auto_refresh_min || 15) + ' دقیقه</span><button data-step="auto_refresh_min:1">+</button></span></div>' +
+      '<span class="stepper"><button data-step="auto_refresh_min:-1">−</button><span class="val">' + O.faNum(set.auto_refresh_min || 30) + ' دقیقه</span><button data-step="auto_refresh_min:1">+</button></span></div>' +
       '<div class="set-row"><div><div class="set-label">اعلان سیگنال جدید و خبر فوری ' + O.ico('bell', 12) + '</div></div>' + switchHtml('notify_enabled', set.notify_enabled !== false) + '</div>' +
       '<div class="set-row"><div><div class="set-label">انیمیشن‌ها ' + O.ico('wave', 12) + '</div></div>' + switchHtml('animations_enabled', set.animations_enabled !== false) + '</div>' +
       '</div>';
