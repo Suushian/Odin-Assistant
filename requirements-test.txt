@@ -1,0 +1,7 @@
+# وابستگی‌های تست CI — نسخه‌های آزموده‌شده در بازبینی ۲۰۲۶-۱۱-۲۳.
+# این فایل عمداً PySide6/tradingview-ta ندارد (تست‌ها lazy import می‌کنند).
+pandas==3.1.1
+numpy==2.4.6
+PyYAML==6.0.4
+requests==2.34.2
+feedparser==6.0.14

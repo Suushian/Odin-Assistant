@@ -6,9 +6,12 @@
 <meta name="theme-color" content="#E7E7EC">
 <!-- باز نگه‌داشتن هر ارتباط خروجی از صفحه: اپ فقط فایل‌های محلی خودش را
      می‌خواند (file://) و هیچ اسکریپت/فریم/بیرونی لازم ندارد. این CSP یک
-     لایهٔ دفاعی است، نه جایگزینِ اسکریپت‌های اعلامی. -->
+     لایهٔ دفاعی است، نه جایگزینِ اسکریپت‌های اعلامی.
+     style-src عمداً 'unsafe-inline' دارد: ۱۲۷ style attribute در رشته‌های
+     innerHTML استفاده می‌شود؛ حذف آن چیدمان را می‌شکند. script-src همچنان
+     بدون unsafe-inline/unsafe-eval است. -->
 <meta http-equiv="Content-Security-Policy"
-      content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; form-action 'none'; base-uri 'none'; frame-ancestors 'none'">
+      content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; form-action 'none'; base-uri 'none'; frame-ancestors 'none'">
 <title>ODIN ASSISTANT</title>
 <link rel="stylesheet" href="style.css">
 </head>

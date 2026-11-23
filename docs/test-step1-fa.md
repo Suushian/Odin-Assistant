@@ -20,14 +20,14 @@
 ## قدم ۱ — دانلود پروژه
 
 **راه ساده (بدون Git):**
-1. برو به `https://github.com/KhodeSushianm/Trading-Bot`
+1. برو به `https://github.com/Suushian/Odin-Assistant`
 2. دکمه سبز **Code** ← **Download ZIP**
-3. فایل ZIP را در یک مسیر ساده Extract کن، مثلاً: `C:\Trading-Bot`
+3. فایل ZIP را در یک مسیر ساده Extract کن، مثلاً: `C:\Odin-Assistant`
    > ⚠️ مسیر پوشه فارسی یا خیلی عمیق نباشد (مثلاً داخل Desktop مشکلی ندارد)
 
 **راه حرفه‌ای (با Git):** اگر Git نصب داری:
 ```
-git clone https://github.com/KhodeSushianm/Trading-Bot.git
+git clone https://github.com/Suushian/Odin-Assistant.git
 ```
 
 ---
@@ -37,7 +37,7 @@ git clone https://github.com/KhodeSushianm/Trading-Bot.git
 در cmd (یا PowerShell) برو داخل پوشه پروژه و کتابخانه‌ها را نصب کن:
 
 ```
-cd C:\Trading-Bot
+cd C:\Odin-Assistant
 pip install -r requirements.txt
 ```
 

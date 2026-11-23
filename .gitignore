@@ -39,13 +39,14 @@ android/.gradle/
 android/keystore/
 android/keystore.properties
 android/local.properties
-tests/js/fixtures.json
 # دادهٔ اجرای اپ/تست‌ها وقتی data_dir به پوشهٔ اجرا می‌افتد (legacy/portable)
 /alerts.json
 /chart_*.json
 /license.dat
 /trial.dat
 /signals.jsonl
+/sent_signals.json
+/cache/
 /config.local.yaml
 /state.last.json
 shots-v20/

@@ -51,9 +51,12 @@ import java.util.concurrent.TimeUnit;
  */
 public class Bridge {
 
+    // نسخه از BuildConfig (همان APP_VERSION) می‌آید تا UA و UI واگرا نشوند.
     private static final String UA =
-            "Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) "
-                    + "Chrome/126.0.0.0 Mobile Safari/537.36 ODINAssistant/1.0.1";
+            "Mozilla/5.0 (Linux; Android " + Build.VERSION.RELEASE
+                    + ") AppleWebKit/537.36 (KHTML, like Gecko) "
+                    + "Chrome/126.0.0.0 Mobile Safari/537.36 ODINAssistant/"
+                    + BuildConfig.VERSION_NAME;
 
     private final Context ctx;          // همیشه غیرnull (application context ترجیحاً)
     private final Activity act;         // در حالت سرویس null است
@@ -68,6 +71,7 @@ public class Bridge {
         HTTP_POOL.allowCoreThreadTimeOut(true);
     }
     private final SharedPreferences prefs;
+    private static final Object PREF_APPEND_LOCK = new Object();
     private final SharedPreferences secretPrefs;
 
     // A process-wide gate is required because the foreground Activity and the
@@ -122,15 +126,13 @@ public class Bridge {
                         throw new IllegalArgumentException("Request body too large");
                     }
 
-                    // Enforce pacing across both foreground/background WebViews, not just
-                    // within each JavaScript runtime. Failed network attempts count too.
-                    paceTwelveData(current);
-
                     final String originalHost = current.getHost().toLowerCase(java.util.Locale.ROOT);
                     final String originalProtocol = current.getProtocol().toLowerCase(java.util.Locale.ROOT);
                     boolean completed = false;
                     for (int redirects = 0; redirects <= 5; redirects++) {
                         validateHttpUrl(current);
+                        // Pace every attempt (including redirect hops) across both WebViews.
+                        paceTwelveData(current);
                         c = (HttpURLConnection) current.openConnection();
                         c.setInstanceFollowRedirects(false);
                         c.setRequestMethod(m);
@@ -249,12 +251,28 @@ public class Bridge {
 
     @JavascriptInterface
     public void setPref(String key, String val) {
-        prefs.edit().putString(key, val == null ? "" : val).apply();
+        // commit داخل همان قفلِ appendPref: ترتیب trim+append ژورنال حفظ شود.
+        synchronized (PREF_APPEND_LOCK) {
+            prefs.edit().putString(key, val == null ? "" : val).commit();
+        }
+    }
+
+    /** افزودن اتمیک به یک کلید متنی (ژورنال JSONL) — دو WebView هم‌زمان داده گم نکنند. */
+    @JavascriptInterface
+    public void appendPref(String key, String val) {
+        if (key == null || key.isEmpty()) return;
+        synchronized (PREF_APPEND_LOCK) {
+            String old = prefs.getString(key, "");
+            // commit داخل قفل: نوشتنِ بعدی بلافاصله مقدار جدید را می‌بیند.
+            prefs.edit().putString(key, old + (val == null ? "" : val)).commit();
+        }
     }
 
     @JavascriptInterface
     public void removePref(String key) {
-        prefs.edit().remove(key).apply();
+        synchronized (PREF_APPEND_LOCK) {
+            prefs.edit().remove(key).commit();
+        }
     }
 
     // API credentials live in a separate preferences file so Android backup
@@ -280,10 +298,8 @@ public class Bridge {
         try {
             return ctx.getPackageManager().getPackageInfo(ctx.getPackageName(), 0).versionName;
         } catch (Exception e) {
-            // نسخهٔ پشتیبان فقط وقتی پرس‌وجوی PackageManager خطا دهد؛ باید با
-            // APP_VERSION در src/app_paths.py (منبع حقیقت) یکی باشد تا UA و
-            // UI نسخهٔ اشتباه نشان ندهند.
-            return "1.0.1";
+            // نسخهٔ پشتیبان از BuildConfig (مشتق از APP_VERSION).
+            return BuildConfig.VERSION_NAME;
         }
     }
 
@@ -350,13 +366,14 @@ public class Bridge {
     // ── اعلان اندروید (سیگنال جدید / خبر فوری) ────────────────────
     /** اگر اعلان‌ها خاموش باشند (تنظیمات سیستم یا مجوز رد شده) بی‌صدا رد می‌شود. */
     @JavascriptInterface
-    public void notify(final String title, final String body) {
-        ui.post(new Runnable() {
-            @Override
-            public void run() {
-                Notif.signal(ctx, title, body);
-            }
-        });
+    public boolean notify(final String title, final String body) {
+        // مستقیم (نه ui.post) تا نتیجهٔ واقعیِ ثبت اعلان به JS برگردد؛
+        // NotificationManager از هر threadی قابل فراخوانی است.
+        try {
+            return Notif.signal(ctx, title, body);
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     @JavascriptInterface
@@ -535,15 +552,27 @@ public class Bridge {
     }
 
     /** «ok» یا «permission» یا شرح خطا برمی‌گرداند (JS ترجمه می‌کند). */
+    private static String mimeForName(String name) {
+        String n = name == null ? "" : name.toLowerCase(java.util.Locale.US);
+        if (n.endsWith(".jsonl") || n.endsWith(".json")) return "application/json";
+        if (n.endsWith(".csv")) return "text/csv";
+        if (n.endsWith(".txt")) return "text/plain";
+        if (n.endsWith(".png")) return "image/png";
+        if (n.endsWith(".jpg") || n.endsWith(".jpeg")) return "image/jpeg";
+        if (n.endsWith(".pdf")) return "application/pdf";
+        return "application/octet-stream";
+    }
+
     @JavascriptInterface
     public String saveDownload(String name, String content) {
         try {
             name = sanitizeFileName(name, "odin-journal.jsonl");
+            if (content == null) return "empty";
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 // API 29+: MediaStore — بدون هیچ مجوزی
                 ContentValues cv = new ContentValues();
                 cv.put(MediaStore.Downloads.DISPLAY_NAME, name);
-                cv.put(MediaStore.Downloads.MIME_TYPE, "application/json");
+                cv.put(MediaStore.Downloads.MIME_TYPE, mimeForName(name));
                 cv.put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS);
                 cv.put(MediaStore.Downloads.IS_PENDING, 1);
                 Uri uri = ctx.getContentResolver()
@@ -607,13 +636,20 @@ public class Bridge {
                 cv.put(MediaStore.Images.Media.MIME_TYPE, "image/png");
                 cv.put(MediaStore.Images.Media.RELATIVE_PATH,
                         Environment.DIRECTORY_PICTURES + "/ODIN");
+                cv.put(MediaStore.Images.Media.IS_PENDING, 1);
                 Uri uri = ctx.getContentResolver()
                         .insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, cv);
                 if (uri == null) return "insert-failed";
                 OutputStream os = ctx.getContentResolver().openOutputStream(uri);
-                if (os == null) return "open-failed";
+                if (os == null) {
+                    ctx.getContentResolver().delete(uri, null, null);
+                    return "open-failed";
+                }
                 os.write(png);
                 os.close();
+                cv.clear();
+                cv.put(MediaStore.Images.Media.IS_PENDING, 0);
+                ctx.getContentResolver().update(uri, cv, null, null);
                 return "ok";
             }
             if (act == null) return "permission";

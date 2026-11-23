@@ -13,7 +13,7 @@
 ## 🔀 وضعیت پروژه را اول بخوانید
 
 از **v0.22.0** توسعهٔ نسخهٔ ویندوز **منجمد** شده و تمرکز فقط روی اندروید است.
-آخرین نسخهٔ ویندوز [`v0.21.0`](https://github.com/KhodeSushianm/Trading-Bot/releases/tag/v0.21.0) است.
+آخرین نسخهٔ ویندوز [`v0.21.0`](https://github.com/Suushian/Odin-Assistant/releases/tag/v0.21.0) است.
 اسناد ویندوزی زیر با برچسب 🖥️ **منجمد** علامت خورده‌اند: محتوا درست است ولی
 به‌روز نمی‌شود. جزئیات و دلیل اینکه چرا موتور پایتون با این حال حذف نشد:
 [گزارش پروژه، بخش ۰](project-report-fa.md).
@@ -30,7 +30,7 @@
 | [`plugin-architecture-fa.md`](plugin-architecture-fa.md) | 🏗️ سند مادرِ معماری پلاگین: طراحی Contract-Based، فازهای مهاجرت (۱–۸ با کامیت و نتیجه)، تضمین‌های حفظ رفتار، راهنمای افزودن قابلیت | توسعه‌دهندهٔ معماری |
 | [`android-fa.md`](android-fa.md) | 📱 راهنمای نسخهٔ اندروید: نصب، ثبت‌نام و API Key شخصی Twelve Data، تنظیمات منبع بازار، فعال‌سازی لایسنس، ساخت APK از سورس، معماری WebView و تست‌های برابری | کاربر و توسعه‌دهندهٔ اندروید |
 | [`project-report-fa.md`](project-report-fa.md) | 📊 گزارش وضعیت پروژه (snapshot جاری با تاریخ بازبینی درج‌شده در سند)؛ گزارش تاریخی v0.24.0 جداگانه در پوشهٔ archive نگهداری می‌شود | تصمیم‌گیری و بررسی سلامت پروژه |
-| [`../LICENSE_GUIDE.md`](../LICENSE_GUIDE.md) | 🔑 سیستم لایسنس: طرح `HMAC-SHA256(SECRET, device_code)`، تولید کلید سمت سازنده، تریال ۷ روزه، **محدودیت‌های ذاتیِ لایسنس آفلاین (صادقانه)** | سازنده / فعال‌سازی |
+| [`../LICENSE_GUIDE.md`](../LICENSE_GUIDE.md) | 🔑 سیستم لایسنس: طرح `Ed25519 + Base32` (کلید عمومی در اپ)، تولید کلید سمت سازنده، تریال ۷ روزه، **محدودیت‌های ذاتیِ لایسنس آفلاین (صادقانه)** | سازنده / فعال‌سازی |
 
 ## 🧠 طراحی و منطق
 
@@ -45,7 +45,7 @@
 ## 🖥️ اسناد نسخهٔ ویندوز (منجمد در v0.21.0)
 
 > محتوا درست است ولی به‌روز نمی‌شود. برای نصب نسخهٔ ویندوز به
-> [ریلیز v0.21.0](https://github.com/KhodeSushianm/Trading-Bot/releases/tag/v0.21.0) بروید.
+> [ریلیز v0.21.0](https://github.com/Suushian/Odin-Assistant/releases/tag/v0.21.0) بروید.
 
 | سند | محتوا |
 |---|---|
@@ -62,10 +62,10 @@
 
 | فرمان | چه می‌سنجد |
 |---|---|
-| `node tests/js/run_parity.js` | ۲۴ تست برابری موتور JS اندروید با پایتون (دادهٔ زندهٔ بازار) |
 | `node tests/js/smoke_onboarding.js` | ۷۶ بررسی: **نگهبانِ maxlength کلید لایسنس** (سرتاسری: تولید کلید → برش → اعتبارسنجی) + زنجیرهٔ خوش‌آمدگویی + متن‌های ایمنی |
-| `node tests/js/smoke_theme_parity.js` | ۲۱۱ بررسی پاریتی تم، اجزا، نسخه |
-| `node tests/js/smoke_layout.js` | ۴۲ بررسی چیدمان: بودجهٔ عرض هدر، کنتراست، CSS مرده، بودجهٔ متن راهنما |
+| `node tests/js/test_judge_switch.js` / `test_cycle_switch.js` | پاریتی رفتاری موتور JS با گلدن‌های پایتون (داور/چرخه) |
+| `node tests/js/smoke_theme_parity.js` | ۲۱۵ بررسی پاریتی تم، اجزا، نسخه |
+| `node tests/js/smoke_layout.js` | ۴۶ بررسی چیدمان: بودجهٔ عرض هدر، کنتراست، CSS مرده، بودجهٔ متن راهنما |
 | `node tests/js/smoke_icons.js` | ۱۸ رندر از ۸ صفحه — صفر ایموجی + markup اجزای Aurora |
 | `node tests/js/smoke_license.js` | لایسنس: Ed25519 در برابر node:crypto + بُرِدهای مشترک پایتون↔JS، انقضا، قفل دستگاه، تریال، ضدتغییرساعت |
 | `node tests/js/smoke_{alerts,chart,share,about}.js` | هشدار قیمت · نمودار کندل · کارت اشتراک · دربارهٔ ما |
@@ -83,7 +83,6 @@
 |---|---|
 | `installer/release_notes.py` | استخراج یادداشت Release از `CHANGELOG.md` — **هر دو** ورک‌فلو از آن استفاده می‌کنند |
 | `installer/stamp_version.py` | 🖥️ ساخت `version_info.txt` (VERSIONINFO ویندوز) — منجمد |
-| `tests/js/gen_fixtures.py` | ضبط دادهٔ زندهٔ بازار و تولید `fixtures.json` برای `run_parity.js` |
 | `tools/make_project_report.py` | تولید گزارش وضعیت پروژه به HTML خودبسنده، از دادهٔ **اندازه‌گیری‌شده** |
 | `android/make-keystore.sh` | ساخت کلید امضا (یک‌بار اجرا می‌شود) |
 | `assets/make_icon.py` | 🖥️ ساخت آیکون‌ها — منجمد |

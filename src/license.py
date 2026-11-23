@@ -500,7 +500,13 @@ def trial_status(now: datetime | None = None) -> dict:
 #  دروازهٔ اجرا
 # ══════════════════════════════════════════════════════════════
 def license_bypassed() -> bool:
-    """حالت توسعه/تست: ODIN_SKIP_LICENSE=1 یا Qt offscreen."""
+    """حالت توسعه/تست: ODIN_SKIP_LICENSE=1 یا Qt offscreen.
+
+    فقط در اجرای سورس (غیر frozen) مجاز است؛ EXE نهایی با این متغیرها
+    نمی‌تواند دروازه را دور بزند.
+    """
+    if getattr(sys, "frozen", False):
+        return False
     if os.environ.get("ODIN_SKIP_LICENSE") == "1":
         return True
     return os.environ.get("QT_QPA_PLATFORM", "").lower() == "offscreen"

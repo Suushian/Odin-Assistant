@@ -2,7 +2,7 @@
 """ساخت/به‌روزرسانی installer/version_info.txt (منبع VERSIONINFO ویندوز برای PyInstaller).
 
 استفاده:
-    python installer/stamp_version.py 1.0.1
+    python installer/stamp_version.py 1.0.2
     python installer/stamp_version.py v1.0.2        (پیشوند v حذف می‌شود)
     python installer/stamp_version.py               (از APP_VERSION در src/app_paths.py)
 

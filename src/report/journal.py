@@ -86,10 +86,10 @@ def render_stats(stats: Stats, open_entries: list[Entry] | None = None,
             fa_dir = "خرید 🟢" if k == "BUY" else "فروش 🔴"
             lines.append(f"   {fa_dir:<8} {_bucket_line(b)}")
 
-    # تفکیک امتیاز — پاسخ به «آیا آستانهٔ ۷ درست است؟»
+    # تفکیک امتیاز — پاسخ به «آیا آستانهٔ ۵ درست است؟»
     if stats.by_score:
         lines.append("─── به تفکیک امتیاز پشتوانه ───")
-        for k in ("۷", "۸", "۹", "۱۰–۱۱"):
+        for k in ("۵", "۶", "۷", "۸", "۹", "۱۰–۱۱", "≤۴"):
             if k in stats.by_score:
                 lines.append(f"   امتیاز {k:<6} {_bucket_line(stats.by_score[k])}")
         lines.append("   ↳ اگر بازهٔ بالاتر نرخ برد بهتری ندارد، آستانه/وزن‌ها بازنگری می‌خواهند.")

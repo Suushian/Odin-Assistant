@@ -132,7 +132,16 @@
   // همه با گارد: در مرورگر/تست بدون ODINNative بی‌صدا رد می‌شوند.
   O.native = {
     notify: function (title, body) {
-      try { if (typeof ODINNative !== 'undefined' && ODINNative.notify) ODINNative.notify(title, body); } catch (e) { }
+      try {
+        if (typeof ODINNative !== 'undefined' && ODINNative.notify) return !!ODINNative.notify(title, body);
+      } catch (e) { }
+      return false;
+    },
+    notificationsEnabled: function () {
+      try {
+        if (typeof ODINNative !== 'undefined' && ODINNative.notificationsEnabled) return !!ODINNative.notificationsEnabled();
+      } catch (e) { }
+      return false;
     },
     share: function (subject, text) {
       try {
@@ -437,8 +446,11 @@
         // journal عمداً binding ندارد) — fallback مستقیم فقط برای FAILED/override
         var jn = caps.journal || O;
         var dec = jn.shouldSendSignal(sentState, sig, S.cfg.judge, nowMs);
+        // sent یعنی «اعلان واقعاً قابل نمایش بود»، نه «تکراری نبود» (پاریتی با پایتون).
+        var delivered = !!(dec.go && S.settings.notify_enabled !== false
+          && O.native.notificationsEnabled());
         if (S.cfg.journal.enabled !== false) {
-          try { S.journal.appendRec(jn.signalToJournal(sig, dec.go)); } catch (e) { }
+          try { S.journal.appendRec(jn.signalToJournal(sig, delivered)); } catch (e) { }
         }
         if (dec.go) {
           newSignals.push(sig);
@@ -447,7 +459,7 @@
         } else {
           log('[i] سیگنال ' + sig.symbol + ' تکراری است — ' + dec.why);
         }
-        O.BUS.emit(O.core.EVENTS.SIGNAL_SENT, { symbol: sig.symbol, sent: !!dec.go });
+        O.BUS.emit(O.core.EVENTS.SIGNAL_SENT, { symbol: sig.symbol, sent: delivered });
         sig._dup = !dec.go;
         sig._dupWhy = dec.why;
       });
@@ -682,8 +694,8 @@
       var nextMin = Math.max(30, Math.min(240, S.settings.auto_refresh_min || 30));
 
       if (S.settings.background_enabled === false) {   // از UI خاموش شده
-        O.native.notifyOngoing('رصد بازار — متوقف', 'رصد پس‌زمینه در تنظیمات خاموش است');
-        O.native.bgCycleDone(30);
+        // سرویس باید واقعاً بسته شود، نه هر ۳۰ دقیقه بیدار بماند.
+        O.native.stopBackground();
         return;
       }
       var stt = O.makeCaps(S.cfg).session.marketStatus(new Date());   // فاز ۶: از پلاگین سشن
@@ -839,14 +851,20 @@
       if (act === 'copy-device-code') { copyDeviceCode(); return; }
       if (act === 'deactivate-license') {
         O.modal(O.ico('seal', 17, 'c-red') + ' غیرفعال‌سازی؟',
-          'لایسنس از این دستگاه حذف می‌شود و تحلیل/رصد متوقف می‌شود. برای فعال‌سازی دوباره به کلید لایسنس همین دستگاه نیاز داری.', [
+          'لایسنس از این دستگاه حذف می‌شود. اگر دورهٔ آزمایشی هنوز فعال باشد، برنامه تا پایان آن کار می‌کند؛ وگرنه تحلیل/رصد همان لحظه متوقف می‌شود.', [
           {
             label: 'غیرفعال کن', cls: 'red', fn: function () {
               O.licDeactivate(S.storage);
               S.licensed = false;
+              S.licenseInfo = null;
+              // اگر تریال هنوز فعال است، دسترسی تا پایان آن می‌ماند؛ وگرنه
+              // همان لحظه قطع می‌شود (نه ۳۰ ثانیه بعد با تیک خودکار).
+              S.trial = O.trialStatus(S.storage);
+              S.accessOK = !!(S.trial && S.trial.active);
               O.native.stopBackground();
               O.navigate('settings');
-              O.toast('برنامه غیرفعال شد');
+              O.renderHeaderStatus();
+              O.toast(S.accessOK ? 'لایسنس حذف شد — تریال فعال است' : 'برنامه غیرفعال شد');
             }
           },
           { label: 'بی‌خیال', cls: 'ghost' }
@@ -866,6 +884,9 @@
           {
             label: 'بازنشانی', cls: 'red', fn: function () {
               S.settings = JSON.parse(JSON.stringify(DEFAULT_SETTINGS)); saveSettings();
+              // وضعیت سرویس باید با مقدار پیش‌فرض جدید هم‌گام شود.
+              if (S.settings.background_enabled) O.native.startBackground();
+              else O.native.stopBackground();
               O.navigate('settings'); O.toast('تنظیمات بازنشانی شد');
             }
           },

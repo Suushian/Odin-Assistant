@@ -86,13 +86,12 @@ class Stats:
 
 
 def _score_bucket(score: int) -> str:
+    """سطل‌های واقعیِ آستانهٔ ۵ — نه ادغام ۵/۶ در «۷» (باگ قدیمی گزارش)."""
     if score >= 10:
         return "۱۰–۱۱"
-    if score >= 9:
-        return "۹"
-    if score >= 8:
-        return "۸"
-    return "۷"
+    if score >= 5:
+        return "۰۱۲۳۴۵۶۷۸۹"[score] if score <= 9 else str(score)
+    return "≤۴"
 
 
 def compute_stats(entries: list[Entry], now: datetime) -> Stats:

@@ -98,8 +98,10 @@ jobs:
     if: needs.android_guard.outputs.build == 'true'
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - name: Checkout code (tags needed for versionCode monotonic guard)
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -134,15 +136,18 @@ jobs:
           node tests/js/smoke_share.js
           node tests/js/smoke_theme_parity.js
           node tests/js/smoke_layout.js
+          node tests/js/smoke_ui_polish.js
           node tests/js/smoke_onboarding.js
           node tests/js/smoke_core.js
           node tests/js/smoke_plugins.js
+          node tests/js/smoke_service.js
           node tests/js/test_external_url.js
           node tests/js/test_news_render_xss.js
           node tests/js/test_source_freshness.js
           node tests/js/test_market_data_quality.js
           node tests/js/test_twelvedata.js
           node tests/js/test_news_dedupe_order.js
+          node tests/js/test_pipeline_events.js
           node tests/js/test_cycle_switch.js
           node tests/js/test_judge_switch.js
 
@@ -166,8 +171,27 @@ jobs:
               print(f"::error::APP_VERSION={v} در schema versionCode جا نمی‌شود"); sys.exit(1)
           code = int(nums[0]) * 10000 + int(nums[1]) * 100 + int(nums[2])
           print(f"✓ versionName={v}  versionCode={code}")
-          if code <= 1900:
-              print(f"::error::versionCode={code} از نسخهٔ منتشرشدهٔ قبلی (1900 = v0.19.0) بزرگ‌تر نیست؛ اندروید آپدیت را نصب نمی‌کند"); sys.exit(1)
+          # monotonic نسبت به آخرین تگِ منتشرشده (به‌جز خودِ همین نسخه)
+          import subprocess
+          baseline = 1900
+          try:
+              tags = subprocess.check_output(
+                  ["git", "tag", "--sort=-v:refname"], text=True).splitlines()
+              for tag in tags:
+                  tm = re.fullmatch(r"v?(\d+)\.(\d+)\.(\d+)", tag.strip())
+                  if not tm:
+                      continue
+                  tv = ".".join(tm.groups())
+                  if tv == v:
+                      continue
+                  baseline = max(baseline, int(tm.group(1)) * 10000
+                                 + int(tm.group(2)) * 100 + int(tm.group(3)))
+                  break
+          except Exception as e:
+              print(f"::warning::خواندن تگ‌ها ممکن نشد ({e}) — baseline={baseline}")
+          if code <= baseline:
+              print(f"::error::versionCode={code} از آخرین نسخهٔ منتشرشده ({baseline}) بزرگ‌تر نیست؛ اندروید آپدیت را نصب نمی‌کند"); sys.exit(1)
+          print(f"✓ versionCode={code} > baseline={baseline}")
           PY
 
       - name: Prepare release keystore from Secrets (if present)

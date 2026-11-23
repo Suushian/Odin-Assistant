@@ -387,9 +387,19 @@ function testCumulativeVetoThreshold() {
     'وتوی DATA مستقل از شمارندهٔ وتوهای عادی باقی می‌ماند');
 }
 
+
+function testBreakingNewsIsScopedToGoldPairs() {
+  const snap = gen.breakingNews();
+  snap.items[0].direction = { XAU: 1, USD: -1 };
+  A(O.breakingNewsFor(snap, 'EUR', 'USD', 5).length === 0,
+    'خبر فوری طلا نباید EURUSD را وتو کند');
+  A(O.breakingNewsFor(snap, 'XAU', 'USD', 5).length === 1,
+    'خبر فوری طلا باید XAUUSD را وتو کند');
+}
+
 // ══════════════════════════════════════════════════════════════
 function main() {
-  const tests = [testGoldenBattery, testVetoPins, testFivePointSignalThreshold, testCumulativeVetoThreshold, testEvidencePins,
+  const tests = [testGoldenBattery, testVetoPins, testBreakingNewsIsScopedToGoldPairs, testFivePointSignalThreshold, testCumulativeVetoThreshold, testEvidencePins,
     testJudgePathPins, testRegistryRulesWhenPresent];
   const fails = [];
   tests.forEach((t) => {

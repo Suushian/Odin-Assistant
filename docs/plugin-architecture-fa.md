@@ -4,6 +4,7 @@
 > **نسخهٔ پایهٔ سند:** v0.24.0 — کامیت `07b17d4`
 > **اصل حاکم:** Behavior Preservation + Incremental Refactoring
 > **مخاطب:** توسعه‌دهنده (انسان) و هوش مصنوعی — همراه با `ODIN-AI-Context-Pack-fa.md`
+> **به‌روزرسانی ۱٫۰٫۲:** `tests/js/run_parity.js` و `gen_fixtures.py` (پاریتی زندهٔ Yahoo) حذف شدند؛ پوشش پاریتی از گلدن‌های `test_judge_switch`/`test_cycle_switch` و تست‌های آفلاین می‌آید. ارجاع‌های تاریخی این سند به آن دو فایل، سابقهٔ فازها را ثبت می‌کنند.
 
 ---
 

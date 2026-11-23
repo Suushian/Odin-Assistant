@@ -73,7 +73,7 @@ android/app/src/main/assets/www/
   js/judge.js    داور JS: O.veto*/O.ev*/VETO_RULES/EVIDENCE_RULES + تزریق
                  اختیاری قواعد در judgeSymbol/judgeAll
 tests/           ۶ سوئیت واحد/طلایی پایتون + golden/ + manual/(۱۶) +
-                 js/(۱۱ اسموک + run_parity + ۲ میخ رفتاری + golden/)
+                 js/(اسموک‌ها + میخ‌های رفتاری + golden/)
 installer/       release_notes.py (یادداشت ریلیز از CHANGELOG) +
                  stamp_version.py (version_info.txt ← APP_VERSION)
 docs/            این بسته + plugin-architecture-fa.md (سند مادر مهاجرت) +
@@ -117,15 +117,15 @@ docs/            این بسته + plugin-architecture-fa.md (سند مادر م
 | `js/golden/cycle_core_golden.json` + `test_cycle_switch.js` | ۸ سناریوی چرخهٔ سرویس JS (لاگ/اعلان/storage بایت‌به‌بایت) | ❌ میخ |
 | `js/test_pipeline_events.js` | واحدِ createPipelineAsync + توالی ۳۱/۷/۲۸ رویداد چرخه (آینهٔ test_pipeline_switch پایتون) | ❌ میخ |
 | `js/golden/judge_rules_js_golden.json` + `test_judge_switch.js` | سناریوهای داور JS | ❌ میخ |
-| `js/run_parity.js`(زنده) | موتور JS == اوراکل پایتون روی دادهٔ زنده (judge live/sim) | ❌ اوراکل — فقط افزودنی |
-| `js/smoke_*` (۱۶) | UI/لایسنس/تم(۲۱۱)/چیدمان/آیکون/هشدار/نمودار/اشتراک/خوش‌آمد/پلاگین‌ها/سرویس | ساختاری‌ها با مستندسازی |
+| ~~`js/run_parity.js`~~ | در ۱٫۰٫۲ حذف شد (fixture/منبع Yahoo منسوخ)؛ پاریتی با گلدن‌های `test_judge_switch`/`test_cycle_switch` | — |
+| `js/smoke_*` (۱۵) | UI/لایسنس/تم(۲۱۵)/چیدمان/آیکون/هشدار/نمودار/اشتراک/خوش‌آمد/پلاگین‌ها/سرویس | ساختاری‌ها با مستندسازی |
 | `js/smoke_service.js` (زنده) | رصد پس‌زمینهٔ end-to-end | ❌ |
 | `main.py --selftest` · `tests/check_config.py` · `tests/manual/*`(۱۶ سوئیت؛ ۸ تای Qt) | خودآزمایی/کانفیگ/سناریوهای دستی | موردی |
 
 اجرای کامل محلی (ترتیب پیشنهادی):
 `python main.py --selftest && python tests/check_config.py && for t in tests/test_*.py; do python $t; done`
 سپس `for s in tests/js/smoke_*.js tests/js/test_*.js; do node $s; done`
-و در آخر زنده‌ها: `python tests/js/gen_fixtures.py && node tests/js/run_parity.js && node tests/js/smoke_service.js`
+و در آخر: `node tests/js/smoke_service.js`
 
 ## ۶) جریان نسخه و ریلیز
 

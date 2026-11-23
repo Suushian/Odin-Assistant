@@ -22,8 +22,31 @@
     return (this.storage.get(this.KEY) || '');
   };
 
+  // سقف نرم: ژورنال در SharedPreferences نگه داشته می‌شود؛ رشد بی‌نهایت
+  // خواندن/نوشتن و بکاپ را کند می‌کند. با عبور از سقف، قدیمی‌ترین رکوردها
+  // حذف می‌شوند (رکوردهای اخیر و نتایجشان حفظ می‌شوند).
+  O.Journal.MAX_BYTES = 2 * 1024 * 1024;
+  O.Journal.MAX_LINES = 4000;
+
   O.Journal.prototype.appendRec = function (rec) {
-    this.storage.set(this.KEY, this.raw() + JSON.stringify(rec) + '\n');
+    var line = JSON.stringify(rec) + '\n';
+    var raw = this.raw();
+    if (raw.length + line.length > O.Journal.MAX_BYTES) {
+      var lines = raw.split('\n');
+      var keep = lines.slice(Math.max(0, lines.length - O.Journal.MAX_LINES));
+      // حتی اگر تعداد خطوط کم باشد، حجم باید زیر سقف بماند (خط طولانی).
+      var budget = Math.floor(O.Journal.MAX_BYTES / 2);
+      var tail = [];
+      for (var i = keep.length - 1; i >= 0 && budget > 0; i--) {
+        if (keep[i] === '') continue;
+        tail.unshift(keep[i]);
+        budget -= keep[i].length + 1;
+      }
+      raw = tail.length ? tail.join('\n') + '\n' : '';
+      this.storage.set(this.KEY, raw);
+    }
+    if (this.storage.append) this.storage.append(this.KEY, line);
+    else this.storage.set(this.KEY, raw + line);
   };
 
   O.Journal.prototype.load = function () {
@@ -219,9 +242,8 @@
 
   function scoreBucket(score) {
     if (score >= 10) return '۱۰–۱۱';
-    if (score >= 9) return '۹';
-    if (score >= 8) return '۸';
-    return '۷';
+    if (score >= 5) return '۰۱۲۳۴۵۶۷۸۹'.charAt(score);
+    return '≤۴';
   }
 
   O.computeStats = function (entries, nowMs) {

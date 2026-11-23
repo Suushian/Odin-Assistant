@@ -65,6 +65,12 @@ android {
         resourceConfigurations += ["fa"]
     }
 
+    // Bridge از BuildConfig.VERSION_NAME برای UA/getVersion استفاده می‌کند؛
+    // تولید صریح را روشن نگه می‌داریم (AGP 8 پیش‌فرض کتابخانه‌ها را خاموش کرده).
+    buildFeatures {
+        buildConfig true
+    }
+
     signingConfigs {
         release {
             if (keystorePropsFile.exists()) {

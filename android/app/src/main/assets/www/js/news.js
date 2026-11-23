@@ -427,9 +427,13 @@
   // خبرهای فوریِ مرتبط با یک جفت‌ارز (برای وتو)
   O.breakingNewsFor = function (snap, base, quote, minScore) {
     if (!snap || !snap.items) return [];
+    var goldPair = base === 'XAU' || quote === 'XAU';
     return snap.items.filter(function (it) {
       if (!it.breaking || it.score < minScore) return false;
-      return base in it.direction || quote in it.direction || 'XAU' in it.direction;
+      var d = it.direction || {};
+      // خبری که XAU دارد فقط به جفت‌طلا مربوط است، حتی اگر USD هم داشته باشد.
+      if ('XAU' in d) return goldPair;
+      return base in d || quote in d;
     });
   };
 })(typeof ODIN !== 'undefined' ? ODIN : (globalThis.ODIN = {}));
