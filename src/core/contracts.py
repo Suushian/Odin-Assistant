@@ -75,7 +75,8 @@ class TvConfirmationProvider(Protocol):
 class TechnicalAnalyzer(Protocol):
     """`odin.analysis.technical@1` — shape: analyze_symbol فعلی."""
 
-    def analyze_symbol(self, sym_cfg: dict, md: Any, acfg: dict) -> Any:
+    def analyze_symbol(self, sym_cfg: dict, md: Any, acfg: dict,
+                       scfg: Any = None) -> Any:
         """ورودی MarketData، خروجی SymbolAnalysis (verdict/trend/adx/rsi/...)."""
         ...
 

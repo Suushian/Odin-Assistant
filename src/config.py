@@ -94,6 +94,18 @@ def load_config(path: str | None = None) -> dict:
     cfg.setdefault("twelvedata", {})
     cfg.setdefault("tradingview", {"enabled": True, "timeframe": "4h"})
     cfg.setdefault("telegram", {"send_reports": True, "bot_token": "", "chat_id": ""})
+    # ── نسخهٔ ۱.۱: استراتژی‌های چندگانه ────────────────────────
+    # نبودِ کلید = روشن (رفتار پیش‌فرض محصول). پیکربندی قدیمی بدون این بخش
+    # هم هر سه استراتژی را می‌گیرد؛ برای خاموش‌کردن، مقدار false بگذارید.
+    st = cfg.setdefault("strategies", {})
+    if not isinstance(st, dict):
+        st = cfg["strategies"] = {}
+    for _key in ("trend_pullback", "range_reversion", "breakout"):
+        if _key not in st:
+            st[_key] = {"enabled": True}
+        elif isinstance(st[_key], bool):
+            st[_key] = {"enabled": st[_key]}
+
     cfg.setdefault("loop", {"interval_minutes": 15})
     cfg["loop"].setdefault("interval_minutes", 15)
 

@@ -150,6 +150,7 @@ jobs:
           node tests/js/test_pipeline_events.js
           node tests/js/test_cycle_switch.js
           node tests/js/test_judge_switch.js
+          node tests/js/test_strategies.js
 
       # نگهبان ارزان و هدفمند: versionName/versionCode از src/app_paths.py مشتق
       # می‌شوند، پس اگر آن فایل یا الگوی regex عوض شود APK بی‌صدا با نسخهٔ

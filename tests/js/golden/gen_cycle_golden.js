@@ -180,7 +180,21 @@ function createApp(opts) {
   // Test-only key lives in in-memory config, never in persisted settings or fixtures.
   O.CONFIG.twelvedata.api_key = 'golden-test-key';
   // The cycle golden fixture pins historical seven-symbol behavior; production symbol coverage is tested separately.
-  O.CONFIG.symbols = O.CONFIG.symbols.filter((s) => s.name !== 'NZDUSD');
+  O.CONFIG.symbols = O.CONFIG.symbols.filter(
+    (s) => !['NZDUSD', 'EURJPY', 'EURGBP'].includes(s.name));
+  // ── نسخهٔ ۱.۱: این fixture رفتار «تک‌استراتژی، بدون رده‌بندی، بدون قیف»
+  //    را پین می‌کند. رفتار جدید در tests/js/test_strategies.js پین می‌شود.
+  O.CONFIG.strategies = {
+    trend_pullback: { enabled: false },
+    range_reversion: { enabled: false },
+    breakout: { enabled: false }
+  };
+  O.CONFIG.judge.tiers = { enabled: false };
+  O.CONFIG.judge.funnel = { enabled: false, log: false, persist_daily: false };
+  O.CONFIG.judge.portfolio = {
+    max_open_positions: 0, enforce_capacity: false,
+    max_signals_per_day: 0, max_per_symbol_per_day: 0
+  };
 
   // ── پچ seamها (فقط لایهٔ شبکه؛ پارس/تحلیل/داور/ژورنال واقعی‌اند) ──
   O.fetchTwelveDataSymbol = function (symCfg) {

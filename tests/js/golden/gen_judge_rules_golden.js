@@ -51,7 +51,19 @@ function createVm() {
   for (const f of fileList()) {
     vm.runInContext(fs.readFileSync(path.join(WWW, f), 'utf8'), ctx, { filename: f });
   }
-  return ctx.ODIN;
+  const O = ctx.ODIN;
+  // نسخهٔ ۱.۱: این باتری رفتار «تک‌استراتژی و بدون رده‌بندی» را پین می‌کند
+  // (LOW_SCORE برای امتیاز ۵). رده‌بندی/دیده‌بان در tests/js/test_strategies.js
+  // و در چرخهٔ واقعی (test_cycle_switch با config محصول) بررسی می‌شود.
+  try {
+    O.CONFIG.judge.tiers = { enabled: false };
+    O.CONFIG.strategies = {
+      trend_pullback: { enabled: false },
+      range_reversion: { enabled: false },
+      breakout: { enabled: false }
+    };
+  } catch (e) { /* قبل از سوییچ: CONFIG وجود ندارد */ }
+  return O;
 }
 
 // لحظه‌های ثابت (۲۰۲۶-۰۹-۲۳ چهارشنبه / ۲۰۲۶-۰۹-۱۹ شنبه)

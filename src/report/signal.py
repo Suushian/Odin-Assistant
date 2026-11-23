@@ -37,6 +37,15 @@ def stars(n: int) -> str:
     return "⭐" * max(0, min(5, int(n)))
 
 
+def tier_fa(tier: str) -> str:
+    """برچسب فارسی ردهٔ سیگنال (نسخهٔ ۱.۱)."""
+    return {
+        "A": "A — ریسک کامل (حداکثر ۱٪ سرمایه)",
+        "B": "B — نیمریسک (نصف حجم، نیازمند تایید)",
+        "C": "C — فقط دیده‌بان (معامله نکن)",
+    }.get(tier, tier)
+
+
 # ══════════════════════════════════════════════════════════════
 #  پیام یک سیگنال
 # ══════════════════════════════════════════════════════════════
@@ -56,6 +65,18 @@ def render_signal(s: Signal, include_footer: bool = True) -> str:
         "چرا این سیگنال صادر شد؟",
     ]
 
+    # ── رده و استراتژی (نسخهٔ ۱.۱) ────────────────────────────
+    # فقط وقتی هست چاپ می‌شود تا پیام‌های قدیمی/طلایی بایت‌به‌بایت بمانند.
+    tier = getattr(s, "tier", "")
+    strategy_fa = getattr(s, "strategy_fa", "")
+    if strategy_fa:
+        lines.insert(4, f"🏷️ ستاپ: {strategy_fa}")
+    if tier:
+        lines.insert(4, ("🏅 رده: " + tier_fa(tier)))
+        if tier == "B":
+            lines.append("")
+            lines.append("⚠️ ردهٔ B: نیمریسک — حجم را نصف کن و منتظر تایید بیشتر بمان.")
+
     # مدارک مثبت اول، بعد آن‌هایی که امتیاز نگرفتند (شفافیت کامل)
     for e in sorted(s.evidences, key=lambda x: (-x.points, x.key)):
         if e.points > 0:
@@ -72,6 +93,11 @@ def render_signal(s: Signal, include_footer: bool = True) -> str:
         lines.append("⚠️ هشدارها")
         for w in s.warnings:
             lines.append(f"   • {w}")
+
+    note = getattr(s, "capacity_note", "")
+    if note:
+        lines.append("")
+        lines.append(f"🚦 {note}")
 
     lines += [
         "",
@@ -107,6 +133,8 @@ def _reason_short(j: Judgment, min_score: int = 5) -> str:
         return "سیگنال صادر شد ✅"
     if j.reject_reason == "VETO":
         return "؛ ".join(v.title_fa for v in j.vetoes[:2])
+    if j.reject_reason == "WATCHLIST":
+        return j.reject_detail or "در دیده‌بان ماند (سیگنال معاملاتی نیست)"
     if j.reject_reason == "LOW_SCORE":
         # کمبود نسبت به **آستانه**، نه نسبت به حداکثر ممکن
         return (f"امتیاز ناکافی — {fa_num(max(0, min_score - j.score))} امتیاز تا "
@@ -132,10 +160,11 @@ def render_judge_summary(judgments: list[Judgment], min_score: int = 5,
     signals = [j for j in judgments if j.signal]
     if signals:
         lines.append(f"   🎯 {fa_num(len(signals))} سیگنال صادر شد:")
-        for j in sorted(signals, key=lambda x: -x.score):
+        for j in sorted(signals, key=lambda x: (0 if x.tier == "A" else 1, -x.score)):
             s = j.signal
+            badge = f"[{s.tier}] " if getattr(s, "tier", "") else ""
             lines.append(
-                f"   {DIR_EMOJI.get(s.direction, '⚪')} {j.symbol:<7} "
+                f"   {DIR_EMOJI.get(s.direction, '⚪')} {badge}{j.symbol:<7} "
                 f"{s.direction_fa.split()[0]:<5} {stars(s.stars)} "
                 f"{fa_num(j.score)}/{fa_num(j.max_score)} | ورود {fmt_price(s.entry, s.pip)}"
                 f" | حد ضرر {fmt_price(s.sl, s.pip)} | هدف {fmt_price(s.tp, s.pip)}")
@@ -153,7 +182,9 @@ def render_judge_summary(judgments: list[Judgment], min_score: int = 5,
                      if j.reject_reason in ("LOW_SCORE", "CAPPED")
                      else "—")
             lines.append(f"   • {j.symbol:<7} {score:>7}  {_reason_short(j, min_score)}")
-            if j.reject_reason in ("NO_SETUP",) and j.reject_detail:
+            if j.reject_reason == "WATCHLIST" and j.strategy_fa:
+                lines.append(f"       ↳ ستاپ «{j.strategy_fa}» در حال شکل‌گیری است")
+            elif j.reject_reason in ("NO_SETUP",) and j.reject_detail:
                 lines.append(f"       ↳ {j.reject_detail}")
             elif j.reject_reason == "LOW_SCORE":
                 got = [e.label_fa for e in j.evidences if e.points > 0]
@@ -170,5 +201,7 @@ def render_no_signals_note(judgments: list[Judgment]) -> str:
     vet = sum(1 for j in judgments if j.reject_reason == "VETO")
     low = sum(1 for j in judgments if j.reject_reason == "LOW_SCORE")
     nos = sum(1 for j in judgments if j.reject_reason == "NO_SETUP")
+    watch = sum(1 for j in judgments if j.reject_reason == "WATCHLIST")
+    extra = f"، {fa_num(watch)} دیده‌بان" if watch else ""
     return (f"⛔ سیگنالی صادر نشد — {fa_num(vet)} وتو، {fa_num(low)} امتیاز ناکافی، "
-            f"{fa_num(nos)} بدون ستاپ (از {fa_num(len(judgments))} نماد)")
+            f"{fa_num(nos)} بدون ستاپ{extra} (از {fa_num(len(judgments))} نماد)")

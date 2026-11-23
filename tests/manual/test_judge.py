@@ -33,6 +33,11 @@ SAT = datetime(2026, 9, 19, 12, 0, tzinfo=timezone.utc)           # شنبه —
 CFG = load_config()
 ACFG = CFG["analysis"]
 JCFG = CFG["judge"]
+# نسخهٔ ۱.۱: این باتری رفتار «تک‌استراتژی و بدون رده‌بندی» را پین می‌کند
+# (LOW_SCORE برای امتیاز ۴). رفتار رده‌بندی/دیده‌بان در tests/test_strategies.py
+# و وضعیت WATCHLIST با config واقعی در همان تست بررسی می‌شود.
+JCFG = dict(JCFG)
+JCFG["tiers"] = {"enabled": False}
 SYMS = CFG["symbols"]
 
 
@@ -336,14 +341,15 @@ print()
 print("=" * 78)
 print("۸) جلوگیری از اسپم: سیگنال تکراری در cooldown دوباره ارسال نمی‌شود")
 print("=" * 78)
-from src.engine import should_send_signal  # noqa: E402
+from src.engine import _signal_state_key, should_send_signal  # noqa: E402
 
 sig = j.signal
 state = {}
 go, why = should_send_signal(state, sig, JCFG, now=WED_OVERLAP)
 check(go, "بار اول → ارسال می‌شود")
 
-state[f"{sig.symbol}|{sig.direction}"] = {"ts": WED_OVERLAP.isoformat(), "score": sig.score}
+# نسخهٔ ۱.۱: کلید ضداسپم = setup_id (نماد|استراتژی|جهت)، نه نماد|جهت
+state[_signal_state_key(sig)] = {"ts": WED_OVERLAP.isoformat(), "score": sig.score}
 go, why = should_send_signal(state, sig, JCFG, now=WED_OVERLAP + timedelta(minutes=15))
 check(not go, f"۱۵ دقیقه بعد، همان سیگنال → ارسال نمی‌شود ({why[:60]})")
 
@@ -362,9 +368,11 @@ go, _ = should_send_signal(state, opp, JCFG, now=WED_OVERLAP + timedelta(minutes
 check(go, "جهت مخالف (SELL) کلید جدا دارد → ارسال می‌شود")
 
 # ورودی خراب در state نباید برنامه را بیندازد
-go, _ = should_send_signal({"EURUSD|BUY": {"ts": "not-a-date"}}, sig, JCFG, now=WED_OVERLAP)
+go, _ = should_send_signal({_signal_state_key(sig): {"ts": "not-a-date"}},
+                           sig, JCFG, now=WED_OVERLAP)
 check(go, "state خراب → با احتیاط ارسال می‌شود (سقوط نمی‌کند)")
-go, _ = should_send_signal({"EURUSD|BUY": "رشتهٔ اشتباه"}, sig, JCFG, now=WED_OVERLAP)
+go, _ = should_send_signal({_signal_state_key(sig): "رشتهٔ اشتباه"},
+                           sig, JCFG, now=WED_OVERLAP)
 check(go, "ورودی غیرdict هم تحمل می‌شود")
 
 print()

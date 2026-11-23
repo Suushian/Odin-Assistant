@@ -70,6 +70,11 @@ SAT = datetime(2026, 9, 19, 12, 0, tzinfo=timezone.utc)           # شنبه —
 CFG = load_config()
 ACFG = CFG["analysis"]
 JCFG = CFG["judge"]
+# نسخهٔ ۱.۱: این باتری رفتار «تک‌استراتژی و بدون رده‌بندی» را پین می‌کند
+# (LOW_SCORE برای امتیاز ۴). رفتار رده‌بندی/دیده‌بان در tests/test_strategies.py
+# و وضعیت WATCHLIST با config واقعی در همان تست بررسی می‌شود.
+JCFG = dict(JCFG)
+JCFG["tiers"] = {"enabled": False}
 SYMS = CFG["symbols"]
 
 

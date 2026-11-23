@@ -102,6 +102,11 @@ jobs:
       - name: Judge-rules behavior pins + golden battery (آفلاین)
         run: python tests/test_judge_rules.py
 
+      # نسخهٔ ۱.۱: سه استراتژی + رده‌بندی A/B/C + سقف پوزیشن/روز + قیف
+      # سیگنال + برابری بایت‌به‌بایت ستاپ‌های پایتون/JS (۶ حالت قطعی).
+      - name: Multi-strategy + tiers + funnel pins (آفلاین)
+        run: python tests/test_strategies.py
+
       # فاز ۳b معماری پلاگین: run_cycle روی PipelineRunner — ترتیب قطعیِ
       # ۱۱ مرحله + رویدادهای stage.* + early-exit = stop در journal_pre.
       # (طلاییِ رفتاریِ خودِ چرخه در step بالا سبز می‌ماند — بدون تغییر.)
@@ -134,6 +139,7 @@ jobs:
           node tests/js/test_market_data_quality.js
           node tests/js/test_news_dedupe_order.js
           node tests/js/test_twelvedata.js
+          node tests/js/test_strategies.js
 
       # فاز ۶ معماری پلاگین: میخ‌های رفتاری موتور JS (svcTick/cycleCore/
       # runPipeline) — قبل از سوییچ به پلاگین‌ها نوشته و سبز شده‌اند؛ بعد از

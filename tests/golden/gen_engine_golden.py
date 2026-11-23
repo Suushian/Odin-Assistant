@@ -146,9 +146,20 @@ def make_cfg():
     # Preserve this historical cycle fixture; threshold 5 is covered by judge-policy pins.
     cfg["judge"]["min_score"] = 7
     # The golden fixture pins historical seven-symbol behavior; production symbol coverage is tested separately.
-    cfg["symbols"] = [s for s in cfg["symbols"] if s["name"] != "NZDUSD"]
+    cfg["symbols"] = [s for s in cfg["symbols"]
+                      if s["name"] not in ("NZDUSD", "EURJPY", "EURGBP")]
     # چرخهٔ طلایی رفتار پیشین را پین می‌کند؛ مسیر فعال اسکالپ در تست داور جداگانه است.
     (cfg.get("strategies") or {}).setdefault("scalping", {})["enabled"] = False
+    # ── نسخهٔ ۱.۱: این fixture رفتار «تک‌استراتژی، بدون رده‌بندی، بدون قیف»
+    #    را پین می‌کند تا هر تغییر ناخواسته در مسیر قدیمی دیده شود. رفتار
+    #    جدید (سه استراتژی + رده A/B/C + پورتفوی) در tests/test_strategies.py
+    #    و tests/test_signal_flow.py جداگانه پین شده است.
+    for _k in ("trend_pullback", "range_reversion", "breakout"):
+        cfg.setdefault("strategies", {})[_k] = {"enabled": False}
+    cfg["judge"]["tiers"] = {"enabled": False}
+    cfg["judge"]["funnel"] = {"enabled": False, "log": False, "persist_daily": False}
+    cfg["judge"]["portfolio"] = {"max_open_positions": 0, "enforce_capacity": False,
+                                 "max_signals_per_day": 0, "max_per_symbol_per_day": 0}
     cfg["data_source"] = "twelvedata"              # تنها منبع بازار
     # این golden چرخهٔ تاریخی را پین می‌کند؛ آستانهٔ پیش‌فرض محصول جداگانه ۵ است.
     cfg["judge"]["min_score"] = 7

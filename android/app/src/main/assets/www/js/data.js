@@ -567,7 +567,9 @@
           log('[!] دادهٔ ' + s.name + ' ناقص است — رد شد' + (sourceError ? ' (' + sourceError + ')' : ''));
         } else {
           mkt.datasets[s.name] = md;
-          try { mkt.analyses.push(caps.technical.analyzeSymbol(s, md, cfg.analysis)); }
+          try {
+            mkt.analyses.push(caps.technical.analyzeSymbol(s, md, cfg.analysis, cfg.strategies));
+          }
           catch (e) { mkt.errors++; log('[!] خطای تحلیل ' + s.name + ': ' + e); }
         }
         log('(' + O.faNum(done) + '/' + O.faNum(total) + ') ' + s.name + (md ? ' ✅' : ' ❌'));

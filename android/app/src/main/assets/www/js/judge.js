@@ -75,6 +75,8 @@
 
   O.vetoTfConflict = function (a, symCfg, md, ctx) {
     var vc = ctx.jcfg.veto;
+    // نسخهٔ ۱.۱: ستاپ «بازگشت از رنج» عمداً خلاف روند H4 است
+    if (a.active_strategy === 'range_reversion') return null;
     if (vc.timeframe_conflict !== false && a.verdict !== 'DATA' && !a.h1_agrees) {
       return Veto('TF_CONFLICT', '🔀 تضاد جهت بین تایم‌فریم‌ها',
         'روند ۴ ساعته ' + O.TREND_FA[a.trend] + ' است ولی ۱ ساعته هم‌جهت نیست — طبق قوانین، معامله در تضاد تایم‌فریم ممنوع است');
@@ -84,6 +86,8 @@
 
   O.vetoRange = function (a, symCfg, md, ctx) {
     var vc = ctx.jcfg.veto;
+    // نسخهٔ ۱.۱: ستاپ «بازگشت از رنج» نیاز دارد بازار رنج باشد
+    if (a.active_strategy === 'range_reversion') return null;
     var adxMin = +((ctx.acfg.adx_min_trend != null) ? ctx.acfg.adx_min_trend : 20);
     if (vc.range_market !== false && a.verdict !== 'DATA' && a.adx < adxMin) {
       return Veto('RANGE', '😴 بازار بی‌روند (رنج)',
@@ -164,6 +168,13 @@
 
   // ── جدول امتیاز (۸ مدرک، حداکثر ۱۱) ────────────────────────
   function evTrend(a, ctx) {
+    if (a.active_strategy === 'range_reversion') {
+      var rMin = +((ctx.acfg.adx_min_trend != null) ? ctx.acfg.adx_min_trend : 20);
+      return Evidence('trend', 'هم‌راستایی روند ۴ ساعته و ۱ ساعته', 1, 2,
+        'بازار در فاز رنج است (ADX=' + O.pyFixed(a.adx, 0) + ' زیر ' + O.pyFixed(rMin, 0) +
+        ') و این ستاپ «بازگشت از کف/سقف رنج» است — به روند نیاز ندارد، پس امتیاز روند کامل نیست',
+        true);
+    }
     var strong = a.adx >= +ctx.acfg.adx_strong;
     var pts = strong ? 2 : 1;
     return Evidence('trend', 'هم‌راستایی روند ۴ ساعته و ۱ ساعته', pts, 2,
@@ -226,6 +237,11 @@
 
   function evMomentum(a, ctx, direction) {
     var L = 'تایید مومنتوم (RSI)';
+    if (a.active_strategy === 'breakout' && a.rsi_rising === (direction === 'BUY')) {
+      return Evidence('momentum', L, 1, 1,
+        'RSI=' + O.pyFixed(a.rsi, 0) + ' و ' + (a.rsi_rising ? 'رو به بالا ↗️' : 'رو به پایین ↘️') +
+        ' — مومنتوم در جهت شکست است', true);
+    }
     if (direction === 'BUY') {
       if (a.rsi_rising && a.rsi >= 30 && a.rsi < 50) {
         return Evidence('momentum', L, 1, 1,
@@ -375,6 +391,17 @@
 
   // ── چرا ستاپی شکل نگرفته (حلقهٔ صداقت) ──────────────────────
   function noSetupReason(a, ctx) {
+    var base = noSetupBase(a, ctx);
+    var scfg = ctx.scfg;
+    if (!scfg) return base;
+    var others = ['range_reversion', 'breakout'].filter(function (k) {
+      return scfg[k] && typeof scfg[k] === 'object' && scfg[k].enabled !== false;
+    }).map(function (k) { return '«' + O.STRATEGY_FA[k] + '»'; });
+    if (!others.length) return base;
+    return base + ' — استراتژی ' + others.join(' و ') + ' هم ستاپ معتبری ندید';
+  }
+
+  function noSetupBase(a, ctx) {
     if (a.trend === 'none') return 'جهت روند نامشخص است';
     if (!a.h1_agrees) return 'تایم‌فریم ۱ ساعته با ۴ ساعته هم‌جهت نیست';
     var adxMin = +(ctx.acfg.adx_min_trend != null ? ctx.acfg.adx_min_trend : 20);
@@ -408,12 +435,21 @@
       symbol: a.symbol, fa_name: a.fa_name, direction: null,
       score: 0, max_score: 11, evidences: [], vetoes: [], warnings: [],
       signal: null, reject_reason: '', reject_detail: '',
-      price: a.price, pip: a.pip
+      price: a.price, pip: a.pip,
+      tier: '', strategy: '', strategy_fa: ''
     };
+
+    // ۰) انتخاب ستاپ (نسخهٔ ۱.۱) — قبل از وتوها، چون دو وتوی نرم برای
+    //    «بازگشت از رنج» استثنا دارند و باید استراتژی فعال را بدانند.
+    var chosen = O.bestSetup(a.setups, ctx.scfg);
+    a.active_strategy = chosen ? chosen.key : '';
+    a.active_setup = chosen;
+    if (chosen) { j.strategy = chosen.key; j.strategy_fa = chosen.label_fa; }
 
     j.vetoes = O.collectVetoes(a, symCfg, md, ctx, vetoRules);
 
-    if (a.verdict === 'BUY_SETUP') j.direction = 'BUY';
+    if (chosen) j.direction = chosen.direction;
+    else if (a.verdict === 'BUY_SETUP') j.direction = 'BUY';
     else if (a.verdict === 'SELL_SETUP') j.direction = 'SELL';
 
     var hardVetoes = j.vetoes.filter(function (v) {
@@ -444,8 +480,20 @@
       }
     });
 
+    // ۵) آستانه + رده (نسخهٔ ۱.۱) — min_score همان ۵ می‌ماند
+    var tcfg = ctx.jcfg.tiers || {};
+    var tiersOn = tcfg.enabled === true;
     var minScore = (ctx.jcfg.min_score | 0) || 5;
     if (j.score < minScore) {
+      var cMin = (tcfg.c_min_score != null) ? (tcfg.c_min_score | 0) : minScore;
+      if (tiersOn && j.score >= cMin) {
+        j.tier = 'C';
+        j.reject_reason = 'WATCHLIST';
+        j.reject_detail = 'امتیاز ' + O.faNum(j.score) + ' از ' + O.faNum(j.max_score) + ' — ' +
+          O.faNum(minScore - j.score) + ' امتیاز تا آستانهٔ ' + O.faNum(minScore) +
+          ' کم داشت؛ فقط در دیده‌بان می‌آید';
+        return j;
+      }
       j.reject_reason = 'LOW_SCORE';
       j.reject_detail = 'امتیاز ' + O.faNum(j.score) + ' از ' + O.faNum(j.max_score) +
         ' — زیر آستانهٔ ' + O.faNum(minScore) + ' است، پس سیگنال صادر نمی‌شود';
@@ -453,7 +501,14 @@
     }
 
     var rcfg = ctx.jcfg.risk;
-    var lv = (riskFn || O.computeLevels)(j.direction, a.price, a.atr, a.support, a.resistance, rcfg);
+    // سطح مرجع حد ضرر: اگر ستاپ لبهٔ مشخصی داد (مثلاً لبهٔ شکسته‌شدهٔ دامنه)
+    // حد ضرر آن‌سوی همان لبه می‌نشیند.
+    var slSupport = a.support, slResist = a.resistance;
+    if (chosen && chosen.stop_ref != null) {
+      if (j.direction === 'BUY') slSupport = chosen.stop_ref;
+      else slResist = chosen.stop_ref;
+    }
+    var lv = (riskFn || O.computeLevels)(j.direction, a.price, a.atr, slSupport, slResist, rcfg);
     var rr = +rcfg.reward_risk;
     if (lv.capped) {
       j.warnings.push('حد ضرر از سطح کلیدی دور بود و به سقف ' + O.faNum(O.pyFixed(+rcfg.max_sl_atr, 1)) + '×ATR محدود شد');
@@ -462,6 +517,20 @@
     if (opp != null && Math.abs(opp - a.price) < Math.abs(lv.tp - a.price)) {
       var kind = j.direction === 'BUY' ? 'مقاومت' : 'حمایت';
       j.warnings.push(kind + ' ' + O.fmtG(opp) + ' سر راه هدف است — رسیدن به هدف سخت‌تر از چیزی است که نسبت ۱:' + O.faRatio(rr) + ' پیشنهاد می‌دهد');
+    }
+
+    // ── رده: A = امتیاز بالا و بدون وتوی نرم | B = بقیهٔ سیگنال‌ها
+    var soft = j.vetoes.filter(function (v) {
+      return v.key !== 'DATA' && v.key !== 'CALENDAR_UNAVAILABLE';
+    });
+    if (tiersOn) {
+      var aMin = (tcfg.a_min_score != null) ? (tcfg.a_min_score | 0) : 7;
+      var bMaxSoft = (tcfg.b_soft_vetoes != null) ? (tcfg.b_soft_vetoes | 0) : 1;
+      j.tier = (j.score >= aMin && soft.length < bMaxSoft) ? 'A' : 'B';
+      if (soft.length && j.tier === 'B') {
+        j.warnings.push('وتوی نرم فعال است (' + soft.map(function (v) { return v.title_fa; }).join('؛ ') +
+          ') — این سیگنال ردهٔ B است: نیمریسک و نیازمند تایید');
+      }
     }
 
     var pip = a.pip || 0.0001;
@@ -476,6 +545,9 @@
       rr: rr,
       is_gold: pip >= 0.5, session_fa: ctx.status.label, now: ctx.nowMs,
       evidences: j.evidences, warnings: j.warnings, sl_capped: lv.capped,
+      tier: j.tier, strategy: j.strategy, strategy_fa: j.strategy_fa,
+      setup_id: chosen ? chosen.setup_id : (a.symbol + '|legacy|' + j.direction),
+      actionable: true, capacity_note: ''
     };
     return j;
   };
@@ -487,7 +559,13 @@
       return O.judgeSymbol(a, {}, datasets[a.symbol], ctx, vetoRules, evidenceRules, riskFn);
     });
     var cap = (ctx.jcfg.max_signals_per_cycle | 0) || 3;
-    var ready = out.filter(function (j) { return j.signal; }).sort(function (x, y) { return y.score - x.score; });
+    // اولویت: ردهٔ A قبل از B، در هر رده امتیاز بیشتر اول (با ردهٔ خاموش،
+    // ترتیب دقیقاً همان -score قبلی می‌شود)
+    var ready = out.filter(function (j) { return j.signal; }).sort(function (x, y) {
+      var tx = x.tier === 'A' ? 0 : 1, ty = y.tier === 'A' ? 0 : 1;
+      if (tx !== ty) return tx - ty;
+      return y.score - x.score;
+    });
     ready.slice(cap).forEach(function (j) {
       j.reject_reason = 'CAPPED';
       j.reject_detail = 'امتیاز ' + O.faNum(j.score) + ' از ' + O.faNum(j.max_score) +
@@ -500,9 +578,70 @@
   O.judgmentStatusFa = function (j) {
     if (j.signal) return '✅ سیگنال صادر شد';
     return {
-      VETO: '🚫 وتو شد', LOW_SCORE: '⏳ امتیاز ناکافی', NO_SETUP: '❔ ستاپی شکل نگرفته',
+      VETO: '🚫 وتو شد', LOW_SCORE: '⏳ امتیاز ناکافی',
+      WATCHLIST: '👁️ دیده‌بان (سیگنال معاملاتی نیست)', NO_SETUP: '❔ ستاپی شکل نگرفته',
       CAPPED: '🔢 به سقف تعداد سیگنال رسید', DISABLED: '⚙️ داور خاموش است'
     }[j.reject_reason] || '—';
+  };
+
+  // ══════════════════════════════════════════════════════════
+  //  قیف سیگنال (نسخهٔ ۱.۱) — پورت src/judge/funnel.py
+  //  فقط می‌شمارد؛ هیچ آستانه‌ای را شل نمی‌کند.
+  // ══════════════════════════════════════════════════════════
+  O.SIGNAL_REASON_ORDER = ['SIGNAL', 'WATCHLIST', 'NO_SETUP', 'LOW_SCORE', 'VETO', 'CAPPED', 'DISABLED'];
+  O.SIGNAL_REASON_FA = {
+    SIGNAL: 'سیگنال', WATCHLIST: 'دیده‌بان', NO_SETUP: 'بدون ستاپ',
+    LOW_SCORE: 'امتیاز ناکافی', VETO: 'وتو', CAPPED: 'سقف چرخه', DISABLED: 'داور خاموش'
+  };
+
+  O.signalFunnel = function (judgments) {
+    var items = judgments || [];
+    var counts = {}, vetoes = {};
+    O.SIGNAL_REASON_ORDER.forEach(function (k) { counts[k] = 0; });
+    items.forEach(function (j) {
+      if (j.signal) counts.SIGNAL++;
+      else {
+        var r = j.reject_reason || '?';
+        counts[r] = (counts[r] || 0) + 1;
+      }
+      (j.vetoes || []).forEach(function (v) { vetoes[v.key] = (vetoes[v.key] || 0) + 1; });
+    });
+    var parts = O.SIGNAL_REASON_ORDER.filter(function (k) { return counts[k]; })
+      .map(function (k) { return O.faNum(counts[k]) + ' ' + O.SIGNAL_REASON_FA[k]; });
+    var line = parts.length
+      ? '🧭 قیف سیگنال (از ' + O.faNum(items.length) + ' نماد): ' + parts.join(' | ')
+      : '🧭 قیف سیگنال: هیچ نمادی داوری نشد';
+    return { total: items.length, signals: counts.SIGNAL || 0, counts: counts,
+      vetoes: vetoes, line_fa: line };
+  };
+
+  O.funnelMergeDaily = function (prev, snap, nowMs) {
+    var out = { days: {} };
+    if (prev && typeof prev === 'object' && prev.days) out.days = JSON.parse(JSON.stringify(prev.days));
+    var key = new Date(nowMs).toISOString().slice(0, 10);
+    var day = out.days[key] || {};
+    day.cycles = (day.cycles | 0) + 1;
+    day.total = (day.total | 0) + (snap.total | 0);
+    day.signals = (day.signals | 0) + (snap.signals | 0);
+    day.counts = day.counts || {};
+    Object.keys(snap.counts || {}).forEach(function (k) {
+      day.counts[k] = (day.counts[k] | 0) + (snap.counts[k] | 0);
+    });
+    day.vetoes = day.vetoes || {};
+    Object.keys(snap.vetoes || {}).forEach(function (k) {
+      day.vetoes[k] = (day.vetoes[k] | 0) + (snap.vetoes[k] | 0);
+    });
+    out.days[key] = day;
+    return out;
+  };
+
+  O.funnelDayLine = function (day) {
+    if (!day) return '';
+    var counts = day.counts || {};
+    var parts = O.SIGNAL_REASON_ORDER.filter(function (k) { return counts[k]; })
+      .map(function (k) { return O.faNum(counts[k]) + ' ' + O.SIGNAL_REASON_FA[k]; });
+    return '📅 امروز (تا این لحظه): ' + O.faNum(day.signals || 0) + ' سیگنال در ' +
+      O.faNum(day.cycles || 0) + ' چرخه — ' + parts.join(' | ');
   };
 
   // رکورد JSON ژورنال (پورت Signal.to_journal)
@@ -518,7 +657,10 @@
       reward_pips: Math.round(s.reward_pips * 10) / 10,
       rr: s.rr, score: s.score, max_score: s.max_score, session: s.session_fa,
       evidences: s.evidences.map(function (e) { return e.key + ':' + e.points + '/' + e.max_points; }),
-      sent: sent !== false
+      sent: sent !== false,
+      tier: s.tier || '',
+      strategy: s.strategy || '',
+      actionable: s.actionable !== false
     };
   };
 })(typeof ODIN !== 'undefined' ? ODIN : (globalThis.ODIN = {}));

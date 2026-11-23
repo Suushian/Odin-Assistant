@@ -6,15 +6,19 @@
   - قدرت روند (ADX)، مومنتوم (RSI در M15)، نوسان (ATR در H1)
   - نزدیک‌ترین حمایت/مقاومت (swing های H4)
   - verdict: کد جمع‌بندی که لایه گزارش آن را به فارسی ترجمه می‌کند
+  - setups:  فهرست ستاپ‌های نامزد از چند استراتژی (نسخهٔ ۱.۱) — بهترین
+             ستاپ در `strategy` می‌آید؛ `verdict` برای سازگاری با نسخهٔ ۱.۰
+             همان قاعدهٔ پولبک را گزارش می‌کند و دست‌نخورده مانده است.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Optional
 
 from ..data.base import MarketData
 from . import indicators as ind
+from .strategies import MarketState, Setup, build_setups
 
 
 @dataclass
@@ -35,10 +39,21 @@ class SymbolAnalysis:
     resistance: Optional[float]
     last_candle: Optional[datetime]
     verdict: str             # RANGE | BUY_SETUP | SELL_SETUP | WAIT | DATA
+    # ── نسخهٔ ۱.۱: چند استراتژی ────────────────────────────────
+    # فیلدهای زیر مقدار پیش‌فرض دارند تا تحلیل‌های دست‌سازِ تست‌ها و
+    # مصرف‌کننده‌های قدیمی بدون تغییر معتبر بمانند (سازگاری کامل).
+    setups: list = field(default_factory=list)   # list[Setup] — بهترین اول
+    strategy: str = ""                           # کلید ستاپ برتر ("" = ستاپ قدیمی)
 
 
-def analyze_symbol(sym_cfg: dict, md: MarketData, acfg: dict) -> SymbolAnalysis:
-    """تحلیل کامل یک نماد بر اساس داده سه تایم‌فریم."""
+def analyze_symbol(sym_cfg: dict, md: MarketData, acfg: dict,
+                   scfg: Optional[dict] = None) -> SymbolAnalysis:
+    """تحلیل کامل یک نماد بر اساس داده سه تایم‌فریم.
+
+    scfg: بخش `strategies` پیکربندی (نسخهٔ ۱.۱). None = همهٔ استراتژی‌های
+    فعال با مقادیر پیش‌فرض — همان رفتاری که فراخوانی سه‌آرگومانی امروز
+    انتظار دارد (سازگاری با قرارداد odin.analysis.technical@1).
+    """
     ema_fast_n = int(acfg.get("ema_fast", 50))
     ema_slow_n = int(acfg.get("ema_slow", 200))
     adx_n = int(acfg.get("adx_period", 14))
@@ -95,12 +110,54 @@ def analyze_symbol(sym_cfg: dict, md: MarketData, acfg: dict) -> SymbolAnalysis:
     else:
         verdict = "WAIT"
 
+    # ── ستاپ‌های چند-استراتژی (نسخهٔ ۱.۱) ────────────────────
+    st = MarketState(
+        price=price, trend=trend, h1_agrees=h1_agrees, adx=adx_v, rsi=rsi_v,
+        rsi_rising=rsi_rising, atr=atr_v, support=support, resistance=resistance,
+        **_range_bounds(h1, scfg),
+    )
+    setups = build_setups(st, sym_cfg["name"], acfg, scfg)
+
     return SymbolAnalysis(
         **common, price=price, trend=trend, h1_agrees=h1_agrees,
         adx=adx_v, rsi=rsi_v, rsi_rising=rsi_rising, atr=atr_v,
         support=support, resistance=resistance,
         last_candle=_last_ts(m15), verdict=verdict,
+        setups=setups, strategy=(setups[0].key if setups else ""),
     )
+
+
+def _range_bounds(h1, scfg: Optional[dict]) -> dict:
+    """دامنهٔ N کندلیِ H1 برای استراتژی شکست (نسخهٔ ۱.۱).
+
+    «دامنه» = سقف/کفِ N کندلِ *قبل از کندل جاری*؛ «دامنهٔ قبلی» همان پنجره
+    یک کندل عقب‌تر است. مقایسهٔ این دو، شکست را «تازه» می‌کند (شکست‌های
+    تکراری روی هر کندل بعدی، اسپم می‌سازند).
+    خروجی خالی (۰) یعنی داده کافی نیست → استراتژی شکست شلیک نمی‌کند.
+    """
+    empty = {"range_high": 0.0, "range_low": 0.0,
+             "prev_range_high": 0.0, "prev_range_low": 0.0, "prev_close": 0.0}
+    block = ((scfg or {}).get("breakout") or {}) if isinstance(scfg, dict) else {}
+    if not isinstance(block, dict):
+        block = {}
+    try:
+        n = int(block.get("lookback_h1", 24))
+    except (TypeError, ValueError):
+        n = 24
+    n = max(5, min(240, n))
+    if h1 is None or len(h1) < n + 3:
+        return empty
+    try:
+        win = h1.iloc[-(n + 1):-1]
+        prev = h1.iloc[-(n + 2):-2]
+        return {
+            "range_high": float(win["High"].max()), "range_low": float(win["Low"].min()),
+            "prev_range_high": float(prev["High"].max()),
+            "prev_range_low": float(prev["Low"].min()),
+            "prev_close": float(h1["Close"].iloc[-2]),
+        }
+    except Exception:
+        return empty
 
 
 def _last_ts(df) -> Optional[datetime]:

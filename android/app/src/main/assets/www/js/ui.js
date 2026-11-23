@@ -384,6 +384,10 @@
     // ردیف‌های ۱..۵ (چیپ جهت/ارسال/امتیاز، ستاره‌ها، جفت‌ارز، سشن، R:R،
     // کاشی‌های ورود/SL/TP با فاصلهٔ پیپ، دلایل پارس‌شده) — همه از components.js
     h += O.signalCard(s, { sub: true, showWarns: false });
+    // نسخهٔ ۱.۱ — سقف پوزیشن باز: «فقط پیگیری» صریح گفته می‌شود
+    if (s.capacity_note) {
+      h += '<div class="reject-why" style="margin-top:8px">' + esc(s.capacity_note) + '</div>';
+    }
 
     if (s._dup) {
       h += '<div class="reject-why" style="margin-top:8px">' + O.ico('repeat', 13) + ' ' + esc(s._dupWhy) + '</div>';
