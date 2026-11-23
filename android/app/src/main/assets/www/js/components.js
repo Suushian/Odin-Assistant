@@ -346,6 +346,13 @@
     h += '<div class="sc-row">';
     h += O.chip(buy ? 'سیگنال خرید' : 'سیگنال فروش', buy ? 'green' : 'red',
       { icon: buy ? 'arrow-up' : 'arrow-down', iconSize: 11 });
+    // نسخهٔ ۱.۱ — ردهٔ سیگنال (فقط وقتی هست، تا کارت‌های قدیمی عوض نشوند)
+    if (s.tier) {
+      var tierTone = s.tier === 'A' ? 'green' : (s.tier === 'B' ? 'amber' : 'ink');
+      var tierLabel = s.tier === 'A' ? 'ردهٔ A — ریسک کامل'
+        : (s.tier === 'B' ? 'ردهٔ B — نیم‌ریسک' : 'ردهٔ C — دیده‌بان');
+      h += O.chip(tierLabel, tierTone);
+    }
     if (opts.showSent !== false) {
       var sent = s.sent !== false;
       h += O.chip(sent ? 'ارسال شد' : 'ارسال نشد', sent ? 'ink' : 'amber');
@@ -364,6 +371,8 @@
       if (s.score != null) {
         h += O.chip('امتیاز ' + faNum(s.score) + ' از ' + faNum(s.max_score == null ? 11 : s.max_score), 'ink');
       }
+      // نسخهٔ ۱.۱ — نام استراتژی سازندهٔ ستاپ
+      if (s.strategy_fa) h += O.chip('ستاپ ' + s.strategy_fa, 'outline');
       h += '</div>';
     }
 

@@ -39,6 +39,7 @@
 | [`signal-assistant-design.md`](signal-assistant-design.md) | سند طراحی کل سیستم: چرا این معماری، جریان داده، لایه‌ها |
 | [`step2-fundamental-news-fa.md`](step2-fundamental-news-fa.md) | موتور فاندامنتال: تقویم اقتصادی ForexFactory + ترجمهٔ فارسی، و موتور اخبار RSS با امتیازدهی جهت‌دار (۰ تا ۶) |
 | [`step3-judge-signals-fa.md`](step3-judge-signals-fa.md) | **داور امتیازدهی**: ۷ دروازهٔ وتو، ۸ مدرک از ۱۱ امتیاز، ریاضی SL/TP، ضداسپم |
+| [`signal-volume-fa.md`](signal-volume-fa.md) | 🧭 **نسخهٔ ۱.۱ — سیگنال‌های بیشتر**: سه استراتژی، رده‌بندی A/B/C، سقف پوزیشن/روز، قیف سیگنال، ریاضی سهمیهٔ Twelve Data |
 | [`step4-journal-stats-fa.md`](step4-journal-stats-fa.md) | ژورنال append-only، پیگیری خودکار نتیجه از کندل‌ها، آمار دقت (حلقهٔ صداقت) |
 | [`test-step1-fa.md`](test-step1-fa.md) | 🧪 راهنمای قدم‌به‌قدم تست مرحلهٔ ۱ (موتور داده و تکنیکال) روی کامپیوتر خودتان — ~۱۰ دقیقه |
 

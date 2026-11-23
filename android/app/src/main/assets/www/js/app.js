@@ -408,6 +408,7 @@
         } else {
           var ctx = {
             jcfg: S.cfg.judge, acfg: S.cfg.analysis, symbolsCfg: S.cfg.symbols,
+            scfg: S.cfg.strategies || {},
             ranking: mkt.ranking, tvMap: mkt.tvMap,
             calSnap: mkt.calSnap || null, newsSnap: mkt.newsSnap || null,
             calendarEnabled: (S.cfg.fundamental || {}).enabled !== false,
@@ -431,6 +432,22 @@
       log(signals.length
         ? 'داور: ' + O.faNum(signals.length) + ' سیگنال صادر شد'
         : 'داور: هیچ سیگنالی صادر نشد (دلیل هر نماد در صفحهٔ سیگنال‌ها هست)');
+
+      // ── قیف سیگنال (نسخهٔ ۱.۱) — چرا سیگنال کم است؟ فقط می‌شمارد.
+      var fcfg = S.cfg.judge.funnel || {};
+      if (fcfg.enabled !== false) {
+        var fsnap = O.signalFunnel(judgments);
+        S.funnel = fsnap;
+        if (fcfg.log !== false) log(fsnap.line_fa);
+        if (fcfg.persist_daily !== false) {
+          var prevF = {};
+          try { prevF = JSON.parse(S.storage.get('funnel.json') || '{}'); } catch (e) { }
+          var merged = O.funnelMergeDaily(prevF, fsnap, nowMs);
+          try { S.storage.set('funnel.json', JSON.stringify(merged)); } catch (e) { }
+          var dayKey = new Date(nowMs).toISOString().slice(0, 10);
+          if (merged.days[dayKey] && fcfg.log !== false) log(O.funnelDayLine(merged.days[dayKey]));
+        }
+      }
     });
 
     // ── ۶) render — no-op (رندر توسط UI جدا انجام می‌شود) ──────
@@ -441,11 +458,39 @@
       // ثبت در ژورنال با کنترل اسپم (cooldown)
       var sentState = {};
       try { sentState = JSON.parse(S.storage.get('sent_signals.json') || '{}'); } catch (e) { }
-      signals.forEach(function (sig) {
+      // ── سقف پوزیشن باز (نسخهٔ ۱.۱) — آینهٔ موتور دسکتاپ ──────
+      // هر توصیهٔ «قابل‌اقدام» که هنوز باز است یک صندلی اشغال می‌کند؛ سیگنال
+      // بعدی حذف نمی‌شود، فقط برچسب «فقط پیگیری» می‌خورد.
+      var pcfg = S.cfg.judge.portfolio || {};
+      var limit = pcfg.max_open_positions | 0;
+      var enforce = pcfg.enforce_capacity !== false && limit > 0;
+      var openPos = 0;
+      try {
+        openPos = S.journal.openEntries().filter(function (e) {
+          return e.sent !== false && e.actionable !== false;
+        }).length;
+      } catch (e) { openPos = 0; }
+      var free = Math.max(0, limit - openPos);
+      var today = O.signalCountsToday(sentState, nowMs);
+      var ordered = signals.slice().sort(function (x, y) {
+        var tx = x.tier === 'A' ? 0 : 1, ty = y.tier === 'A' ? 0 : 1;
+        return tx !== ty ? tx - ty : y.score - x.score;
+      });
+      ordered.forEach(function (sig) {
         // ضداسپم هرگز نباید با غیبت پلاگین بمیرد (آینهٔ تصمیم پایتون:
         // journal عمداً binding ندارد) — fallback مستقیم فقط برای FAILED/override
         var jn = caps.journal || O;
         var dec = jn.shouldSendSignal(sentState, sig, S.cfg.judge, nowMs);
+        var block = O.dailyCapBlock(sig, today, pcfg);
+        if (dec.go && block) dec = { go: false, why: block };
+        if (enforce) {
+          if (free > 0) { sig.actionable = true; sig.capacity_note = ''; free--; }
+          else {
+            sig.actionable = false;
+            sig.capacity_note = 'سقف ' + O.faNum(limit) +
+              ' پوزیشن باز پر است — این سیگنال فقط برای پیگیری است، ورود نکن';
+          }
+        }
         // sent یعنی «اعلان واقعاً قابل نمایش بود»، نه «تکراری نبود» (پاریتی با پایتون).
         var delivered = !!(dec.go && S.settings.notify_enabled !== false
           && O.native.notificationsEnabled());
@@ -454,7 +499,7 @@
         }
         if (dec.go) {
           newSignals.push(sig);
-          sentState[sig.symbol + '|' + sig.direction] = { ts: new Date(nowMs).toISOString(), score: sig.score };
+          sentState[O.signalStateKey(sig)] = { ts: new Date(nowMs).toISOString(), score: sig.score };
           log('سیگنال ' + sig.symbol + ' (' + (sig.direction === 'BUY' ? 'خرید' : 'فروش') + ') در ژورنال ثبت شد');
         } else {
           log('[i] سیگنال ' + sig.symbol + ' تکراری است — ' + dec.why);
@@ -473,7 +518,8 @@
             ? 'سیگنال جدید — ' + newSignals[0].symbol + ' (' + (newSignals[0].direction === 'BUY' ? 'خرید' : 'فروش') + ')'
             : O.faNum(newSignals.length) + ' سیگنال جدید صادر شد';
           var nBody = newSignals.slice(0, 3).map(function (sg) {
-            return sg.symbol + ' · امتیاز ' + O.faNum(sg.score) + '/۱۱ · ورود ' + O.fmtPrice(sg.entry, sg.pip) +
+            return sg.symbol + ' · امتیاز ' + O.faNum(sg.score) + '/۱۱' +
+              (sg.tier ? ' · ردهٔ ' + sg.tier : '') + ' · ورود ' + O.fmtPrice(sg.entry, sg.pip) +
               ' · حد ضرر ' + O.fmtPrice(sg.sl, sg.pip) + ' · هدف ' + O.fmtPrice(sg.tp, sg.pip);
           }).join('\n') + '\n' + O.faNum(O.hhmmTeh(new Date(nowMs))) + ' به وقت تهران — پیشنهاد است، نه دستور معامله';
           O.native.notify(nTitle, nBody);

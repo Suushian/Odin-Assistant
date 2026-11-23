@@ -61,8 +61,8 @@
   };
 
   function TechnicalAdapter() { }
-  TechnicalAdapter.prototype.analyzeSymbol = function (symCfg, md, acfg) {
-    return O.analyzeSymbol(symCfg, md, acfg);
+  TechnicalAdapter.prototype.analyzeSymbol = function (symCfg, md, acfg, scfg) {
+    return O.analyzeSymbol(symCfg, md, acfg, scfg);
   };
 
   function StrengthAdapter() { }

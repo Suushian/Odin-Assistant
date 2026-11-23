@@ -49,6 +49,11 @@ class Entry:
     session: str = ""
     evidences: list[str] = field(default_factory=list)
     sent: bool = True
+    # نسخهٔ ۱.۱ — رده/استراتژی در ژورنال می‌ماند تا آمار «کدام استراتژی چند
+    # درصد برد دارد» بعداً محاسبه شود. actionable پایهٔ شمارش ظرفیت پوزیشن است.
+    tier: str = ""
+    strategy: str = ""
+    actionable: bool = True
 
     # نتیجه
     outcome: Optional[str] = None          # None = هنوز باز

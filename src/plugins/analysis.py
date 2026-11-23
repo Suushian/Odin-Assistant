@@ -12,9 +12,12 @@ from ..core.manifest import PluginManifest
 
 
 class TechnicalPlugin:
-    def analyze_symbol(self, sym_cfg: dict, md: Any, acfg: dict) -> Any:
+    def analyze_symbol(self, sym_cfg: dict, md: Any, acfg: dict,
+                       scfg: Any = None) -> Any:
+        """scfg (نسخهٔ ۱.۱): بخش strategies پیکربندی — پیش‌فرض None = رفتار
+        سه‌آرگومانیِ قبلی (سازگاری کامل با قرارداد odin.analysis.technical@1)."""
         from ..analysis.technical import analyze_symbol
-        return analyze_symbol(sym_cfg, md, acfg)
+        return analyze_symbol(sym_cfg, md, acfg, scfg)
 
 
 class StrengthPlugin:

@@ -59,6 +59,26 @@ a = cfg["analysis"]
 need(a["ema_fast"] < a["ema_slow"], f"EMA سریع ({a['ema_fast']}) < کند ({a['ema_slow']})")
 need(0 < a["adx_min_trend"] < 100, f"آستانهٔ ADX معتبر: {a['adx_min_trend']}")
 
+# ── استراتژی‌های چندگانه (نسخهٔ ۱.۱) ──────────────────────────
+st = cfg.get("strategies") or {}
+need(isinstance(st, dict) and bool(st), "strategies: بخش استراتژی‌ها موجود است")
+for key in ("trend_pullback", "range_reversion", "breakout"):
+    block = st.get(key)
+    need(isinstance(block, dict) and isinstance(block.get("enabled"), bool),
+         f"strategies.{key}.enabled = {block.get('enabled') if isinstance(block, dict) else block}")
+rr = st.get("range_reversion") if isinstance(st.get("range_reversion"), dict) else {}
+need(0 < float(rr.get("band_atr", 0)) <= 3,
+     f"strategies.range_reversion.band_atr = {rr.get('band_atr')} (بین ۰ و ۳)")
+need(0 < float(rr.get("rsi_buy", 0)) < 50 < float(rr.get("rsi_sell", 100)) < 100,
+     f"strategies.range_reversion: rsi_buy={rr.get('rsi_buy')} < ۵۰ < rsi_sell={rr.get('rsi_sell')}")
+bo = st.get("breakout") if isinstance(st.get("breakout"), dict) else {}
+need(5 <= int(bo.get("lookback_h1", 0)) <= 240,
+     f"strategies.breakout.lookback_h1 = {bo.get('lookback_h1')} (بین ۵ و ۲۴۰)")
+need(0 <= float(bo.get("buffer_atr", -1)) <= 2,
+     f"strategies.breakout.buffer_atr = {bo.get('buffer_atr')} (بین ۰ و ۲؛ صفر = شکست نویزی)")
+need(float(bo.get("adx_min", 0)) >= 15,
+     f"strategies.breakout.adx_min = {bo.get('adx_min')} (زیر ۱۵ = شکست در بازار بی‌روند)")
+
 # ── مرحله ۲: فاندامنتال ───────────────────────────────────────
 f = cfg["fundamental"]
 need(isinstance(f.get("enabled"), bool), f"fundamental.enabled = {f.get('enabled')}")
@@ -109,6 +129,35 @@ need(float(j.get("resend_cooldown_minutes", 0)) >= 15,
      f"(حداقل ۱۵ = یک چرخه، وگرنه اسپم می‌شود)")
 need(int(j.get("resend_score_gain", 0)) >= 1,
      f"judge.resend_score_gain = {j.get('resend_score_gain')}")
+
+# ── رده‌بندی و پورتفوی (نسخهٔ ۱.۱) ────────────────────────────
+t = j.get("tiers") or {}
+need_keys(("a_min_score", "c_min_score", "b_soft_vetoes"), t, "judge.tiers")
+need(isinstance(t.get("enabled"), bool), f"judge.tiers.enabled = {t.get('enabled')}")
+need(int(j.get("min_score", 0)) <= int(t.get("a_min_score", 0)) <= mx,
+     f"judge.tiers.a_min_score = {t.get('a_min_score')} (باید ≥ min_score و ≤ {mx})")
+need(int(t.get("c_min_score", 0)) < int(j.get("min_score", 0)),
+     f"judge.tiers.c_min_score = {t.get('c_min_score')} (باید < min_score باشد، وگرنه "
+     f"دیده‌بان با سیگنال قاطی می‌شود)")
+pf = j.get("portfolio") or {}
+need_keys(("max_open_positions", "max_signals_per_day",
+           "max_per_symbol_per_day"), pf, "judge.portfolio")
+need(1 <= int(pf.get("max_open_positions", 0)) <= 10,
+     f"judge.portfolio.max_open_positions = {pf.get('max_open_positions')} (بین ۱ و ۱۰)")
+need(int(pf.get("max_signals_per_day", 0)) >= int(pf.get("max_open_positions", 1)),
+     f"judge.portfolio.max_signals_per_day = {pf.get('max_signals_per_day')} "
+     f"(کمتر از سقف پوزیشن باز = سیگنال‌های بعدی همیشه بلوکه)")
+need(int(pf.get("max_per_symbol_per_day", 0)) >= 1,
+     f"judge.portfolio.max_per_symbol_per_day = {pf.get('max_per_symbol_per_day')}")
+fn = j.get("funnel") or {}
+need(isinstance(fn.get("enabled"), bool), f"judge.funnel.enabled = {fn.get('enabled')}")
+
+# ── سهمیهٔ Twelve Data (پلن رایگان ≈ ۸۰۰ درخواست در روز) ──────
+_cycles = max(1, int(24 * 60 / max(1, int(cfg["loop"]["interval_minutes"]))))
+_per_day = len(syms) * _cycles
+need(_per_day <= 800,
+     f"سهمیهٔ روزانه: {_per_day} درخواست ({len(syms)} نماد × {_cycles} چرخه) — "
+     f"سقف پلن رایگان ۸۰۰ است")
 
 v = j["veto"]
 need(2 <= int(v.get("min_count", 0)) <= 3,

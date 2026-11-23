@@ -48,6 +48,7 @@ from datetime import datetime, timezone
 from typing import Callable, Optional
 
 from ..analysis import indicators as ind
+from ..analysis.strategies import STRATEGY_FA, best_setup
 from ..analysis.technical import SymbolAnalysis
 from ..data.base import MarketData
 from ..fundamental.calendar import CalendarSnapshot, upcoming_events, veto_for_symbol
@@ -62,6 +63,27 @@ DEFAULTS: dict = {
     "max_signals_per_cycle": 3,
     "resend_cooldown_minutes": 180,
     "resend_score_gain": 2,
+    # ── رده‌بندی سیگنال (نسخهٔ ۱.۱) ────────────────────────────
+    # A = ریسک کامل، B = نیم‌ریسک/نیازمند تایید، C = فقط دیده‌بان.
+    # پیش‌فرض خاموش است تا پیکربندی‌های قدیمی بایت‌به‌بایت رفتار امروز را
+    # داشته باشند؛ config.yaml جدید آن را روشن می‌کند.
+    "tiers": {
+        "enabled": False,
+        "a_min_score": 7,        # A از این امتیاز به بالا (و بدون وتوی نرم)
+        "c_min_score": 4,        # بین این عدد و min_score → دیده‌بان
+        "b_soft_vetoes": 1,      # با این تعداد وتوی نرم، حداکثر B
+    },
+    # ── سقف پوزیشن باز (نسخهٔ ۱.۱) ─────────────────────────────
+    # سیگنال با پوزیشن باز قاطی نشود: هر سیگنال هشدار است، ولی «قابل اقدام»
+    # فقط تا وقتی سقف پوزیشن باز پر نشده باشد. موتور این را از ژورنال می‌شمارد.
+    "portfolio": {
+        "max_open_positions": 2,
+        "max_signals_per_day": 8,
+        "max_per_symbol_per_day": 2,
+        "enforce_capacity": True,
+    },
+    # ── قیف سیگنال (نسخهٔ ۱.۱) ─────────────────────────────────
+    "funnel": {"enabled": True, "log": True, "persist_daily": True},
     "veto": {
         "weekend": True,
         "high_impact_event": True,
@@ -164,6 +186,18 @@ class Signal:
     warnings: list[str] = field(default_factory=list)
     sl_capped: bool = False
     sid: str = ""             # شناسهٔ یکتای ژورنال (مرحله ۴ نتیجه را به آن گره می‌زند)
+    # ── نسخهٔ ۱.۱: رده و استراتژی ──────────────────────────────
+    tier: str = ""            # A | B | C ("" = رده‌بندی خاموش است)
+    strategy: str = ""        # کلید استراتژی سازندهٔ ستاپ
+    strategy_fa: str = ""     # برچسب فارسی استراتژی
+    setup_id: str = ""        # symbol|strategy|direction — کلید ضداسپم
+    actionable: bool = True   # ظرفیت پوزیشن باز اجازهٔ اقدام می‌دهد؟
+    capacity_note: str = ""   # توضیح فارسی وقتی ظرفیت پر است
+
+    @property
+    def tier_fa(self) -> str:
+        return {"A": "ردهٔ A — ریسک کامل", "B": "ردهٔ B — نیم‌ریسک",
+                "C": "ردهٔ C — دیده‌بان"}.get(self.tier, "")
 
     @property
     def direction_fa(self) -> str:
@@ -196,6 +230,11 @@ class Signal:
             "session": self.session_fa,
             "evidences": [f"{e.key}:{e.points}/{e.max_points}" for e in self.evidences],
             "sent": sent,
+            # نسخهٔ ۱.۱ — رده/استراتژی در ژورنال می‌ماند تا آمار «کدام
+            # استراتژی چند درصد برد دارد» بعداً قابل محاسبه باشد.
+            "tier": self.tier,
+            "strategy": self.strategy,
+            "actionable": bool(self.actionable),
         }
 
 
@@ -212,10 +251,14 @@ class Judgment:
     vetoes: list[Veto] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
     signal: Optional[Signal] = None
-    reject_reason: str = ""        # NO_SETUP | VETO | LOW_SCORE | CAPPED | DISABLED
+    reject_reason: str = ""        # NO_SETUP | VETO | LOW_SCORE | WATCHLIST | CAPPED | DISABLED
     reject_detail: str = ""
     price: float = 0.0
     pip: float = 0.0001
+    # نسخهٔ ۱.۱ — ستاپ انتخاب‌شده و ردهٔ سیگنال
+    tier: str = ""                 # A | B | C ("" = رده‌بندی خاموش)
+    strategy: str = ""             # کلید استراتژی
+    strategy_fa: str = ""          # برچسب فارسی استراتژی
 
     @property
     def status_fa(self) -> str:
@@ -224,6 +267,7 @@ class Judgment:
         return {
             "VETO": "🚫 وتو شد",
             "LOW_SCORE": "⏳ امتیاز ناکافی",
+            "WATCHLIST": "👁️ دیده‌بان (سیگنال معاملاتی نیست)",
             "NO_SETUP": "❔ ستاپی شکل نگرفته",
             "CAPPED": "🔢 به سقف تعداد سیگنال رسید",
             "DISABLED": "⚙️ داور خاموش است",
@@ -237,6 +281,8 @@ class JudgeContext:
     jcfg: dict
     acfg: dict
     symbols_cfg: list[dict]
+    # بخش `strategies` پیکربندی (نسخهٔ ۱.۱) — کدام استراتژی‌ها فعال‌اند
+    scfg: dict = field(default_factory=dict)
     ranking: list[tuple[str, float]] = field(default_factory=list)
     tv_map: dict = field(default_factory=dict)
     cal_snap: Optional[CalendarSnapshot] = None
@@ -317,8 +363,15 @@ def veto_weekend(a: SymbolAnalysis, sym_cfg: dict, md: Optional[MarketData],
 
 def veto_tf_conflict(a: SymbolAnalysis, sym_cfg: dict, md: Optional[MarketData],
                      ctx: JudgeContext) -> Optional[Veto]:
-    """🔀 تضاد جهت بین تایم‌فریم ۴ ساعته و ۱ ساعته."""
+    """🔀 تضاد جهت بین تایم‌فریم ۴ ساعته و ۱ ساعته.
+
+    استثنا (نسخهٔ ۱.۱): ستاپ «بازگشت از رنج» عمداً خلاف روند H4 است —
+    اگر همان‌جا هم این وتو را شلیک کنیم، استراتژی رنج هرگز شانسی ندارد.
+    """
     vc = ctx.jcfg["veto"]
+    strategy = getattr(a, "active_strategy", "")
+    if strategy == "range_reversion":
+        return None
     if vc.get("timeframe_conflict", True) and a.verdict != "DATA" and not a.h1_agrees:
         return Veto("TF_CONFLICT", "🔀 تضاد جهت بین تایم‌فریم‌ها",
                     f"روند ۴ ساعته {TREND_FA[a.trend]} است ولی ۱ ساعته هم‌جهت نیست "
@@ -328,9 +381,15 @@ def veto_tf_conflict(a: SymbolAnalysis, sym_cfg: dict, md: Optional[MarketData],
 
 def veto_range(a: SymbolAnalysis, sym_cfg: dict, md: Optional[MarketData],
                ctx: JudgeContext) -> Optional[Veto]:
-    """😴 بازار بی‌روند — ADX زیر analysis.adx_min_trend."""
+    """😴 بازار بی‌روند — ADX زیر analysis.adx_min_trend.
+
+    استثنا (نسخهٔ ۱.۱): ستاپ «بازگشت از رنج» *نیاز* دارد بازار رنج باشد؛
+    وقتی همان استراتژی انتخاب شده، این وتو معنایی ندارد.
+    """
     vc = ctx.jcfg["veto"]
     acfg = ctx.acfg
+    if getattr(a, "active_strategy", "") == "range_reversion":
+        return None
     adx_min = float(acfg.get("adx_min_trend", 20))
     if vc.get("range_market", True) and a.verdict != "DATA" and a.adx < adx_min:
         return Veto("RANGE", "😴 بازار بی‌روند (رنج)",
@@ -425,7 +484,18 @@ def collect_vetoes(a: SymbolAnalysis, sym_cfg: dict, md: Optional[MarketData],
 #  جدول امتیاز
 # ══════════════════════════════════════════════════════════════
 def ev_trend(a: SymbolAnalysis, ctx: JudgeContext, direction: str) -> Evidence:
-    """هم‌راستایی روند H4 و H1 (+۲ اگر قوی، +۱ اگر متوسط)."""
+    """هم‌راستایی روند H4 و H1 (+۲ اگر قوی، +۱ اگر متوسط).
+
+    استثنای نسخهٔ ۱.۱: در ستاپ «بازگشت از رنج» روندی وجود ندارد که امتیاز
+    کامل بگیرد؛ صادقانه ۱ از ۲ می‌گیرد (نه ۲ با متن گمراه‌کننده).
+    """
+    if getattr(a, "active_strategy", "") == "range_reversion":
+        adx_min = float(ctx.acfg.get("adx_min_trend", 20))
+        return Evidence(
+            "trend", "هم‌راستایی روند ۴ ساعته و ۱ ساعته", 1, 2,
+            f"بازار در فاز رنج است (ADX={a.adx:.0f} زیر {adx_min:.0f}) و این ستاپ "
+            f"«بازگشت از کف/سقف رنج» است — به روند نیاز ندارد، پس امتیاز روند کامل نیست",
+            ok=True)
     strong = a.adx >= float(ctx.acfg.get("adx_strong", 25))
     pts = 2 if strong else 1
     return Evidence(
@@ -491,7 +561,15 @@ def ev_fundamental(a: SymbolAnalysis, ctx: JudgeContext, direction: str) -> Evid
 
 
 def ev_momentum(a: SymbolAnalysis, ctx: JudgeContext, direction: str) -> Evidence:
-    """تایید مومنتوم با RSI (+۱)."""
+    """تایید مومنتوم با RSI (+۱).
+
+    استثنای نسخهٔ ۱.۱: در «شکست دامنه» RSI معمولاً بالای ۵۰ است و قاعدهٔ
+    پولبک (RSI<50) هرگز تایید نمی‌داد؛ اینجا جهتِ *حرکت* مهم است.
+    """
+    if getattr(a, "active_strategy", "") == "breakout" and a.rsi_rising == (direction == "BUY"):
+        return Evidence("momentum", "تایید مومنتوم (RSI)", 1, 1,
+                        f"RSI={a.rsi:.0f} و {'رو به بالا ↗️' if a.rsi_rising else 'رو به پایین ↘️'} "
+                        f"— مومنتوم در جهت شکست است", ok=True)
     if direction == "BUY":
         if a.rsi_rising and 30 <= a.rsi < 50:
             return Evidence("momentum", "تایید مومنتوم (RSI)", 1, 1,
@@ -662,7 +740,23 @@ def compute_levels(direction: str, entry: float, atr: float,
 #  داوری
 # ══════════════════════════════════════════════════════════════
 def _no_setup_reason(a: SymbolAnalysis, ctx: JudgeContext) -> str:
-    """چرا ستاپی شکل نگرفته — توضیح صادقانه به‌جای سکوت."""
+    """چرا ستاپی شکل نگرفته — توضیح صادقانه به‌جای سکوت.
+
+    نسخهٔ ۱.۱: اگر چند استراتژی روشن است، متن پایه دست‌نخورده می‌ماند (پین
+    تست‌ها) و فقط یک جملهٔ تکمیلی می‌گوید بقیهٔ استراتژی‌ها هم ستاپ ندادند.
+    """
+    base = _no_setup_base(a, ctx)
+    if not getattr(ctx, "scfg", None):
+        return base
+    others = [STRATEGY_FA[k] for k in ("range_reversion", "breakout")
+              if isinstance(ctx.scfg.get(k), dict) and ctx.scfg[k].get("enabled", True)]
+    if not others:
+        return base
+    return (base + " — استراتژی " + " و ".join(f"«{o}»" for o in others)
+            + " هم ستاپ معتبری ندید")
+
+
+def _no_setup_base(a: SymbolAnalysis, ctx: JudgeContext) -> str:
     if a.trend == "none":
         return "جهت روند نامشخص است"
     if not a.h1_agrees:
@@ -696,12 +790,27 @@ def judge_symbol(a: SymbolAnalysis, sym_cfg: dict, md: Optional[MarketData],
     """
     j = Judgment(symbol=a.symbol, fa_name=a.fa_name, direction=None,
                  max_score=11, price=a.price, pip=a.pip)
+    jcfg = ctx.jcfg
+
+    # ۰) انتخاب ستاپ (نسخهٔ ۱.۱) — *قبل* از وتوها، چون دو وتوی نرم
+    #    (رنج / تضاد تایم‌فریم) برای استراتژی «بازگشت از رنج» استثنا دارند
+    #    و باید بدانند کدام استراتژی فعال است.
+    chosen = best_setup(getattr(a, "setups", None), getattr(ctx, "scfg", None))
+    try:                                  # تحلیل‌های دست‌سازِ قدیمی هم بی‌خطر بمانند
+        a.active_strategy = chosen.key if chosen is not None else ""
+        a.active_setup = chosen
+    except Exception:
+        pass
+    if chosen is not None:
+        j.strategy, j.strategy_fa = chosen.key, chosen.label_fa
 
     # ۱) وتوها — همیشه اول، چون بدون استثنا هستند
     j.vetoes = collect_vetoes(a, sym_cfg, md, ctx, rules=veto_rules)
 
     # ۲) آیا اصلاً ستاپی هست که داوری شود؟
-    if a.verdict == "BUY_SETUP":
+    if chosen is not None:
+        j.direction = chosen.direction
+    elif a.verdict == "BUY_SETUP":
         j.direction = "BUY"
     elif a.verdict == "SELL_SETUP":
         j.direction = "SELL"
@@ -729,19 +838,41 @@ def judge_symbol(a: SymbolAnalysis, sym_cfg: dict, md: Optional[MarketData],
     for e in j.evidences:
         if e.detail_fa.startswith("⚠️"):
             j.warnings.append(e.detail_fa.lstrip("⚠️ ").strip())
-    # ۵) آستانه
-    if j.score < int(ctx.jcfg.get("min_score", 5)):
+    # ۵) آستانه + رده (نسخهٔ ۱.۱)
+    #    min_score همان ۵ دست‌نخورده است؛ رده‌بندی فقط *برچسب* و *ریسک*
+    #    را عوض می‌کند، نه آستانه را. سیگنالِ نزدیک به آستانه به‌جای سکوت
+    #    کامل در «دیده‌بان» می‌نشیند تا کاربر بداند چه چیزی در حال شکل‌گیری است.
+    tcfg = jcfg.get("tiers") or {}
+    tiers_on = bool(tcfg.get("enabled", False))
+    min_score = int(jcfg.get("min_score", 5))
+    if j.score < min_score:
+        c_min = int(tcfg.get("c_min_score", min_score))
+        if tiers_on and j.score >= c_min:
+            j.tier = "C"
+            j.reject_reason = "WATCHLIST"
+            j.reject_detail = (f"امتیاز {fa_num(j.score)} از {fa_num(j.max_score)} — "
+                               f"{fa_num(min_score - j.score)} امتیاز تا آستانهٔ "
+                               f"{fa_num(min_score)} کم داشت؛ فقط در دیده‌بان می‌آید")
+            return j
         j.reject_reason = "LOW_SCORE"
         j.reject_detail = (f"امتیاز {fa_num(j.score)} از {fa_num(j.max_score)} — زیر "
-                           f"آستانهٔ {fa_num(int(ctx.jcfg.get('min_score', 5)))} است، "
+                           f"آستانهٔ {fa_num(int(jcfg.get('min_score', 5)))} است، "
                            f"پس سیگنال صادر نمی‌شود")
         return j
 
     # ۶) ساخت سیگنال
-    rcfg = ctx.jcfg["risk"]
+    rcfg = jcfg["risk"]
     _levels = compute_levels if risk_fn is None else risk_fn
+    # سطح مرجع حد ضرر: اگر ستاپ یک لبهٔ مشخص داد (مثلاً لبهٔ شکسته‌شدهٔ دامنه)،
+    # حد ضرر آن‌سوی همان لبه می‌نشیند — نه آن‌سوی یک سطح دوردست H4.
+    sl_support, sl_resist = a.support, a.resistance
+    if chosen is not None and chosen.stop_ref is not None:
+        if j.direction == "BUY":
+            sl_support = chosen.stop_ref
+        else:
+            sl_resist = chosen.stop_ref
     sl, tp, risk, capped = _levels(j.direction, a.price, a.atr,
-                                   a.support, a.resistance, rcfg)
+                                   sl_support, sl_resist, rcfg)
     rr = float(rcfg.get("reward_risk", 2.0))
     if capped:
         cap = float(rcfg.get("max_sl_atr", 3.0))
@@ -754,6 +885,16 @@ def judge_symbol(a: SymbolAnalysis, sym_cfg: dict, md: Optional[MarketData],
                           f"از چیزی است که نسبت ۱:{fa_ratio(rr)} "
                           f"پیشنهاد می‌دهد")
 
+    # ── رده: A = امتیاز بالا و بدون وتوی نرم | B = بقیهٔ سیگنال‌ها
+    soft = [v for v in j.vetoes if v.key not in {"DATA", "CALENDAR_UNAVAILABLE"}]
+    if tiers_on:
+        a_min = int(tcfg.get("a_min_score", 7))
+        b_max_soft = int(tcfg.get("b_soft_vetoes", 1))
+        j.tier = "A" if (j.score >= a_min and len(soft) < b_max_soft) else "B"
+        if soft and j.tier == "B":
+            j.warnings.append("وتوی نرم فعال است (" + "؛ ".join(v.title_fa for v in soft)
+                              + ") — این سیگنال ردهٔ B است: نیم‌ریسک و نیازمند تایید")
+
     pip = a.pip or 0.0001
     j.signal = Signal(
         symbol=a.symbol, fa_name=a.fa_name, direction=j.direction,
@@ -765,6 +906,9 @@ def judge_symbol(a: SymbolAnalysis, sym_cfg: dict, md: Optional[MarketData],
         rr=rr,
         is_gold=bool(pip >= 0.5), session_fa=ctx.status.label, now=ctx.now,
         evidences=j.evidences, warnings=j.warnings, sl_capped=capped,
+        tier=j.tier, strategy=j.strategy, strategy_fa=j.strategy_fa,
+        setup_id=((chosen.setup_id if chosen is not None
+                   else f"{a.symbol}|legacy|{j.direction}")),
     )
     return j
 
@@ -784,7 +928,10 @@ def judge_all(analyses: list[SymbolAnalysis], datasets: dict, ctx: JudgeContext,
                         risk_fn=risk_fn)
            for a in analyses]
     cap = int(ctx.jcfg.get("max_signals_per_cycle", 3))
-    ready = sorted([j for j in out if j.signal], key=lambda j: -j.score)
+    # اولویت: ردهٔ A قبل از B، و در هر رده امتیاز بیشتر اول.
+    # (وقتی رده‌بندی خاموش است tier خالی است و ترتیب دقیقاً همان -score قبلی می‌شود.)
+    ready = sorted([j for j in out if j.signal],
+                   key=lambda j: (0 if j.tier == "A" else 1, -j.score))
     for j in ready[cap:]:
         j.reject_reason = "CAPPED"
         j.reject_detail = (f"امتیاز {fa_num(j.score)} از {fa_num(j.max_score)} کافی بود، "

@@ -270,14 +270,18 @@ def test_journal_signal_and_state() -> None:
             A(rec["id"] == "pin-1" and rec["sent"] is True and rec["symbol"] == "EURUSD",
               "رکورد ژورنال باید دقیق باشد")
 
-            state = {"EURUSD|BUY": {"ts": (NOW - timedelta(minutes=30)).isoformat(),
-                                    "score": 7}}
+            # نسخهٔ ۱.۱: کلید ضداسپم «نماد|استراتژی|جهت» است. سیگنال بدون
+            # استراتژی (این pin) کلید legacy می‌گیرد — همان رفتار قبلی.
+            key = engine._signal_state_key(sig)
+            A(key == "EURUSD|BUY", f"کلید ضداسپم سیگنال بی‌استراتژی باید قالب قدیمی باشد: {key}")
+            state = {key: {"ts": (NOW - timedelta(minutes=30)).isoformat(),
+                           "score": 7}}
             go, why = engine.should_send_signal(state, sig, {"resend_cooldown_minutes": 180,
                                                              "resend_score_gain": 2}, now=NOW)
             A(go is True and "بهتر" in why,
               "امتیاز ۹ در برابر ۷ (delta=2 ≥ gain) → ارسال با دلیل «بهتر شد»")
-            state2 = {"EURUSD|BUY": {"ts": (NOW - timedelta(minutes=30)).isoformat(),
-                                     "score": 9}}
+            state2 = {key: {"ts": (NOW - timedelta(minutes=30)).isoformat(),
+                            "score": 9}}
             go2, why2 = engine.should_send_signal(state2, sig, {"resend_cooldown_minutes": 180,
                                                                 "resend_score_gain": 2}, now=NOW)
             A(go2 is False and "دقیقه پیش" in why2, "تکراری در cooldown → ارسال نشود")

@@ -10,6 +10,9 @@
     symbols: [
       { name: 'EURUSD', fa: 'یورو به دلار آمریکا', td: 'EUR/USD', tv: { screener: 'forex', exchange: 'FX', symbol: 'EURUSD' }, base: 'EUR', quote: 'USD', pip: 0.0001 },
       { name: 'GBPUSD', fa: 'پوند به دلار آمریکا', td: 'GBP/USD', tv: { screener: 'forex', exchange: 'FX', symbol: 'GBPUSD' }, base: 'GBP', quote: 'USD', pip: 0.0001 },
+      // نسخهٔ ۱.۱ — کراس‌های یورو (تنوع فرصت؛ سبد قبلی تماماً ...USD بود)
+      { name: 'EURJPY', fa: 'یورو به ین ژاپن', td: 'EUR/JPY', tv: { screener: 'forex', exchange: 'FX', symbol: 'EURJPY' }, base: 'EUR', quote: 'JPY', pip: 0.01 },
+      { name: 'EURGBP', fa: 'یورو به پوند انگلیس', td: 'EUR/GBP', tv: { screener: 'forex', exchange: 'FX', symbol: 'EURGBP' }, base: 'EUR', quote: 'GBP', pip: 0.0001 },
       { name: 'USDJPY', fa: 'دلار آمریکا به ین ژاپن', td: 'USD/JPY', tv: { screener: 'forex', exchange: 'FX', symbol: 'USDJPY' }, base: 'USD', quote: 'JPY', pip: 0.01 },
       { name: 'USDCAD', fa: 'دلار آمریکا به دلار کانادا', td: 'USD/CAD', tv: { screener: 'forex', exchange: 'FX', symbol: 'USDCAD' }, base: 'USD', quote: 'CAD', pip: 0.0001 },
       { name: 'AUDUSD', fa: 'دلار استرالیا به دلار آمریکا', td: 'AUD/USD', tv: { screener: 'forex', exchange: 'FX', symbol: 'AUDUSD' }, base: 'AUD', quote: 'USD', pip: 0.0001 },
@@ -23,6 +26,14 @@
       adx_period: 14, adx_min_trend: 20, adx_strong: 25,
       rsi_period: 14, atr_period: 14,
       swing_window: 5, strength_lookback_h1: 24
+    },
+
+    // ── استراتژی‌های چندگانه (نسخهٔ ۱.۱) ─────────────────────
+    // آینهٔ config.yaml → strategies. نبودِ کلید = روشن.
+    strategies: {
+      trend_pullback: { enabled: true },
+      range_reversion: { enabled: true, band_atr: 1.0, rsi_buy: 32, rsi_sell: 68 },
+      breakout: { enabled: true, lookback_h1: 24, buffer_atr: 0.25, adx_min: 20 }
     },
 
     history: {
@@ -63,9 +74,18 @@
     judge: {
       enabled: true,
       min_score: 5,
-      max_signals_per_cycle: 3,
-      resend_cooldown_minutes: 180,
+      max_signals_per_cycle: 4,
+      resend_cooldown_minutes: 90,
       resend_score_gain: 2,
+      // رده‌بندی (A = ریسک کامل، B = نیم‌ریسک، C = دیده‌بان بدون سیگنال)
+      tiers: { enabled: true, a_min_score: 7, c_min_score: 4, b_soft_vetoes: 1 },
+      // سقف پوزیشن باز — سیگنال بیشتر، پوزیشن بیشتر نه
+      portfolio: {
+        max_open_positions: 2, max_signals_per_day: 8,
+        max_per_symbol_per_day: 2, enforce_capacity: true
+      },
+      // قیف سیگنال — چرا سیگنال کم است؟ (فقط می‌شمارد، آستانه را شل نمی‌کند)
+      funnel: { enabled: true, log: true, persist_daily: true },
       veto: {
         weekend: true, high_impact_event: true, timeframe_conflict: true,
         range_market: true, volatility_spike: true, breaking_news: true,
@@ -81,7 +101,7 @@
       }
     },
 
-    journal: { enabled: true, expiry_hours: 48, conservative_both_touch: true },
+    journal: { enabled: true, expiry_hours: 24, conservative_both_touch: true },
 
     ui: { user_name: 'سوشیان', animations: true },
 

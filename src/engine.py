@@ -25,6 +25,7 @@ from .core.bus import EventBus, Events
 from .core.lifecycle import LifecycleManager, PluginState
 from .core.pipeline import STAGES, PipelineRunner, StageResult
 from .fa import fa_num
+from .judge import funnel as funnel_mod      # قیف سیگنال (نسخهٔ ۱.۱ — فقط می‌شمارد)
 from .judge.scoring import JudgeContext      # نوعِ مشترکِ ctx داور (قراردادِ فراخوانی)
 from .plugins import build_default_registry
 from .plugins.data import select_market_provider
@@ -169,7 +170,7 @@ def _collect_market(cfg: dict, log: LogFn, with_tv: bool = True) -> dict:
                 if caps.technical is None:            # سخت‌گیری فاز ۷
                     raise RuntimeError("پلاگین تحلیل تکنیکال در دسترس نیست")
                 out["analyses"].append(caps.technical.analyze_symbol(
-                    sym_cfg, md, cfg["analysis"]))
+                    sym_cfg, md, cfg["analysis"], cfg.get("strategies") or {}))
             except Exception as e:
                 out["errors"] += 1
                 log(f"[!] خطا در {sym_cfg['name']}: {str(e)[:100]}")
@@ -313,7 +314,11 @@ def should_send_signal(state: dict, sig, jcfg: dict,
         حداقل `resend_score_gain` واحد بهتر شده باشد (یعنی مدارک قوی‌تر شده‌اند)
     """
     now = now or datetime.now(timezone.utc)
-    key = f"{sig.symbol}|{sig.direction}"
+    # نسخهٔ ۱.۱: کلید ضداسپم = شناسهٔ ستاپ (نماد|استراتژی|جهت)، نه فقط نماد|جهت.
+    # چرا؟ چون یک «پولبک در روند» و یک «شکست دامنه» روی همان نماد دو فرصت
+    # مستقل‌اند و نباید همدیگر را ۹۰ دقیقه ساکت کنند. سیگنال‌های قدیمی
+    # (بدون setup_id) کلید قبلی را می‌گیرند تا رفتارشان عوض نشود.
+    key = _signal_state_key(sig)
     prev = state.get(key)
     cooldown = float(jcfg.get("resend_cooldown_minutes", 180))
     gain = int(jcfg.get("resend_score_gain", 2))
@@ -331,6 +336,94 @@ def should_send_signal(state: dict, sig, jcfg: dict,
         return True, f"امتیاز {fa_num(delta)} واحد بهتر از دفعهٔ قبل شد"
     return False, (f"همین سیگنال {fa_num(int(age_min))} دقیقه پیش فرستاده شد — "
                    f"تا {fa_num(int(cooldown - age_min))} دقیقهٔ دیگر تکرارش نمی‌کنیم")
+
+
+def _signal_state_key(sig) -> str:
+    """کلید ضداسپم — «نماد|استراتژی|جهت» (نسخهٔ ۱.۱).
+
+    عمداً از فیلدهای زندهٔ سیگنال ساخته می‌شود (نه از `setup_id` ذخیره‌شده) تا
+    اگر کسی جهت/استراتژی سیگنال را عوض کرد، کلید هم با آن عوض شود. سیگنالِ
+    بدون استراتژی همان کلید قدیمی `نماد|جهت` را می‌گیرد تا فایل‌های state و
+    طلایی‌های تاریخی دست‌نخورده بمانند.
+    """
+    strategy = getattr(sig, "strategy", "")
+    if not strategy:
+        return f"{sig.symbol}|{sig.direction}"          # قالب قدیمی (سازگاری کامل)
+    return f"{sig.symbol}|{strategy}|{sig.direction}"
+
+
+def _open_positions(journal) -> int:
+    """تخمین تعداد پوزیشن باز: سیگنال‌های ارسال‌شدهٔ «قابل‌اقدام» که هنوز بازند.
+
+    صادقانه: ربات نمی‌داند کاربر واقعاً وارد شده یا نه. محافظه‌کارانه‌ترین
+    تخمینِ ممکن همین است — هر توصیهٔ قابل‌اقدامی که هنوز نه به هدف خورده و نه
+    به حد ضرر، «اشغال‌کنندهٔ ظرفیت» شمرده می‌شود. وقتی سیگنال با کندل حل شد،
+    ظرفیت خودکار آزاد می‌شود.
+    """
+    try:
+        return sum(1 for e in journal.open_entries()
+                   if getattr(e, "sent", True) and getattr(e, "actionable", True))
+    except Exception:
+        return 0
+
+
+def _sends_today(state: dict, now: datetime) -> dict:
+    """شمارش ارسال‌های امروز (UTC) از فایل state: {"total", "by_symbol": {}}."""
+    day = now.astimezone(timezone.utc).strftime("%Y-%m-%d")
+    total, by_symbol = 0, {}
+    for key, val in (state or {}).items():
+        if not isinstance(val, dict):
+            continue
+        try:
+            ts = datetime.fromisoformat(str(val.get("ts", "")))
+        except Exception:
+            continue
+        if ts.tzinfo is None:
+            ts = ts.replace(tzinfo=timezone.utc)
+        if ts.astimezone(timezone.utc).strftime("%Y-%m-%d") != day:
+            continue
+        total += 1
+        sym = str(key).split("|")[0]
+        by_symbol[sym] = by_symbol.get(sym, 0) + 1
+    return {"total": total, "by_symbol": by_symbol}
+
+
+def _daily_cap_block(sig, today: dict, pcfg: dict) -> str:
+    """سقف روزانه — «سیگنال بیشتر» نباید به «اسپم» تبدیل شود."""
+    limit = int(pcfg.get("max_signals_per_day", 0) or 0)
+    if limit and today["total"] >= limit:
+        return (f"سقف {fa_num(limit)} سیگنال در روز پر شده — "
+                f"فردا دوباره بررسی می‌شود")
+    per_sym = int(pcfg.get("max_per_symbol_per_day", 0) or 0)
+    n = today["by_symbol"].get(sig.symbol, 0)
+    if per_sym and n >= per_sym:
+        return (f"برای {sig.symbol} امروز {fa_num(n)} سیگنال فرستاده شد "
+                f"(سقف {fa_num(per_sym)}) — تمرکز روی بقیهٔ نمادها")
+    return ""
+
+
+def _funnel_path():
+    return app_paths.logs_dir() / "funnel.json"
+
+
+def _load_funnel() -> dict:
+    try:
+        with open(_funnel_path(), encoding="utf-8") as f:
+            d = json.load(f)
+        return d if isinstance(d, dict) else {}
+    except Exception:
+        return {}
+
+
+def _save_funnel(data: dict, keep_days: int = 30) -> None:
+    days = data.get("days") or {}
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=keep_days)).strftime("%Y-%m-%d")
+    data["days"] = {k: v for k, v in days.items() if k >= cutoff}
+    try:
+        with open(_funnel_path(), "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=1)
+    except Exception:
+        pass
 
 
 def journal_signal(sig, sent: bool) -> None:
@@ -400,7 +493,7 @@ def run_cycle(cfg: Optional[dict] = None, on_log: LogFn = _noop,
     C: dict = {"mkt": None, "now": None, "simulated": False, "journal": None,
                "stats": None, "resolved": [], "cal_snap": None, "news_snap": None,
                "vetoes": {}, "jcfg": {}, "judgments": [], "signals": [],
-               "judge_summary": "", "report": "", "sent_signals": [],
+               "judge_summary": "", "report": "", "sent_signals": [], "funnel": None,
                "fired_alerts": []}
 
     runner = PipelineRunner(registry=caps.reg, bus=BUS, log=log, stages=STAGES)
@@ -489,6 +582,7 @@ def run_cycle(cfg: Optional[dict] = None, on_log: LogFn = _noop,
             else:
                 ctx = JudgeContext(
                     jcfg=jcfg, acfg=cfg["analysis"], symbols_cfg=cfg["symbols"],
+                    scfg=(cfg.get("strategies") or {}),
                     ranking=C["mkt"]["ranking"], tv_map=C["mkt"]["tv_map"],
                     cal_snap=C["cal_snap"],
                     calendar_enabled=bool((cfg.get("fundamental") or {}).get("enabled", True)),
@@ -508,11 +602,32 @@ def run_cycle(cfg: Optional[dict] = None, on_log: LogFn = _noop,
                               "score": _sg.score})
                 log(f"⚖️ داور: {len(signals)} سیگنال صادر شد 🎯" if signals
                     else "⚖️ داور: هیچ سیگنالی صادر نشد (دلیل هر نماد در گزارش هست)")
+                # ── قیف سیگنال (نسخهٔ ۱.۱) ────────────────────────
+                # فقط می‌شمارد: چند نماد بدون ستاپ ماند، چند وتو شد، چند امتیاز
+                # کم آورد. بدون این عدد، «سیگنال کم است» یک حس است نه یک داده.
+                fcfg = jcfg.get("funnel") or {}
+                if fcfg.get("enabled", True):
+                    snap = funnel_mod.summarize(judgments)
+                    C["funnel"] = snap
+                    result["funnel"] = {k: snap[k] for k in
+                                        ("total", "signals", "counts", "vetoes")}
+                    if fcfg.get("log", True):
+                        log(snap["line_fa"])
+                    if fcfg.get("persist_daily", True) and not C["simulated"]:
+                        merged = funnel_mod.merge_daily(_load_funnel(), snap, C["now"])
+                        _save_funnel(merged)
+                        today = (merged.get("days") or {}).get(
+                            C["now"].astimezone(timezone.utc).strftime("%Y-%m-%d"))
+                        if today and fcfg.get("log", True):
+                            log(funnel_mod.day_line(today))
                 judge_summary = _safe_render(
                     caps, "judge_summary",
                     {"judgments": judgments,
                      "min_score": int(jcfg.get("min_score", 5)),
                      "now": C["now"]}, log)
+                # قیف سیگنال سرِ گزارش داور — «چرا کم است» همان‌جا دیده شود
+                if C.get("funnel"):
+                    judge_summary = C["funnel"]["line_fa"] + "\n" + judge_summary
         else:
             log("[i] داور امتیازدهی در تنظیمات غیرفعال است")
         C["judgments"], C["signals"], C["judge_summary"] = judgments, signals, judge_summary
@@ -554,22 +669,48 @@ def run_cycle(cfg: Optional[dict] = None, on_log: LogFn = _noop,
             log(f"⚠️ حالت شبیه‌سازی: {len(signals)} سیگنال ساخته شد ولی به تلگرام "
                 f"ارسال نمی‌شود و در ژورنال ثبت نمی‌شود (فقط نمایشی است)")
             for sig in signals:
-                sent_signals.append({"symbol": sig.symbol, "direction": sig.direction,
-                                     "score": sig.score, "max_score": sig.max_score,
-                                     "sent": False, "simulated": True,
-                                     "text": _safe_render(caps, "signal", {"s": sig}, log),
-                                     "entry": sig.entry, "sl": sig.sl, "tp": sig.tp})
+                row = {"symbol": sig.symbol, "direction": sig.direction,
+                       "score": sig.score, "max_score": sig.max_score,
+                       "sent": False, "simulated": True,
+                       "text": _safe_render(caps, "signal", {"s": sig}, log),
+                       "entry": sig.entry, "sl": sig.sl, "tp": sig.tp}
+                if getattr(sig, "tier", "") or getattr(sig, "strategy", ""):
+                    row.update({"tier": sig.tier, "strategy": sig.strategy,
+                                "strategy_fa": getattr(sig, "strategy_fa", "")})
+                sent_signals.append(row)
         elif signals:
             state = _load_signal_state()
-            for sig in signals:
+            pcfg = C["jcfg"].get("portfolio") or {}
+            # ظرفیت پوزیشن باز (نسخهٔ ۱.۱): هر توصیهٔ «قابل‌اقدام» که هنوز باز است
+            # یک صندلی اشغال می‌کند. سیگنال‌های بعدی حذف نمی‌شوند — فقط برچسب
+            # «فقط پیگیری» می‌خورند، چون کاربر سقف ۲ پوزیشن گذاشته است.
+            limit = int(pcfg.get("max_open_positions", 0) or 0)
+            enforce = bool(pcfg.get("enforce_capacity", True)) and limit > 0
+            free = max(0, limit - (_open_positions(C["journal"]) if C["journal"] else 0))
+            today = _sends_today(state, C["now"])
+            # ردهٔ A اول، بعد امتیاز — تا بهترین فرصت‌ها اول «صندلی» بگیرند
+            ordered = sorted(signals, key=lambda s: (0 if getattr(s, "tier", "") == "A" else 1,
+                                                     -s.score))
+            for sig in ordered:
+                block = _daily_cap_block(sig, today, pcfg)
                 go, why = should_send_signal(state, sig, C["jcfg"], now=C["now"])
+                if go and block:
+                    go, why = False, block
+                if enforce:
+                    if free > 0:
+                        sig.actionable, sig.capacity_note = True, ""
+                        free -= 1
+                    else:
+                        sig.actionable = False
+                        sig.capacity_note = (f"سقف {fa_num(limit)} پوزیشن باز پر است — "
+                                             f"این سیگنال فقط برای پیگیری است، ورود نکن")
                 text = _safe_render(caps, "signal", {"s": sig}, log)
                 sent = False
                 if go:
                     sent, _msg = _send_telegram(cfg, text, log,
                                                 label=f"🎯 سیگنال {sig.symbol}")
                     if sent:
-                        state[f"{sig.symbol}|{sig.direction}"] = {
+                        state[_signal_state_key(sig)] = {
                             "ts": datetime.now(timezone.utc).isoformat(),
                             "score": sig.score,
                         }
@@ -577,16 +718,24 @@ def run_cycle(cfg: Optional[dict] = None, on_log: LogFn = _noop,
                     log(f"[i] سیگنال {sig.symbol} ({sig.direction}) ارسال نشد — {why}")
                 BUS.emit(Events.SIGNAL_SENT, {"symbol": sig.symbol, "sent": sent})
                 journal_signal(sig, sent)      # پایهٔ ژورنال مرحله ۴
-                sent_signals.append({"symbol": sig.symbol, "direction": sig.direction,
-                                     "score": sig.score, "max_score": sig.max_score,
-                                     "sent": sent, "text": text,
-                                     "entry": sig.entry, "sl": sig.sl, "tp": sig.tp,
-                                     # v0.19.0 — فیلدهای کارت سیگنال (popup/اشتراک تصویر/نمودار)
-                                     "pip": sig.pip, "is_gold": bool(getattr(sig, "is_gold", False)),
-                                     "rr": sig.rr, "stars": getattr(sig, "stars", 0),
-                                     "session_fa": getattr(sig, "session_fa", ""),
-                                     "fa_name": getattr(sig, "fa_name", ""),
-                                     "now": C["now"].isoformat()})
+                row = {"symbol": sig.symbol, "direction": sig.direction,
+                       "score": sig.score, "max_score": sig.max_score,
+                       "sent": sent, "text": text,
+                       "entry": sig.entry, "sl": sig.sl, "tp": sig.tp,
+                       # v0.19.0 — فیلدهای کارت سیگنال (popup/اشتراک تصویر/نمودار)
+                       "pip": sig.pip, "is_gold": bool(getattr(sig, "is_gold", False)),
+                       "rr": sig.rr, "stars": getattr(sig, "stars", 0),
+                       "session_fa": getattr(sig, "session_fa", ""),
+                       "fa_name": getattr(sig, "fa_name", ""),
+                       "now": C["now"].isoformat()}
+                # رده/استراتژی فقط وقتی هست اضافه می‌شود (سازگاری کامل با
+                # مصرف‌کننده‌های قدیمی و با طلاییِ تاریخی موتور)
+                if getattr(sig, "tier", "") or getattr(sig, "strategy", ""):
+                    row.update({"tier": sig.tier, "strategy": sig.strategy,
+                                "strategy_fa": getattr(sig, "strategy_fa", ""),
+                                "actionable": bool(getattr(sig, "actionable", True)),
+                                "capacity_note": getattr(sig, "capacity_note", "")})
+                sent_signals.append(row)
             _save_signal_state(state)
         result["signals"] = sent_signals
 

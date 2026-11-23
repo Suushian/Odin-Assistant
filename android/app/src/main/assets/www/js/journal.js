@@ -283,8 +283,48 @@
   };
 
   // ── کنترل اسپم (پورت should_send_signal) ────────────────────
+  // کلید ضداسپم (نسخهٔ ۱.۱): «نماد|استراتژی|جهت» — ستاپ‌های مستقل همدیگر را
+  // ساکت نمی‌کنند. سیگنال بدون استراتژی همان کلید قدیمی «نماد|جهت» را می‌گیرد.
+  O.signalStateKey = function (sig) {
+    var strategy = sig.strategy || '';
+    return strategy ? (sig.symbol + '|' + strategy + '|' + sig.direction)
+      : (sig.symbol + '|' + sig.direction);
+  };
+
+  // ── سقف روزانه (نسخهٔ ۱.۱) — «سیگنال بیشتر» نباید به اسپم تبدیل شود
+  O.signalCountsToday = function (state, nowMs) {
+    var day = new Date(nowMs).toISOString().slice(0, 10);
+    var total = 0, bySymbol = {};
+    Object.keys(state || {}).forEach(function (key) {
+      var v = state[key];
+      if (!v || typeof v !== 'object') return;
+      var t = Date.parse(v.ts);
+      if (isNaN(t)) return;
+      if (new Date(t).toISOString().slice(0, 10) !== day) return;
+      total++;
+      var sym = String(key).split('|')[0];
+      bySymbol[sym] = (bySymbol[sym] || 0) + 1;
+    });
+    return { total: total, by_symbol: bySymbol };
+  };
+
+  O.dailyCapBlock = function (sig, today, pcfg) {
+    pcfg = pcfg || {};
+    var limit = pcfg.max_signals_per_day | 0;
+    if (limit && today.total >= limit) {
+      return 'سقف ' + O.faNum(limit) + ' سیگنال در روز پر شده — فردا دوباره بررسی می‌شود';
+    }
+    var perSym = pcfg.max_per_symbol_per_day | 0;
+    var n = (today.by_symbol || {})[sig.symbol] || 0;
+    if (perSym && n >= perSym) {
+      return 'برای ' + sig.symbol + ' امروز ' + O.faNum(n) + ' سیگنال فرستاده شد (سقف ' +
+        O.faNum(perSym) + ') — تمرکز روی بقیهٔ نمادها';
+    }
+    return '';
+  };
+
   O.shouldSendSignal = function (state, sig, jcfg, nowMs) {
-    var key = sig.symbol + '|' + sig.direction;
+    var key = O.signalStateKey(sig);
     var prev = state[key];
     var cooldown = +jcfg.resend_cooldown_minutes || 180;
     var gain = (jcfg.resend_score_gain | 0) || 2;
