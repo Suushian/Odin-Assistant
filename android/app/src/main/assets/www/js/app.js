@@ -864,7 +864,7 @@
           saveSettings();
           O.navigate('settings');
         } else if (key === 'auto_refresh_min') {
-          var cur = S.settings.auto_refresh_min || 15;
+          var cur = S.settings.auto_refresh_min || 30;
           S.settings.auto_refresh_min = Math.max(30, Math.min(120, cur + delta * 5));
           saveSettings();
           O.navigate('settings');
