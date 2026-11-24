@@ -16,8 +16,14 @@
 - `docs/odin-launcher-icon.svg` نسخهٔ برداریِ مرجع است.
 - اندروید: `drawable/odin_launcher_icon.xml`، `odin_launcher_foreground.xml`
   (در ناحیهٔ ایمن ۶۶dp) و `ic_stat_odin.xml` (فقط خطِ پالس، تک‌رنگ).
+- لانچر برای دستگاه‌های API 24–25 (پیش از adaptive icon):
+  `res/mipmap-anydpi/ic_launcher.xml` با همان مسیر و نسخهٔ تختِ رنگ.
+- رنگ پس‌زمینهٔ آیکون تطبیقی: `res/values/colors.xml` → `ic_launcher_background`
+  برابر `#0F1620` (هم‌خانوادهٔ فیلدِ نشان).
 - اسپلش و «درباره ما» در وب‌ویو، همان مسیر را با `scale(0.4444)` می‌کشند؛
   آیکون دسکتاپ در `src/ui/icons.py` با `scale(0.2222)` و به‌صورت توپر.
+- تصویر مستندات `docs/images/splash.png` از همین نشان ساخته می‌شود (رندرِ
+  طراحیِ کارت اسپلش با توکن‌های تم؛ نه اسکرین‌شاتِ دستگاه).
 
 ## سیستم رنگ
 
@@ -35,5 +41,5 @@
     node tests/js/smoke_brand_identity.js
     node tests/js/smoke_theme_parity.js
 
-`smoke_brand_identity.js` تضمین می‌کند هر هشت سطح، دقیقاً همان رشته‌های مسیرِ
+`smoke_brand_identity.js` تضمین می‌کند همهٔ سطوح، دقیقاً همان رشته‌های مسیرِ
 منبع را داشته باشند و هیچ بازمانده‌ای از نشان قدیمی (Ø) باقی نماند.

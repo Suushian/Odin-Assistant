@@ -31,6 +31,8 @@ const pyTheme = read('src/ui/theme.py');
 const css = read('android/app/src/main/assets/www/style.css');
 const manifest = read('android/app/src/main/AndroidManifest.xml');
 const adaptive = read('android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml');
+const legacyLauncher = read('android/app/src/main/res/mipmap-anydpi/ic_launcher.xml');
+const colors = read('android/app/src/main/res/values/colors.xml');
 const generator = read('assets/make_icon.py');
 const brandDoc = read('docs/brand-identity.md');
 
@@ -54,13 +56,17 @@ assert(pyTheme.includes('brand: str = "#101013"') && pyTheme.includes('brand_tin
 assert(css.includes('--brand: #101013;') && css.includes('--brand-tint: #EDEDF0;'), 'Android CSS brand tokens must match Python');
 assert(manifest.includes('android:icon="@mipmap/ic_launcher"'), 'manifest must use the adaptive launcher resource');
 assert(adaptive.includes('<adaptive-icon') && adaptive.includes('odin_launcher_foreground'), 'adaptive icon must use the marked foreground');
+assert(legacyLauncher.includes(SQUIRCLE) && legacyLauncher.includes(HOLE), 'API 24–25 launcher must use the source mark too');
+assert(legacyLauncher.includes('android:fillType="evenOdd"'), 'API 24–25 launcher must cut the pulse');
+assert(/ic_launcher_background">#0F1620</.test(colors), 'adaptive background must match the brand field colour');
 
 // ── نشان قدیمی (Ø) نباید در هیچ سطح برند باقی بماند
 const legacy = ['a25,25', 'M25,83 L83,25', 'M25 83 83 25', 'M11 37 37 11', 'r="5.55"',
                 'M24,13 a11,11', 'extent = ring_r + 152'];
 for (const needle of legacy) {
   for (const [name, text] of [['svg', svg], ['launcher', launcher], ['status', status],
-                              ['splash', html], ['about', about], ['icons', pyIcons]]) {
+                              ['splash', html], ['about', about], ['icons', pyIcons],
+                              ['legacy launcher', legacyLauncher]]) {
     assert(!text.includes(needle), 'legacy Ø artwork must be gone from ' + name + ' (' + needle + ')');
   }
 }
@@ -78,4 +84,4 @@ for (const [name, px] of Object.entries(mipmaps)) {
   assert(buf.readUInt32BE(16) === px && buf.readUInt32BE(20) === px, 'mipmap ' + name + ' must be ' + px + 'px');
 }
 
-console.log('SMOKE BRAND IDENTITY OK — پالسِ منفی: یک منبع هندسه، ۸ سطح برند، PNG/ICO/mipmapها');
+console.log('SMOKE BRAND IDENTITY OK — پالسِ منفی: یک منبع هندسه، همهٔ سطوح برند (SVG/launcher/adaptive/status/splash/about/دسکتاپ/rester)');
