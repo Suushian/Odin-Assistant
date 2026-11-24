@@ -81,6 +81,13 @@
       resend_score_gain: 2,
       // رده‌بندی (A = ریسک کامل، B = نیم‌ریسک، C = دیده‌بان بدون سیگنال)
       tiers: { enabled: true, a_min_score: 7, c_min_score: 4, b_soft_vetoes: 1 },
+      // v1.6.0 — دروازهٔ استراتژی (آینهٔ config.yaml). پیش‌فرض خاموش.
+      strategy_gate: {
+        enabled: false,
+        trend_pullback: { enabled: true, min_score: 5 },
+        breakout: { enabled: true, min_score: 5 },
+        range_reversion: { enabled: true, min_score: 5 }
+      },
       // سقف پوزیشن باز — سیگنال بیشتر، پوزیشن بیشتر نه
       portfolio: {
         max_open_positions: 2, max_signals_per_day: 8,

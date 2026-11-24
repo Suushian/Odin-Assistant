@@ -310,13 +310,72 @@ function testConfigWiring() {
 }
 
 // ══════════════════════════════════════════════════════════════
+//  v1.6.0 — دروازهٔ استراتژی (آینهٔ tests/test_signal_quality.py)
+// ══════════════════════════════════════════════════════════════
+function testStrategyGate() {
+  const G = (inner) => makeCtx({ strategy_gate: Object.assign({ enabled: true }, inner || {}) }, WED);
+
+  // ۱) پیش‌فرض خاموش = رفتار قبلی
+  const offGate = O.strategyGate({ strategy_gate: { enabled: false } }, 'breakout');
+  A(offGate.on === false && offGate.allowed === true && offGate.min_score === 0,
+    'پیش‌فرض: دروازه خاموش، ستاپ مجاز، آستانهٔ اضافه صفر');
+  A(O.strategyGate({}, 'breakout').on === false, 'نبودِ کلید config = خاموش');
+
+  // ۲) سه حالت روشن
+  const g = { strategy_gate: { enabled: true,
+    breakout: { enabled: false }, range_reversion: { min_score: 8 },
+    trend_pullback: { min_score: '6' } } };
+  A(O.strategyGate(g, 'breakout').allowed === false, 'ستاپ خاموش → allowed=false');
+  A(O.strategyGate(g, 'range_reversion').min_score === 8, 'min_score عددی');
+  A(O.strategyGate(g, 'trend_pullback').min_score === 6, 'min_score رشته‌ای');
+  A(O.strategyGate(g, 'nope').allowed === true, 'ستاپ ناشناخته = بی‌تغییر');
+  A(O.strategyGate({ strategy_gate: { enabled: true, breakout: { min_score: 'x' } } },
+    'breakout').min_score === 0, 'min_score نامعتبر → بی‌اثر');
+
+  // ۳) مسیر داوری: ستاپ با کیفیت بالا که پیش‌فرض سیگنال می‌دهد
+  const withSetup = (key) => makeAnalysis({ setups: [{ key: key, quality: 3, direction: 'BUY' }] });
+
+  let j = O.judgeSymbol(withSetup('range_reversion'), {}, null, makeCtx({}, WED));
+  A(!!j.signal && j.reject_reason === '', 'دروازهٔ خاموش: سیگنال مثل قبل صادر می‌شود');
+  const baseScore = j.score;
+
+  j = O.judgeSymbol(withSetup('range_reversion'), {}, null,
+    G({ range_reversion: { enabled: false } }));
+  A(!j.signal && j.reject_reason === 'STRATEGY_OFF', 'ستاپ خاموش → STRATEGY_OFF');
+  A(j.reject_detail.indexOf('بازگشت از کف/سقف رنج') >= 0, 'متن رد، نام فارسی ستاپ را دارد');
+  A(j.reject_detail.indexOf(O.faNum(baseScore)) >= 0, 'متن رد، امتیاز همان ستاپ را دارد');
+  A(O.judgmentStatusFa(j).indexOf('⛔') === 0, 'برچسب وضعیت برای ستاپ خاموش');
+
+  // رده‌بندی عمداً خاموش است تا دلیل دقیقاً LOW_SCORE باشد (وگرنه دیده‌بان می‌شود)
+  j = O.judgeSymbol(withSetup('range_reversion'), {}, null,
+    makeCtx({ tiers: { enabled: false },
+              strategy_gate: { enabled: true, range_reversion: { min_score: 12 } } }, WED));
+  A(!j.signal && j.reject_reason === 'LOW_SCORE', 'آستانهٔ ۱۲ برای ستاپ → LOW_SCORE');
+  A(j.reject_detail.indexOf(O.faNum(12)) >= 0, 'متن LOW_SCORE آستانهٔ مؤثر را نشان می‌دهد');
+
+  j = O.judgeSymbol(withSetup('range_reversion'), {}, null,
+    G({ range_reversion: { min_score: 5 } }));
+  A(!!j.signal, 'آستانهٔ ۵ = عمومی → سیگنال صادر می‌شود');
+
+  j = O.judgeSymbol(withSetup('trend_pullback'), {}, null,
+    G({ range_reversion: { enabled: false } }));
+  A(!!j.signal, 'خاموش‌کردن یک ستاپ، ستاپ دیگر را نمی‌بندد');
+
+  // ۴) قیف باید دلیل تازه را بشمارد
+  A(O.SIGNAL_REASON_ORDER.indexOf('STRATEGY_OFF') >= 0, 'STRATEGY_OFF در ترتیب قیف هست');
+  A(!!O.SIGNAL_REASON_FA.STRATEGY_OFF, 'برچسب فارسی STRATEGY_OFF تعریف شده');
+}
+
+
+// ══════════════════════════════════════════════════════════════
 testSetupDetection();
 testBestSetup();
 testTiers();
 testStrategyInJudge();
+testStrategyGate();
 testFunnel();
 testSpamAndCapacity();
 testConfigWiring();
 
 console.log('✅ STRATEGY TESTS (JS) OK — ' + COUNT +
-  ' بررسی پاس؛ سه استراتژی + رده‌بندی + قیف + سقف پوزیشن/روز در موتور اندروید سبز است');
+  ' بررسی پاس؛ سه استراتژی + رده‌بندی + دروازهٔ استراتژی + قیف + سقف پوزیشن/روز در موتور اندروید سبز است');

@@ -2,8 +2,8 @@
 ;  ODIN Assistant — نصب‌کنندهٔ رسمی ویندوز (Inno Setup 6)
 ;
 ;  ساخت محلی (ویندوز + Inno Setup نصب):
-;      iscc /DAppVersion=1.5.0 installer\odin.iss
-;  خروجی: installer\Output\ODINAssistant-v1.5.0-windows-setup.exe
+;      iscc /DAppVersion=1.6.0 installer\odin.iss
+;  خروجی: installer\Output\ODINAssistant-v1.6.0-windows-setup.exe
 ;
 ;  CI (GitHub Actions روی windows-latest) همین فایل را بعد از PyInstaller
 ;  کامپایل می‌کند؛ مسیر ISCC در workflow پیدا/نصب می‌شود.

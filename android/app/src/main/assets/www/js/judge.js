@@ -426,6 +426,25 @@
 
   // ── داوری یک نماد (هرگز استثنا پرتاب نمی‌کند) ───────────────
   // ══════════════════════════════════════════════════════════
+  // ══════════════════════════════════════════════════════════
+  //  v1.6.0 — دروازهٔ استراتژی (آینهٔ src/judge/scoring.py)
+  //  هر ستاپ می‌تواند خاموش شود یا آستانهٔ امتیاز خودش را داشته باشد.
+  //  پیش‌فرض config: enabled=false → رفتار ۱.۵.۰ دست‌نخورده می‌ماند.
+  // ══════════════════════════════════════════════════════════
+  function strategyGate(jcfg, key) {
+    var out = { on: false, allowed: true, min_score: 0 };
+    var g = (jcfg || {}).strategy_gate;
+    if (!g || typeof g !== 'object' || g.enabled !== true) return out;
+    out.on = true;
+    var row = key ? g[key] : null;
+    if (!row || typeof row !== 'object') return out;
+    if (row.enabled === false) { out.allowed = false; return out; }
+    var n = parseInt(row.min_score, 10);
+    out.min_score = (isFinite(n) && n > 0) ? n : 0;
+    return out;
+  }
+  O.strategyGate = strategyGate;
+
   O.judgeSymbol = function (a, symCfg, md, ctx, vetoRules, evidenceRules, riskFn) {
     // vetoRules/evidenceRules/riskFn (فاز ۶b): تزریق *اختیاری* قواعد —
     // undefined = فهرست‌های پیش‌فرض همین ماژول (بایت‌به‌بایت رفتار امروز).
@@ -484,6 +503,20 @@
     var tcfg = ctx.jcfg.tiers || {};
     var tiersOn = tcfg.enabled === true;
     var minScore = (ctx.jcfg.min_score | 0) || 5;
+
+    // v1.6.0 — دروازهٔ استراتژی: خاموش‌کردن یک ستاپ یا سخت‌تر کردن آستانه‌اش
+    var gate = strategyGate(ctx.jcfg, j.strategy);
+    if (gate.on && j.strategy) {
+      if (!gate.allowed) {
+        j.reject_reason = 'STRATEGY_OFF';
+        j.reject_detail = 'ستاپ «' + (j.strategy_fa || O.STRATEGY_FA[j.strategy] || j.strategy) +
+          '» در تنظیمات خاموش شده است — ' +
+          'حتی با امتیاز ' + O.faNum(j.score) + ' سیگنال صادر نمی‌شود';
+        return j;
+      }
+      if (gate.min_score > minScore) minScore = gate.min_score;
+    }
+
     if (j.score < minScore) {
       var cMin = (tcfg.c_min_score != null) ? (tcfg.c_min_score | 0) : minScore;
       if (tiersOn && j.score >= cMin) {
@@ -600,7 +633,8 @@
     return {
       VETO: '🚫 وتو شد', LOW_SCORE: '⏳ امتیاز ناکافی',
       WATCHLIST: '👁️ دیده‌بان (سیگنال معاملاتی نیست)', NO_SETUP: '❔ ستاپی شکل نگرفته',
-      CAPPED: '🔢 به سقف تعداد سیگنال رسید', DISABLED: '⚙️ داور خاموش است'
+      CAPPED: '🔢 به سقف تعداد سیگنال رسید', DISABLED: '⚙️ داور خاموش است',
+      STRATEGY_OFF: '⛔ ستاپ خاموش شده'
     }[j.reject_reason] || '—';
   };
 
@@ -608,10 +642,11 @@
   //  قیف سیگنال (نسخهٔ ۱.۱) — پورت src/judge/funnel.py
   //  فقط می‌شمارد؛ هیچ آستانه‌ای را شل نمی‌کند.
   // ══════════════════════════════════════════════════════════
-  O.SIGNAL_REASON_ORDER = ['SIGNAL', 'WATCHLIST', 'NO_SETUP', 'LOW_SCORE', 'VETO', 'CAPPED', 'DISABLED'];
+  O.SIGNAL_REASON_ORDER = ['SIGNAL', 'WATCHLIST', 'NO_SETUP', 'LOW_SCORE', 'STRATEGY_OFF', 'VETO', 'CAPPED', 'DISABLED'];
   O.SIGNAL_REASON_FA = {
     SIGNAL: 'سیگنال', WATCHLIST: 'دیده‌بان', NO_SETUP: 'بدون ستاپ',
-    LOW_SCORE: 'امتیاز ناکافی', VETO: 'وتو', CAPPED: 'سقف چرخه', DISABLED: 'داور خاموش'
+    LOW_SCORE: 'امتیاز ناکافی', VETO: 'وتو', CAPPED: 'سقف چرخه', DISABLED: 'داور خاموش',
+    STRATEGY_OFF: 'ستاپ خاموش'
   };
 
   O.signalFunnel = function (judgments) {
