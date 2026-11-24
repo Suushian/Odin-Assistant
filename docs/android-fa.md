@@ -7,7 +7,7 @@
 
 ## هویت بصری برنامه
 
-آیکون لانچر از منبع برداری `android/app/src/main/res/drawable/odin_launcher_icon.xml` رندر می‌شود. نشان برند **«پالسِ منفی»** است: اسکوئرکلِ روشن که خطِ ضربانِ سیگنال از دلش بریده شده (همان نشان Splash/دربارهٔ ما/آیکون دسکتاپ)؛ هندسهٔ مشترک از `assets/brand_mark.py` می‌آید و نسخهٔ SVG در [`odin-launcher-icon.svg`](odin-launcher-icon.svg) است. `smoke_brand_identity.js` هندسهٔ مشترک را پین می‌کند.
+آیکون لانچر از منبع برداری `android/app/src/main/res/drawable/odin_launcher_icon.xml` رندر می‌شود. نشان برند **«پالسِ منفی»** است: اسکوئرکلِ روشن که خطِ ضربانِ سیگنال از دلش بریده شده (همان نشان Splash/دربارهٔ ما/آیکون دسکتاپ)؛ هندسهٔ مشترک از `assets/brand_mark.py` می‌آید و نسخهٔ SVG در [`odin-launcher-icon.svg`](odin-launcher-icon.svg) است. `smoke_brand_identity.js` هندسهٔ مشترک را پین می‌کند. برای دستگاه‌های API 24–25 (پیش از adaptive icon) نسخهٔ تختِ همان نشان در `res/mipmap-anydpi/ic_launcher.xml` است و رنگ پس‌زمینهٔ آیکون تطبیقی از `res/values/colors.xml` (`ic_launcher_background` = `#0F1620`) می‌آید.
 
 ## آن چه در گوشی دارید
 
