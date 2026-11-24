@@ -310,8 +310,27 @@ jobs:
           gh release upload "$TAG" "$OUT" --repo "$GITHUB_REPOSITORY" --clobber
           echo "::notice::APK اندروید ${TAG} روی Release منتشر شد (تنها خروجی قابل‌توزیع)."
 
-      - name: Warn if unsigned (تگ بود ولی امضا نشد)
+      # ── نگهبان معنا‌دار: «هر تگ باید در پایان یک APK منتشرشده داشته باشد»
+      # قبلاً این گام به‌محض نبودِ keystore رسمی قرمز می‌شد، حتی وقتی
+      # `debug-apk-publish.yml` همان تگ را با APK دیباگ منتشر کرده بود (v1.0.1).
+      # حالا تا ۵ دقیقه صبر می‌کند تا آن ریلیز APKدار شود و فقط اگر هیچ APK ای
+      # منتشر نشد، خطا می‌دهد — یعنی سیگنالِ قرمز معنای واقعی «انتشار گم شد» دارد.
+      - name: Ensure the tag ends up with a published APK
         if: startsWith(github.ref, 'refs/tags/') && env.SIGNED != '1'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "::error::تگ ${{ github.ref_name }} زده شد ولی APK امضانشده تولید نشد — چیزی منتشر نمی‌شود. Secrets کلید امضا را بررسی کنید."
+          set -uo pipefail
+          TAG="${{ github.ref_name }}"
+          for i in $(seq 1 20); do
+            if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json assets \
+                 -q '.assets[].name' 2>/dev/null | grep -qi '\.apk$'; then
+              echo "✓ ریلیز $TAG یک APK دارد (امضا: debug، از ورک‌فلوی انتشار)."
+              echo "این بیلد فقط صحتِ ساختِ نسخهٔ release را تأیید کرد و چیزی منتشر نکرد."
+              exit 0
+            fi
+            echo "… هنوز APK ای روی $TAG نیست (تلاش $i/20) — ۱۵ ثانیه صبر"
+            sleep 15
+          done
+          echo "::error::تگ $TAG زده شد ولی هیچ APK منتشرشده‌ای ندارد — نه keystore رسمی بود و نه بیلد دیباگ منتشر شد."
           exit 1
