@@ -791,6 +791,22 @@ def render_markdown(results: list[Result], meta: dict) -> str:
               f"منقضی={s['expired']} · میانگین نگهداری {s['avg_bars']:.0f} کندل", ""]
         if s["seat_stolen"]:
             L += [f"⚠️ {s['seat_stolen']} بار صندلی ظرفیت را سیگنالی گرفت که ارسال نشد.", ""]
+
+    # ── D3/D4: بخش‌های تحلیلی (فقط اگر همان اجرا خواسته شده باشد)
+    extra = meta.get("extra") or {}
+    if extra.get("split"):
+        L += [f"## 🔀 آزمون برون‌نمونه (مرز {extra['split']['mid']})", ""]
+        L += [f"- {ln}" for ln in extra["split"]["lines"]]
+        L += ["", "**چرا؟** در دو بک‌تست واقعی، رتبهٔ استراتژی‌ها برعکس شد؛ "
+                  "قرائتی که فقط در نیمهٔ اول تکرار شود، بیش‌برازش است.", ""]
+    if extra.get("score_advice"):
+        L += ["## 🎚️ کالیبراسیون امتیاز", ""]
+        L += [f"- {ln}" for ln in extra["score_advice"]]
+        L += [""]
+    if extra.get("auto_min"):
+        L += [f"## ⭐ آستانهٔ خودکار: {extra['auto_min']}", "",
+              "سناریوی دوم در جدول خلاصه با همان آستانه اجرا شده است؛ "
+              "اختلاف دو سطر = سهمِ آستانه از نتیجه.", ""]
     return "\n".join(L)
 
 
@@ -799,6 +815,91 @@ def render_markdown(results: list[Result], meta: dict) -> str:
 # ══════════════════════════════════════════════════════════════
 #  چرا: آستانهٔ ۵ از یازده، یک عددِ دستی است. با یک اجرا می‌توان دید
 #  کدام آستانه در همان دادهٔ واقعی انتظار مثبت می‌دهد — بدون تغییر config.
+# ── D3/D4: تقسیم درون/برون‌نمونه و کالیبراسیون امتیاز ──────────
+#  چرا: در دو بک‌تست واقعی، رتبهٔ استراتژی‌ها برعکس شد (breakout در دادهٔ
+#  کاربر بدترین، در ۲۰۱۹–۲۰۲۰ بهترین). تصمیمی که روی یک بازه گرفته شود،
+#  بدون آزمون بازهٔ دوم، بیش‌برازش است. و امتیاز هم یکنوا نبود:
+#  امتیاز ۵ → −۰٫۰۲۲R (۷۶٪ معامله‌ها) ولی امتیاز ۶ → +۰٫۰۸۷R.
+def best_threshold(trades, min_trades: int = 100, lo: int = 5, hi: int = 10):
+    """آستانهٔ امتیازی که در همین داده بهترین میانگین R را می‌دهد.
+
+    فقط آستانه‌هایی بررسی می‌شوند که حداقل `min_trades` معامله باقی بگذارند؛
+    وگرنه یک آستانهٔ خوش‌شانس با ۱۰ معامله برنده می‌شود.
+    Returns: (آستانه, میانگین R, تعداد معامله) یا None.
+    """
+    done = [t for t in trades if t.result]
+    best = None
+    for th in range(int(lo), int(hi) + 1):
+        sel = [t for t in done if (t.score or 0) >= th]
+        if len(sel) < min_trades:
+            continue
+        avg = sum(t.r for t in sel) / len(sel)
+        if best is None or avg > best[1]:
+            best = (th, avg, len(sel))
+    return best
+
+
+def score_advice(stats: dict, min_trades: int = 100) -> list:
+    """جمله‌های ساده دربارهٔ اینکه کدام سبد امتیاز ارزش ندارد (D4)."""
+    out = []
+    bands = {int(k): v for k, v in (stats.get("per_score") or {}).items()}
+    big = {k: v for k, v in bands.items() if v["trades"] >= min_trades}
+    if not big:
+        return ["سبد امتیازی با نمونهٔ کافی (≥"
+                f"{min_trades} معامله) وجود ندارد — داوری دربارهٔ آستانه زود است."]
+    bad = {k: v for k, v in big.items() if v["avg_r"] <= 0}
+    good = {k: v for k, v in big.items() if v["avg_r"] > 0}
+    for k in sorted(bad):
+        out.append(f"امتیاز {k}: {bad[k]['trades']} معامله، میانگین "
+                   f"{bad[k]['avg_r']:+.3f}R — این سبد ارزش معامله ندارد.")
+    for k in sorted(good):
+        out.append(f"امتیاز {k}: {good[k]['trades']} معامله، میانگین "
+                   f"{good[k]['avg_r']:+.3f}R — سودده.")
+    if bad and good and min(good) > min(bad):
+        out.append(f"⇒ آستانهٔ {min(good)} بهتر از {min(big)} به نظر می‌رسد "
+                   f"(ولی با --split در بازهٔ دوم هم بسنج).")
+    return out
+
+
+def split_result(res, start: datetime, end: datetime):
+    """نیمهٔ اول و دوم بازهٔ شبیه‌سازی — برای آزمون برون‌نمونه (D3)."""
+    span = (end - start) / 2
+    mid = start + span
+    a = [t for t in res.trades if t.result and t.entry_ts < mid]
+    b = [t for t in res.trades if t.result and t.entry_ts >= mid]
+    return (mid, a, b)
+
+
+def split_verdict(first: list, second: list, min_trades: int = 60) -> list:
+    """آیا نتیجهٔ نیمهٔ اول در نیمهٔ دوم تکرار شد؟ (زبان ساده)"""
+    def summ(ts):
+        if not ts:
+            return {"n": 0, "avg": 0.0, "hit": 0.0}
+        wins = sum(1 for t in ts if t.r > 0)
+        return {"n": len(ts), "avg": sum(t.r for t in ts) / len(ts),
+                "hit": wins / len(ts)}
+
+    s1, s2 = summ(first), summ(second)
+    if s1["n"] < min_trades or s2["n"] < min_trades:
+        return [f"نمونهٔ کافی نیست (نیمهٔ اول {s1['n']}، نیمهٔ دوم {s2['n']} "
+                f"معامله؛ حداقل {min_trades}) — داوری نکن."]
+    same_sign = (s1["avg"] >= 0) == (s2["avg"] >= 0)
+    lines = [f"نیمهٔ اول: {s1['n']} معامله · برد {100 * s1['hit']:.1f}% · "
+             f"میانگین {s1['avg']:+.3f}R",
+             f"نیمهٔ دوم: {s2['n']} معامله · برد {100 * s2['hit']:.1f}% · "
+             f"میانگین {s2['avg']:+.3f}R"]
+    if same_sign and s1["avg"] > 0 and s2["avg"] > 0:
+        lines.append("✅ هر دو نیمه مثبت‌اند — نتیجه پایدارتر است (ولی هنوز "
+                     "تضمین آینده نیست).")
+    elif same_sign and s1["avg"] <= 0 and s2["avg"] <= 0:
+        lines.append("🔻 هر دو نیمه منفی‌اند — این قاعده ارزش ادامه دادن ندارد؛ "
+                     "به‌جای تنظیم آستانه، ساختار ورود/خروج را عوض کن.")
+    else:
+        lines.append("⚠️ علامت میانگین R بین دو نیمه عوض شده — نتیجه به بازه "
+                     "وابسته است؛ روی یک بازه تصمیم نگیر.")
+    return lines
+
+
 def sweep_min_scores(cfg: dict, data: dict, values, *, start=None, end=None,
                      spread: Optional[dict] = None, slippage: float = DEFAULT_SLIPPAGE):
     """اجرای پیاپی بک‌تست با آستانه‌های مختلف روی *همان* داده."""
@@ -859,7 +960,8 @@ def main(argv=None) -> int:
     ap.add_argument("--legacy", action="store_true", help="فقط استراتژی ۱.۰ (پولبک)")
     ap.add_argument("--no-breakout", action="store_true")
     ap.add_argument("--no-tiers", action="store_true")
-    ap.add_argument("--min-score", type=int, default=None)
+    ap.add_argument("--min-score", default=None,
+                    help="عدد، یا 'auto' برای انتخاب خودکار از همین داده")
     ap.add_argument("--sweep-min-score", default="",
                     help="جاروی آستانهٔ امتیاز؛ مثال: 5,6,7,8")
     ap.add_argument("--max-open", type=int, default=None)
@@ -873,6 +975,8 @@ def main(argv=None) -> int:
     ap.add_argument("--verbose-every", type=int, default=0)
     ap.add_argument("--expiry-hours", type=float, default=None,
                     help="بازنویسی journal.expiry_hours برای آزمون‌ها")
+    ap.add_argument("--split", action="store_true",
+                    help="بازه را نصف کن: درون‌نمونه + برون‌نمونه (D3)")
     ap.add_argument("--no-autoscale", action="store_true",
                     help="تشخیص/اصلاح خودکار دادهٔ pointی متاتریدر را خاموش کن")
     args = ap.parse_args(argv)
@@ -905,8 +1009,9 @@ def main(argv=None) -> int:
         cfg["strategies"]["breakout"] = False
     if args.no_tiers:
         cfg["judge"]["tiers"]["enabled"] = False
-    if args.min_score is not None:
-        cfg["judge"]["min_score"] = args.min_score
+    auto_min = isinstance(args.min_score, str) and args.min_score.strip().lower() == "auto"
+    if args.min_score is not None and not auto_min:
+        cfg["judge"]["min_score"] = int(args.min_score)
     if args.max_open is not None:
         cfg["judge"]["portfolio"]["max_open_positions"] = args.max_open
     if args.max_per_day is not None:
@@ -986,6 +1091,53 @@ def main(argv=None) -> int:
         print(f"    ◆ رده {name:<3} {v['trades']:>4} معامله | برد {_pct(v['win_rate'])} | "
               f"میانگین R {v['avg_r']:+.3f}")
 
+    # ── D3: آزمون برون‌نمونه — نیمهٔ اول در برابر نیمهٔ دوم
+    extra: dict = {}
+    results_extra = None
+    if args.split:
+        w_start = start or min(d.index[0] for d in data.values())
+        w_end = end or max(d.index[-1] for d in data.values())
+        mid, first, second = split_result(res, w_start, w_end)
+        lines = split_verdict(first, second)
+        extra["split"] = {"mid": f"{mid:%Y-%m-%d}", "lines": lines}
+        print(f"\n🔀 درون/برون‌نمونه (مرز {mid:%Y-%m-%d})")
+        for ln in lines:
+            print(f"   {ln}")
+
+    # ── D4: پیشنهاد آستانهٔ امتیاز از همین داده
+    advice = score_advice(s, min_trades=max(30, s["trades"] // 20))
+    print("\n🎚️ کالیبراسیون امتیاز")
+    for ln in advice:
+        print(f"   {ln}")
+    extra["score_advice"] = advice
+
+    if auto_min:
+        pick = best_threshold(res.trades, min_trades=100)
+        cur = int((cfg.get("judge") or {}).get("min_score", 5))
+        if pick is None:
+            print("   [!] نمونهٔ کافی برای انتخاب خودکار آستانه نیست (≥۱۰۰ معامله).")
+        else:
+            th, avg, n = pick
+            if th == cur:
+                print(f"   ⭐ پیشنهاد: {th} — همان آستانهٔ فعلی است؛ اجرای دوم لازم نیست.")
+                extra["auto_min"] = th
+            else:
+                print(f"   ⭐ آستانهٔ پیشنهادی از خودِ داده: {th} "
+                      f"(میانگین {avg:+.3f}R روی {n} معامله) — اجرای دوم…")
+                import copy
+                c2 = copy.deepcopy(cfg)
+                c2.setdefault("judge", {})["min_score"] = int(th)
+                bt2 = Backtest(c2, data, start=start, end=end, spread=spread,
+                               slippage=args.slippage,
+                               label=f"{args.label} · min_score={th}")
+                res2 = bt2.run()
+                s2 = res2.stats()
+                print(f"   ↳ معامله {s2['trades']} | برد {_pct(s2['hit_rate'])} | "
+                      f"میانگین R {s2['avg_r']:+.3f} | PF {s2['profit_factor']:.2f} | "
+                      f"افت {s2['max_dd_r']:+.1f}R")
+                results_extra = res2
+                extra["auto_min"] = th
+
     args.out.mkdir(parents=True, exist_ok=True)
     meta = {
         "date": datetime.now().strftime("%Y-%m-%d"),
@@ -995,13 +1147,17 @@ def main(argv=None) -> int:
                   f"{max(d.index[-1] for d in data.values()):%Y-%m-%d}",
         "window": _window_note(start, end, data),
         "cycle": Backtest.CYCLE_MINUTES, "slippage": args.slippage,
+        "extra": extra,
     }
     stem = "".join(ch if ch.isalnum() or ch in "-_" else "-" for ch in args.label)[:48]
     (args.out / f"{stem}.json").write_text(
         json.dumps({"meta": meta, "stats": s,
-                    "trades": [t.as_dict() for t in res.trades]},
+                    "trades": [t.as_dict() for t in res.trades],
+                    "auto_trades": ([t.as_dict() for t in results_extra.trades]
+                                    if results_extra is not None else [])},
                    ensure_ascii=False, indent=1), encoding="utf-8")
-    (args.out / f"{stem}.md").write_text(render_markdown([res], meta), encoding="utf-8")
+    all_res = [res] + ([results_extra] if results_extra is not None else [])
+    (args.out / f"{stem}.md").write_text(render_markdown(all_res, meta), encoding="utf-8")
     if bt.debug_rows:
         pd.DataFrame(bt.debug_rows).to_csv(args.out / f"{stem}-signals.csv", index=False)
     if args.save_trades and res.trades:

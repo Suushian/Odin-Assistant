@@ -105,6 +105,16 @@ python tools/quality_check.py --data-dir ~/odin-m15 --jobs 2
 روی صفحه چاپ می‌کند و می‌گوید کدام فایل‌ها را باید بفرستی.
 اگر پوشهٔ داده پیدا نشود، مسیر و قالب موردنیاز را می‌گوید.
 
+**گام ۴ (تازه، v1.6.5) — دو سوییچ مهم:**
+
+```bash
+# آیا نتیجه در نیمهٔ دوم هم تکرار می‌شود؟
+python tools/backtest.py --data-dir ~/odin-m15 --split ...
+
+# آستانهٔ امتیاز از خودِ داده، نه از حدس
+python tools/backtest.py --data-dir ~/odin-m15 --min-score auto ...
+```
+
 گام‌های دستی (اگر خواستی جدا اجرا کنی):
 
 ```bash
