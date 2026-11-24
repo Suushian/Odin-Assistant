@@ -130,6 +130,47 @@ def judge_config(cfg: dict) -> dict:
 
 
 # ══════════════════════════════════════════════════════════════
+#  v1.6.0 — دروازهٔ استراتژی (Strategy gate)
+# ══════════════════════════════════════════════════════════════
+#  چرا: بک‌تست ۱٬۴۸۵ معامله‌ای نشان داد کل سیستم چند دهم درصد زیر خط
+#  سربه‌سر است (وین‌ریت ۳۲٫۹٪ در برابر سربه‌سر ۳۳٫۳٪ با RR=۲). در چنین
+#  وضعیتی سریع‌ترین راهِ بهبود، «حذفِ زیرمجموعهٔ زیان‌ده» است، نه افزودن
+#  اندیکاتور. ولی سه ستاپ با یک آستانهٔ مشترک (`min_score`) داوری می‌شدند.
+#
+#  این دروازه به هر ستاپ اجازه می‌دهد:
+#    • خاموش شود (`enabled: false`) → هیچ سیگنالی از آن صادر نمی‌شود
+#    • آستانهٔ بالاتری بگیرد (`min_score: 7`) → فقط نمونهٔ قوی‌ترش رد شود
+#
+#  پیش‌فرض: `enabled: false` در config یعنی کل دروازه خاموش است و رفتار
+#  دقیقاً همان ۱.۵.۰ می‌ماند (سازگاری کامل؛ تست‌های طلایی هم بی‌تغییر).
+def strategy_gate(jcfg: dict, key: str) -> dict:
+    """تنظیم دروازه برای یک ستاپ.
+
+    Returns: {on: bool, allowed: bool, min_score: int, reason_fa: str}
+      on        → آیا دروازه در config فعال است؟
+      allowed   → آیا این ستاپ مجاز است؟
+      min_score → آستانهٔ مؤثرِ اختصاصی این ستاپ (۰ = آستانهٔ عمومی)
+    """
+    g = (jcfg or {}).get("strategy_gate")
+    out = {"on": False, "allowed": True, "min_score": 0, "reason_fa": ""}
+    if not isinstance(g, dict) or not g.get("enabled"):
+        return out
+    out["on"] = True
+    row = g.get(key) if key else None
+    row = row if isinstance(row, dict) else {}
+    if row.get("enabled") is False:
+        out["allowed"] = False
+        out["reason_fa"] = "این ستاپ در تنظیمات خاموش شده است"
+        return out
+    try:
+        out["min_score"] = max(0, int(row.get("min_score", 0) or 0))
+    except (TypeError, ValueError):
+        out["min_score"] = 0
+    return out
+
+
+
+# ══════════════════════════════════════════════════════════════
 #  ساختارهای داده
 # ══════════════════════════════════════════════════════════════
 @dataclass
@@ -853,6 +894,19 @@ def judge_symbol(a: SymbolAnalysis, sym_cfg: dict, md: Optional[MarketData],
     tcfg = jcfg.get("tiers") or {}
     tiers_on = bool(tcfg.get("enabled", False))
     min_score = int(jcfg.get("min_score", 5))
+
+    # v1.6.0 — دروازهٔ استراتژی: خاموش‌کردن یک ستاپ یا سخت‌تر کردن آستانه‌اش.
+    # پیش‌فرض خاموش است، پس هیچ رفتاری عوض نمی‌شود.
+    gate = strategy_gate(jcfg, j.strategy)
+    if gate["on"] and j.strategy:
+        if not gate["allowed"]:
+            j.reject_reason = "STRATEGY_OFF"
+            j.reject_detail = (f"ستاپ «{j.strategy_fa}» در تنظیمات خاموش شده است — "
+                               f"حتی با امتیاز {fa_num(j.score)} سیگنال صادر نمی‌شود")
+            return j
+        if gate["min_score"] > min_score:
+            min_score = gate["min_score"]
+
     if j.score < min_score:
         c_min = int(tcfg.get("c_min_score", min_score))
         if tiers_on and j.score >= c_min:
@@ -864,7 +918,7 @@ def judge_symbol(a: SymbolAnalysis, sym_cfg: dict, md: Optional[MarketData],
             return j
         j.reject_reason = "LOW_SCORE"
         j.reject_detail = (f"امتیاز {fa_num(j.score)} از {fa_num(j.max_score)} — زیر "
-                           f"آستانهٔ {fa_num(int(jcfg.get('min_score', 5)))} است، "
+                           f"آستانهٔ {fa_num(min_score)} است، "
                            f"پس سیگنال صادر نمی‌شود")
         return j
 

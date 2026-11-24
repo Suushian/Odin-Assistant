@@ -276,6 +276,13 @@ class Result:
             "trades_per_day": len(t) / max(1, self.days),
             "per_strategy": group(lambda x: x.strategy or "-"),
             "per_tier": group(lambda x: x.tier or "-"),
+            # v1.6.0 — سه برش تشخیصی که برای «قدرت سیگنال» تصمیم‌سازند:
+            #   per_score  → کدام امتیاز واقعاً سود می‌دهد (کالیبراسیون آستانه)
+            #   per_hour   → کدام ساعت‌ها انتظار منفی دارند (گیت سشن)
+            #   per_weekday→ کدام روزهای هفته (دوشنبه/جمعه معمولاً متفاوت‌اند)
+            "per_score": group(lambda x: str(int(x.score))),
+            "per_hour": group(lambda x: f"{x.entry_ts.hour:02d}"),
+            "per_weekday": group(lambda x: str(x.entry_ts.weekday())),
             "per_symbol": group(lambda x: x.symbol),
             "per_direction": group(lambda x: x.direction),
             "funnel": dict(self.funnel), "vetoes": dict(self.vetoes),
@@ -678,6 +685,17 @@ def render_markdown(results: list[Result], meta: dict) -> str:
             L += [f"### {title}", ""]
             L += _table([[k, v["trades"], _pct(v["win_rate"]), f"{v['avg_r']:+.3f}",
                           f"{v['total_r']:+.1f}"] for k, v in s[key].items()], head2) + [""]
+        for title, key, head3 in (
+            ("به تفکیک امتیاز", "per_score",
+             ["امتیاز", "معامله", "نرخ برد", "میانگین R", "مجموع R"]),
+            ("به تفکیک ساعت ورود (UTC)", "per_hour",
+             ["ساعت", "معامله", "نرخ برد", "میانگین R", "مجموع R"]),
+            ("به تفکیک روز هفته", "per_weekday",
+             ["روز (۰=دوشنبه)", "معامله", "نرخ برد", "میانگین R", "مجموع R"]),
+        ):
+            L += [f"### {title}", ""]
+            L += _table([[k, v["trades"], _pct(v["win_rate"]), f"{v['avg_r']:+.3f}",
+                          f"{v['total_r']:+.1f}"] for k, v in s[key].items()], head3) + [""]
         L += ["### قیف و ردها", "",
               "- نتیجهٔ داوری: " + "، ".join(f"{k}={v}" for k, v in s["funnel"].items()),
               "- وتوها: " + ("، ".join(f"{k}={v}" for k, v in s["vetoes"].items()) or "—"),
@@ -687,6 +705,60 @@ def render_markdown(results: list[Result], meta: dict) -> str:
               f"منقضی={s['expired']} · میانگین نگهداری {s['avg_bars']:.0f} کندل", ""]
         if s["seat_stolen"]:
             L += [f"⚠️ {s['seat_stolen']} بار صندلی ظرفیت را سیگنالی گرفت که ارسال نشد.", ""]
+    return "\n".join(L)
+
+
+# ══════════════════════════════════════════════════════════════
+#  v1.6.0 — جاروی آستانهٔ امتیاز (min_score sweep)
+# ══════════════════════════════════════════════════════════════
+#  چرا: آستانهٔ ۵ از یازده، یک عددِ دستی است. با یک اجرا می‌توان دید
+#  کدام آستانه در همان دادهٔ واقعی انتظار مثبت می‌دهد — بدون تغییر config.
+def sweep_min_scores(cfg: dict, data: dict, values, *, start=None, end=None,
+                     spread: Optional[dict] = None, slippage: float = DEFAULT_SLIPPAGE):
+    """اجرای پیاپی بک‌تست با آستانه‌های مختلف روی *همان* داده."""
+    import copy
+    out = []
+    for v in values:
+        c = copy.deepcopy(cfg)
+        c.setdefault("judge", {})["min_score"] = int(v)
+        bt = Backtest(c, data, start=start, end=end,
+                      spread=spread or DEFAULT_SPREAD, slippage=slippage,
+                      label=f"min_score={int(v)}")
+        out.append((int(v), bt.run()))
+    return out
+
+
+def sweep_pick(pairs, min_trades: int = 100):
+    """بهترین آستانه: بیشترین میانگین R میان گزینه‌هایی که نمونهٔ کافی دارند."""
+    ok = [(v, r.stats()) for v, r in pairs if r.stats()["trades"] >= min_trades]
+    if not ok:
+        return None
+    return max(ok, key=lambda p: p[1]["avg_r"])[0]
+
+
+def render_sweep(pairs, meta: dict, min_trades: int = 100) -> str:
+    """گزارش مارک‌داون جاروی آستانه."""
+    head = ["آستانه", "سیگنال", "سیگنال/روز", "معامله", "نرخ برد", "میانگین R",
+            "مجموع R", "PF", "حداکثر افت"]
+    rows = []
+    for v, r in pairs:
+        s = r.stats()
+        rows.append([v, s["signals"], f"{s['signals_per_day']:.2f}", s["trades"],
+                     _pct(s["hit_rate"]), f"{s['avg_r']:+.3f}", f"{s['total_r']:+.1f}",
+                     ("∞" if s["profit_factor"] == float("inf") else f"{s['profit_factor']:.2f}"),
+                     f"{s['max_dd_r']:+.1f}"])
+    pick = sweep_pick(pairs, min_trades)
+    L = [f"# جاروی آستانهٔ امتیاز — {meta['date']}", "",
+         f"- **بازه:** {meta['period']}",
+         f"- **هزینه:** اسپرد/۲ + {meta['slippage']} پیپ لغزش در هر طرف",
+         f"- **معیار انتخاب:** بیشترین میانگین R میان آستانه‌هایی با ≥ {min_trades} معامله", ""]
+    L += _table(rows, head) + [""]
+    if pick is not None:
+        L += [f"**پیشنهاد بر پایهٔ همین داده: `min_score = {pick}`.** "
+              "این پیشنهاد را باید در یک بازهٔ دوم (واک‌فوروارد) هم دید، "
+              "وگرنه فیت‌شدن روی گذشته است.", ""]
+    L += ["**چطور بخوانیم:** ستون «معامله» را هم ببین؛ آستانه‌ای که ۱۲ معامله دارد "
+          "با وجود میانگین R بالا قابل اعتماد نیست.", ""]
     return "\n".join(L)
 
 
@@ -702,6 +774,8 @@ def main(argv=None) -> int:
     ap.add_argument("--no-breakout", action="store_true")
     ap.add_argument("--no-tiers", action="store_true")
     ap.add_argument("--min-score", type=int, default=None)
+    ap.add_argument("--sweep-min-score", default="",
+                    help="جاروی آستانهٔ امتیاز؛ مثال: 5,6,7,8")
     ap.add_argument("--max-open", type=int, default=None)
     ap.add_argument("--max-per-day", type=int, default=None)
     ap.add_argument("--cooldown", type=int, default=None)
@@ -750,6 +824,30 @@ def main(argv=None) -> int:
 
     start = datetime.fromisoformat(args.start) if args.start else None
     end = (datetime.fromisoformat(args.end) + timedelta(days=1)) if args.end else None
+
+    if args.sweep_min_score.strip():
+        values = sorted({int(x) for x in args.sweep_min_score.split(",") if x.strip()})
+        print(f"🚀 جاروی آستانهٔ امتیاز: {values}")
+        pairs = sweep_min_scores(cfg, data, values, start=start, end=end,
+                                 spread=spread, slippage=args.slippage)
+        s_meta = {
+            "date": datetime.now().strftime("%Y-%m-%d"),
+            "period": f"{min(d.index[0] for d in data.values()):%Y-%m-%d} → "
+                      f"{max(d.index[-1] for d in data.values()):%Y-%m-%d}",
+            "slippage": args.slippage,
+        }
+        for v, r in pairs:
+            st = r.stats()
+            print(f"  • min_score={v:<2} سیگنال {st['signals']:>4} | معامله {st['trades']:>4} | "
+                  f"برد {_pct(st['hit_rate'])} | میانگین R {st['avg_r']:+.3f} | "
+                  f"PF {st['profit_factor']:.2f} | افت {st['max_dd_r']:+.1f}R")
+        pick = sweep_pick(pairs)
+        if pick is not None:
+            print(f"  ⭐ پیشنهاد (بیشترین میانگین R با ≥۱۰۰ معامله): min_score={pick}")
+        args.out.mkdir(parents=True, exist_ok=True)
+        (args.out / "sweep-min-score.md").write_text(render_sweep(pairs, s_meta), encoding="utf-8")
+        print(f"\n💾 {args.out / 'sweep-min-score.md'}")
+        return 0
 
     print(f"🚀 اجرا: {args.label}")
     bt = Backtest(cfg, data, start=start, end=end, spread=spread,

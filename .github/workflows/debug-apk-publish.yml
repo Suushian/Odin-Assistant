@@ -1,0 +1,84 @@
+name: Publish Debug APK (test build)
+
+# ── چرا این ورک‌فلو ────────────────────────────────────────────────────
+# `build-android-debug.yml` فقط artifact می‌سازد و طبق سیاست پروژه هیچ
+# Release ای ایجاد نمی‌کند؛ دانلودِ artifact هم نیازمند ورود به GitHub است.
+# این ورک‌فلو برای «تست روی دستگاه» ساخته شده: همان APK دیباگ را می‌سازد و
+# به‌صورت یک **pre-release** (نه Latest) با لینک دانلودِ مستقیم منتشر می‌کند.
+#
+# قیدها:
+#   • فقط pre-release؛ هرگز Latest را جابه‌جا نمی‌کند.
+#   • keystore تولید (release) خوانده نمی‌شود؛ امضا همان debug keystore گریدل است.
+#   • فقط با push روی برنچ‌های arena/* یا اجرای دستی.
+on:
+  push:
+    branches: ["arena/**"]
+  workflow_dispatch:
+
+permissions:
+  contents: write      # برای ساخت Release و آپلود asset
+
+concurrency:
+  group: debug-apk-publish-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: "17"
+          distribution: temurin
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: "platforms;android-34 build-tools;34.0.0"
+
+      - name: Set up Gradle 8.7
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.7"
+
+      - name: Guard rails (parity + layout)
+        run: |
+          set -euo pipefail
+          node tests/js/smoke_theme_parity.js
+          node tests/js/smoke_layout.js
+
+      - name: Build debug APK
+        run: |
+          set -euo pipefail
+          cd android
+          gradle assembleDebug --no-daemon --console=plain
+
+      - name: Package and publish pre-release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          APK="android/app/build/outputs/apk/debug/app-debug.apk"
+          test -s "$APK"
+          VERSION=$(python3 -c "import re,pathlib;print(re.search(r'APP_VERSION\s*=\s*\"([^\"]+)\"', pathlib.Path('src/app_paths.py').read_text(encoding='utf-8')).group(1))")
+          NAME="ODIN-Assistant-v${VERSION}-debug.apk"
+          cp "$APK" "$NAME"
+          sha256sum "$NAME" | tee SHA256.txt
+          TAG="debug-v${VERSION}-build${{ github.run_number }}"
+          gh release create "$TAG" "$NAME" SHA256.txt \
+            --title "ODIN Assistant v${VERSION} — Debug APK (build ${{ github.run_number }})" \
+            --prerelease \
+            --target "${{ github.sha }}" \
+            --notes "نسخهٔ **دیباگ** برای تست روی دستگاه — نسخهٔ انتشار نیست.
+
+          - \`versionName\`: \`${VERSION}\` · \`versionCode\` از \`src/app_paths.py\`
+          - امضا: debug keystore گریدل (فقط برای تست؛ با نسخهٔ رسمی قابل ارتقا نیست)
+          - ساخته‌شده از کامیت \`${{ github.sha }}\`
+
+          **نصب:** فایل APK را روی گوشی باز کنید و «نصب از منابع نامشخص» را برای فایل‌منیجر اجازه دهید.
+          کلید Twelve Data را باید خودتان در «تنظیمات» وارد کنید."
