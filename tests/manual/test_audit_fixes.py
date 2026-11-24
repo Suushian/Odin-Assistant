@@ -44,7 +44,8 @@ print("=" * 78)
 tmp = tempfile.TemporaryDirectory()
 real_journal = Journal(os.path.join(tmp.name, "s.jsonl"))
 # یک سیگنال بازِ منقضی‌شده می‌کاریم تا در چرخهٔ عادی بسته شود
-real_journal.append({"kind": "signal", "id": "sim1", "ts": (NOW - timedelta(hours=60)).isoformat(),
+# ۱.۲.۰: انقضا ۷۲ ساعت شد → سیگنال باید قدیمی‌تر از آن باشد تا منقضی شود
+real_journal.append({"kind": "signal", "id": "sim1", "ts": (NOW - timedelta(hours=120)).isoformat(),
                      "symbol": "EURUSD", "direction": "BUY", "entry": 1.10, "sl": 1.098,
                      "tp": 1.104, "pip": 0.0001, "atr": 0.001, "risk_pips": 20,
                      "reward_pips": 40, "rr": 2.0, "score": 8, "max_score": 11,
