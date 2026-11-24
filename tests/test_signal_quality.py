@@ -19,6 +19,7 @@
 from __future__ import annotations
 
 import importlib.util
+import pathlib
 import sys
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -172,12 +173,61 @@ def test_sweep_helpers() -> None:
     A(md.count("|") > 20, "جدول مارک‌داون ساخته شد")
 
 
+
+# ── ۵) ابزار «چه کاری الان انجام بدهم» (tools/quality_check.py) ───────
+def test_quality_check_tool() -> None:
+    print("\n── ۵) ابزار check: خلاصه و پیشنهاد ─────────────────────────")
+    qs = importlib.util.spec_from_file_location("odin_qc", ROOT / "tools" / "quality_check.py")
+    qc = importlib.util.module_from_spec(qs)
+    sys.modules["odin_qc"] = qc
+    qs.loader.exec_module(qc)
+
+    stats = {
+        "trades": 120, "hit_rate": 0.35, "avg_r": -0.02,
+        "profit_factor": 0.94, "max_dd_r": -18.0,
+        "per_strategy": {
+            "trend_pullback": {"trades": 60, "win_rate": 0.42, "avg_r": 0.08, "total_r": 4.8},
+            "range_reversion": {"trades": 55, "win_rate": 0.27, "avg_r": -0.12, "total_r": -6.6},
+            "breakout": {"trades": 5, "win_rate": 0.0, "avg_r": -0.9, "total_r": -4.5},
+        },
+        "per_score": {"5": {"trades": 70, "win_rate": 0.31, "avg_r": -0.09, "total_r": -6.3},
+                      "7": {"trades": 50, "win_rate": 0.41, "avg_r": 0.09, "total_r": 4.5}},
+    }
+
+    lines = qc.summarize(stats, min_trades=30)
+    joined = "\n".join(lines)
+    A("range_reversion" in joined and "trend_pullback" in joined,
+      "خلاصه، استراتژی‌های با نمونهٔ کافی را می‌آورد")
+    A("breakout" not in joined, "گروه با ۵ معامله (کمتر از آستانهٔ ۳۰) حذف می‌شود")
+    A("امتیاز 5" in joined and "امتیاز 7" in joined, "جدول امتیاز در خلاصه هست")
+
+    tips = "\n".join(qc.advice(stats, min_trades=30))
+    A("range_reversion" in tips and "منفی" in tips, "پیشنهاد، استراتژی منفی را نام می‌برد")
+    A("trend_pullback" in tips, "پیشنهاد، تنها گروهِ سودده را هم نام می‌برد")
+    A("breakout" not in tips, "پیشنهاد روی نمونهٔ ناکافی تصمیم نمی‌گیرد")
+
+    A("همهٔ گروه‌ها منفی" in "\n".join(qc.advice(
+        {"per_strategy": {"a": {"trades": 40, "win_rate": 0.2, "avg_r": -0.1, "total_r": -4},
+                          "b": {"trades": 40, "win_rate": 0.3, "avg_r": -0.05, "total_r": -2}}})),
+      "حالت «همه منفی» پیام درست می‌دهد")
+    A("نمونهٔ کافی" in "\n".join(qc.advice({"per_strategy": {}})),
+      "نبودِ نمونه → پیام صریح، نه استثنا")
+
+    # نام‌گذاری فایل‌ها همان قاعدهٔ read_data است
+    import tempfile
+    with tempfile.TemporaryDirectory() as tmp:
+        for n in ("EURUSD_M15.csv", "XAUUSD.csv", "EURUSD_H1.csv", "notes.txt"):
+            (pathlib.Path(tmp) / n).write_text("time,open,high,low,close\n", encoding="utf-8")
+        got = set(qc.data_files(pathlib.Path(tmp)))
+        A(got == {"EURUSD", "XAUUSD"}, f"فقط CSVهای M15 شمرده می‌شوند (دریافتی: {got})")
+
 def main() -> int:
     print("🔎 تست کیفیت سیگنال (v1.6.0)")
     test_gate_helper()
     test_gate_in_judge()
     test_stats_breakdowns()
     test_sweep_helpers()
+    test_quality_check_tool()
     print("\n" + "=" * 60)
     if FAILS:
         print(f"❌ SIGNAL-QUALITY TESTS FAILED — {len(FAILS)} از {COUNT} بررسی")
@@ -185,7 +235,7 @@ def main() -> int:
             print("  •", f)
         return 1
     print(f"✅ SIGNAL-QUALITY TESTS OK — {COUNT} بررسی پاس؛ دروازهٔ استراتژی، "
-          f"برش‌های تشخیصی و انتخاب آستانه قفل شدند")
+          f"برش‌های تشخیصی، انتخاب آستانه و ابزار check قفل شدند")
     return 0
 
 
