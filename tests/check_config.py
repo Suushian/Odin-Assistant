@@ -207,6 +207,18 @@ need(cfg["judge"]["veto"]["high_impact_event"] is True
 # ── مرحله ۴: ژورنال ───────────────────────────────────────────
 j = cfg["journal"]
 need(isinstance(j.get("enabled"), bool), f"journal.enabled = {j.get('enabled')}")
+# نسخهٔ ۱.۲ — اردر لیمیت: نوع سفارش و بازهٔ اعتبار
+for _key, _scfg in (cfg.get("strategies") or {}).items():
+    if not isinstance(_scfg, dict):
+        continue
+    _ot = _scfg.get("order_type", "")
+    need(_ot in ("", "market", "limit"),
+         f"strategies.{_key}.order_type = {_ot} (باید market یا limit باشد)")
+    if "limit_valid_minutes" in _scfg:
+        need(0 < float(_scfg["limit_valid_minutes"]) <= 24 * 60,
+             f"strategies.{_key}.limit_valid_minutes = {_scfg['limit_valid_minutes']} "
+             f"(بین ۱ و ۱۴۴۰ دقیقه)")
+
 need(0 < float(j.get("expiry_hours", 0)) <= 24 * 30,
      f"journal.expiry_hours = {j.get('expiry_hours')} (بین ۰ و ۳۰ روز)")
 need(isinstance(j.get("conservative_both_touch"), bool),

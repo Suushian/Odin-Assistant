@@ -512,7 +512,8 @@
             : O.faNum(newSignals.length) + ' سیگنال جدید صادر شد';
           var nBody = newSignals.slice(0, 3).map(function (sg) {
             return sg.symbol + ' · امتیاز ' + O.faNum(sg.score) + '/۱۱' +
-              (sg.tier ? ' · ردهٔ ' + sg.tier : '') + ' · ورود ' + O.fmtPrice(sg.entry, sg.pip) +
+              (sg.tier ? ' · ردهٔ ' + sg.tier : '') +
+              (sg.order_type === 'limit' ? ' · لیمیت ' : ' · ورود ') + O.fmtPrice(sg.entry, sg.pip) +
               ' · حد ضرر ' + O.fmtPrice(sg.sl, sg.pip) + ' · هدف ' + O.fmtPrice(sg.tp, sg.pip);
           }).join('\n') + '\n' + O.faNum(O.hhmmTeh(new Date(nowMs))) + ' به وقت تهران — پیشنهاد است، نه دستور معامله';
           O.native.notify(nTitle, nBody);

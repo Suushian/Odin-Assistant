@@ -132,7 +132,7 @@ def load_config(path: str | None = None) -> dict:
 
     # ── مرحله ۴: ژورنال و آمار دقت ─────────────────────────────
     j = cfg.setdefault("journal", {})
-    for k, v in (("enabled", True), ("expiry_hours", 48),
+    for k, v in (("enabled", True), ("expiry_hours", 72),
                  ("conservative_both_touch", True)):
         j.setdefault(k, v)
     jn = j.setdefault("nightly", {})

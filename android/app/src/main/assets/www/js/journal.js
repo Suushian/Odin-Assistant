@@ -8,7 +8,10 @@
   'use strict';
 
   O.TP = 'TP'; O.SL = 'SL'; O.EXPIRED = 'EXPIRED';
-  O.OUTCOME_FA = { TP: '🎯 هدف خورد', SL: '🛑 حد ضرر خورد', EXPIRED: '⏳ بدون برخورد منقضی شد' };
+  // نسخهٔ ۱.۲ — اردر لیمیت پر نشد: معامله‌ای انجام نشده، از آمار دقت بیرون
+  O.UNFILLED = 'UNFILLED';
+  O.OUTCOME_FA = { TP: '🎯 هدف خورد', SL: '🛑 حد ضرر خورد',
+    EXPIRED: '⏳ بدون برخورد منقضی شد', UNFILLED: '🚫 سفارش لیمیت پر نشد' };
 
   // ── ذخیره‌سازی ──────────────────────────────────────────────
   // storage = {get(key), set(key,val)} — روی گوشی از پل نیتیو می‌آید،
@@ -100,6 +103,8 @@
       rr: +rec.rr || 2, score: rec.score | 0, max_score: (rec.max_score | 0) || 11,
       session: rec.session || '', evidences: (rec.evidences || []).slice(),
       sent: rec.sent !== false,
+      order_type: rec.order_type || 'market',
+      valid_minutes: +(rec.valid_minutes || 0),
       outcome: null, outcome_ts: null, close_price: null, r: null, note: ''
     };
   }
@@ -169,6 +174,24 @@
     return null;
   }
 
+  // قالب‌بندی عدد بدون وابستگی به core.js (این فایل تنها هم بارگذاری می‌شود)
+  function pyFix(n, d) {
+    var f = (O && O.pyFixed) ? O.pyFixed : function (v, k) { return Number(v).toFixed(k); };
+    return f(n, d);
+  }
+
+  // اولین کندلی که قیمت به لیمیت رسیده (خرید: Low ≤ لیمیت، فروش: High ≥ لیمیت)
+  function limitFillTs(e, candles, deadlineMs, nowMs) {
+    var until = Math.min(deadlineMs, nowMs);
+    for (var i = 0; i < candles.length; i++) {
+      var bar = candles[i];
+      if (bar.t <= e.ts || bar.t + 15 * 60e3 > until) continue;
+      var hit = e.direction === 'BUY' ? bar.l <= e.entry : bar.h >= e.entry;
+      if (hit) return bar.t;
+    }
+    return null;
+  }
+
   function bothTouch(e, md) {
     if (!md || !md.m15) return false;
     for (var i = 0; i < md.m15.length; i++) {
@@ -186,16 +209,36 @@
     var jcfg = cfg.journal || {};
     if (jcfg.enabled === false) return [];
     var conservative = jcfg.conservative_both_touch !== false;
-    var expiryH = +jcfg.expiry_hours || 48;
+    var expiryH = +jcfg.expiry_hours || 72;
     var resolved = [];
 
     journal.openEntries().forEach(function (e) {
       var md = datasets[e.symbol];
+      // نسخهٔ ۱.۲: تا وقتی اردر لیمیت پر نشده، معامله‌ای وجود ندارد
+      var startTs = e.ts, e2 = e;
+      var validMin = +(e.valid_minutes || 0);
+      if (e.order_type === 'limit' && validMin > 0) {
+        var fillDeadline = e.ts + validMin * 60e3;
+        var filledAt = (md && md.m15) ? limitFillTs(e, md.m15, fillDeadline, nowMs) : null;
+        if (filledAt === null) {
+          if (nowMs >= fillDeadline) {
+            var noteU = 'قیمت تا ' + pyFix(validMin, 0) + ' دقیقه به لیمیت ' +
+              pyFix(e.entry, 5) + ' نرسید — معامله انجام نشد';
+            journal.addOutcome(e.id, O.UNFILLED, null, 0, noteU, nowMs);
+            e.outcome = O.UNFILLED; e.r = 0; e.note = noteU; e.outcome_ts = nowMs;
+            resolved.push(e);
+            if (onLog) onLog('📔 ژورنال: ' + e.symbol + ' ' + e.direction + ' → سفارش لیمیت پر نشد');
+          }
+          return;
+        }
+        startTs = filledAt;
+        e2 = Object.assign({}, e, { ts: filledAt });
+      }
       var hit = null;
-      if (md && md.m15 && md.m15.length) hit = scanBars(e, md.m15, conservative);
+      if (md && md.m15 && md.m15.length) hit = scanBars(e2, md.m15, conservative);
 
       var rOverride = null, outcome, closePrice, note = '';
-      if (hit === null && (nowMs - e.ts) > expiryH * 3600e3) {
+      if (hit === null && (nowMs - startTs) > expiryH * 3600e3) {
         var close = (md && md.m15 && md.m15.length) ? md.m15[md.m15.length - 1].c : null;
         outcome = O.EXPIRED; closePrice = close;
         if (close === null) {
@@ -206,7 +249,7 @@
         }
       } else if (hit !== null) {
         outcome = hit[0]; closePrice = hit[1];
-        if (outcome === O.SL && conservative && bothTouch(e, md)) {
+        if (outcome === O.SL && conservative && bothTouch(e2, md)) {
           note = 'هر دو سطح در یک کندل خوردند؛ محتاطانه ضرر شمرده شد';
         }
       } else {
@@ -224,8 +267,9 @@
   };
 
   // ── آمار دقت (پورت stats.py) ────────────────────────────────
-  function Bucket() { return { closed: 0, wins: 0, losses: 0, expired: 0, r_sum: 0 }; }
+  function Bucket() { return { closed: 0, wins: 0, losses: 0, unfilled: 0, expired: 0, r_sum: 0 }; }
   function bucketAdd(b, e) {
+    if (e.outcome === O.UNFILLED) { b.unfilled += 1; return; }
     b.closed += 1;
     if (O.entryIsWin(e)) b.wins += 1;
     else if (O.entryIsLoss(e)) b.losses += 1;

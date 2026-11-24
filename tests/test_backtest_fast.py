@@ -138,6 +138,47 @@ A(abs(tr.r_weighted - 1.0) < 1e-9, "ردهٔ B = نیم‌ریسک در R وزن
 
 
 # ══════════════════════════════════════════════════════════════
+section("۲b) نسخهٔ ۱.۲ — انقضای ۱۴۴ ساعته و اردر لیمیت")
+
+A(bt.expiry_hours == 72, f"انقضا از config خوانده می‌شود (۷۲): {bt.expiry_hours}")
+bt24 = bt_mod.Backtest({"symbols": [], "analysis": {}, "judge": {}, "journal": {}},
+                       {"EURUSD": pd.DataFrame()}, label="t", expiry_hours=24)
+A(bt24.expiry_hours == 24, "بازنویسی انقضا با پارامتر ممکن است")
+
+# اردر لیمیت پرنشده: هیچ معامله‌ای باز نمی‌شود و شمارنده بالا می‌رود
+import types  # noqa: E402
+sig = types.SimpleNamespace(
+    symbol="EURUSD", direction="BUY", strategy="breakout", tier="A", score=8,
+    entry=1.0500, sl=1.0480, tp=1.0540, actionable=True,
+    order_type="limit", valid_minutes=120)
+bt2 = bt_mod.Backtest({"symbols": [], "analysis": {}, "judge": {}, "journal": {}},
+                      {"EURUSD": pd.DataFrame()}, label="t2", expiry_hours=144)
+idx = pd.date_range("2024-01-02 10:00", periods=10, freq="15min")
+flat = pd.DataFrame({"Open": 1.06, "High": 1.061, "Low": 1.059, "Close": 1.06}, index=idx)
+bt2.data = {"EURUSD": flat}
+bt2.pos = {"EURUSD": {t: i for i, t in enumerate(flat.index)}}
+bt2.timeline = list(flat.index)
+bt2.cycles_before = 0
+
+_orig_cycle = bt2._cycle
+
+
+def _cycle_once(self, ts, now, state, open_trades):
+    """فقط در اولین چرخه یک سیگنال لیمیت می‌دهد (قیمت هرگز به ۱٫۰۵ نمی‌رسد)."""
+    if self.cycles_before:
+        return []
+    self.cycles_before += 1
+    return [types.SimpleNamespace(**{**vars(sig), "actionable": True})]
+
+
+bt2._cycle = types.MethodType(_cycle_once, bt2)
+res2 = bt2.run()
+A(res2.unfilled == 1 and len(res2.trades) == 0,
+  f"لیمیتِ پرنشده معامله نمی‌سازد و شمرده می‌شود: unfilled={res2.unfilled}, "
+  f"trades={len(res2.trades)}")
+
+
+# ══════════════════════════════════════════════════════════════
 section("۳) بدون نگاه به آینده: H1/H4 با زمان بستهٔ کندل برش می‌خورند")
 
 

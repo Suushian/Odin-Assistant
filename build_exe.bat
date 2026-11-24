@@ -47,8 +47,8 @@ set ISCC=
 if exist "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" set "ISCC=C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
 if exist "C:\Program Files\Inno Setup 6\ISCC.exe" set "ISCC=C:\Program Files\Inno Setup 6\ISCC.exe"
 if defined ISCC (
-    "%ISCC%" /DAppVersion=1.1.1 installer\odin.iss
-    echo   Installer: installer\Output\ODINAssistant-v1.1.1-windows-setup.exe
+    "%ISCC%" /DAppVersion=1.2.0 installer\odin.iss
+    echo   Installer: installer\Output\ODINAssistant-v1.2.0-windows-setup.exe
 ) else (
     echo   [i] Inno Setup not found - portable EXE only. Get it from jrsoftware.org
     echo       or download the official installer from GitHub Releases.

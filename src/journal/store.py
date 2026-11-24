@@ -22,6 +22,8 @@ JOURNAL_FILE = "signals.jsonl"
 
 # نتیجه‌ها
 TP, SL, EXPIRED = "TP", "SL", "EXPIRED"
+# نسخهٔ ۱.۲ — اردر لیمیت پر نشد: معامله‌ای انجام نشده و در آمار دقت نمی‌آید
+UNFILLED = "UNFILLED"
 
 
 def _now() -> datetime:
@@ -54,6 +56,9 @@ class Entry:
     tier: str = ""
     strategy: str = ""
     actionable: bool = True
+    # نسخهٔ ۱.۲ — نوع سفارش: market یا limit (اعتبار valid_minutes دقیقه)
+    order_type: str = "market"
+    valid_minutes: int = 0
 
     # نتیجه
     outcome: Optional[str] = None          # None = هنوز باز
@@ -143,6 +148,8 @@ class Journal:
             score=int(rec.get("score", 0)), max_score=int(rec.get("max_score", 11)),
             session=rec.get("session", ""), evidences=list(rec.get("evidences") or []),
             sent=bool(rec.get("sent", True)),
+            order_type=rec.get("order_type", "market") or "market",
+            valid_minutes=int(rec.get("valid_minutes", 0) or 0),
         )
 
     @staticmethod

@@ -219,6 +219,7 @@ class Result:
     judgments: int = 0
     days: int = 1
     seat_stolen: int = 0
+    unfilled: int = 0                      # نسخهٔ ۱.۲ — اردر لیمیت پرنشده
     funnel: Counter = field(default_factory=Counter)
     vetoes: Counter = field(default_factory=Counter)
     strategy_pick: Counter = field(default_factory=Counter)
@@ -270,6 +271,7 @@ class Result:
             "max_dd_r": mdd,
             "avg_bars": (sum(x.bars for x in t) / len(t)) if t else 0,
             "signals": self.signals, "signals_actionable": self.signals_actionable,
+            "unfilled": self.unfilled,
             "signals_per_day": self.signals / max(1, self.days),
             "trades_per_day": len(t) / max(1, self.days),
             "per_strategy": group(lambda x: x.strategy or "-"),
@@ -311,12 +313,17 @@ class Backtest:
                  start: Optional[datetime] = None, end: Optional[datetime] = None,
                  spread: Optional[dict] = None, slippage: float = DEFAULT_SLIPPAGE,
                  label: str = "baseline", verbose_every: int = 0,
-                 debug_signals: bool = False):
+                 debug_signals: bool = False,
+                 expiry_hours: float | None = None):
         self.cfg = cfg
         self.label = label
         self.verbose_every = verbose_every
         self.debug_rows = [] if debug_signals else None
         self.spread = spread or DEFAULT_SPREAD
+        # نسخهٔ ۱.۲ — انقضا از config می‌آید (پیش‌فرض تولید: ۱۴۴ ساعت).
+        jcfg = (cfg.get("journal") or {})
+        self.expiry_hours = float(expiry_hours if expiry_hours is not None
+                                  else jcfg.get("expiry_hours", 24))
         self.slippage = slippage
         self.pool = None
         sym_cfg = {s["name"]: s for s in cfg["symbols"]}
@@ -404,6 +411,7 @@ class Backtest:
                 self.res.strategy_pick[j.signal.strategy or "-"] += 1
 
         signals = [j.signal for j in judgments if j.signal]
+        dbg_by_sig = {}
         if self.debug_rows is not None:
             by_sym = {a.symbol: a for a in analyses}
             for j in judgments:
@@ -412,15 +420,22 @@ class Backtest:
                 a = by_sym[j.symbol]
                 su = getattr(a, "active_setup", None)
                 sg = j.signal
-                self.debug_rows.append({
+                row = {
                     "now": now.strftime("%Y-%m-%d %H:%M"), "symbol": j.symbol,
                     "strategy": sg.strategy, "dir": sg.direction, "score": sg.score,
-                    "atr": round(a.atr, 7), "price": a.price, "entry": sg.entry,
-                    "sl": sg.sl, "tp": sg.tp, "risk_pips": round(sg.risk_pips, 2),
-                    "rr": sg.rr, "stop_ref": getattr(su, "stop_ref", None),
+                    "atr": round(float(a.atr or 0.0), 7), "price": a.price,
+                    "entry": sg.entry, "sl": sg.sl, "tp": sg.tp,
+                    "risk_pips": round(sg.risk_pips, 2), "rr": sg.rr,
+                    "stop_ref": getattr(su, "stop_ref", None),
                     "support": a.support, "resistance": a.resistance,
+                    "adx": round(float(getattr(a, "adx", 0.0) or 0.0), 2),
+                    "rsi": round(float(getattr(a, "rsi", 50.0) or 50.0), 2),
                     "tier": sg.tier, "actionable": sg.actionable,
-                })
+                    # این دو ستون بعد از تصمیم ارسال پر می‌شوند (مطالعات فیلتر)
+                    "sent": False, "suppress": "",
+                }
+                dbg_by_sig[id(sg)] = row
+                self.debug_rows.append(row)
         if not signals:
             return []
 
@@ -441,6 +456,10 @@ class Backtest:
             # نسخهٔ ۱.۱.۱: همان تابع موتور، تا شبیه‌ساز و موتور یک قاعده داشته
             # باشند (صندلی فقط با ارسال واقعی مصرف می‌شود).
             free = _apply_capacity(sig, go, free, enforce, limit)
+            row = dbg_by_sig.get(id(sig))
+            if row is not None:
+                row["sent"] = bool(go)
+                row["suppress"] = "" if go else str(why)[:64]
             if go:
                 state[_signal_state_key(sig)] = {"ts": now.isoformat(), "score": sig.score}
                 sent.append(sig)
@@ -499,10 +518,13 @@ class Backtest:
             "symbols": self.symbols,
             "spread": {k: self.spread.get(k) for k in self.symbols},
             "slippage": self.slippage,
+            "expiry_hours": self.expiry_hours,
         })
         state: dict = {}
         open_trades: list[Trade] = []
         pending: dict = {}                     # ts → [(نماد, سیگنال)]
+        # نسخهٔ ۱.۲ — اردرهای لیمیت منتظر پرشدن (per symbol)
+        pending_limits: list[dict] = []
         day_counts: Counter = Counter()
         step = timedelta(minutes=self.BAR_MINUTES)
 
@@ -522,7 +544,37 @@ class Backtest:
                     decision_ts=ts - step, entry_ts=ts, entry=entry,
                     sl=sig.sl, tp=sig.tp, risk_units=risk,
                     plan_entry=float(sig.entry),
-                    expiry_ts=ts + timedelta(hours=24)))
+                    expiry_ts=ts + timedelta(hours=self.expiry_hours)))
+
+            # ۱b) اردرهای لیمیت: پرشدن روی همین کندل یا انقضای سفارش
+            if pending_limits:
+                keep_limits = []
+                for o in pending_limits:
+                    sym, sig = o["symbol"], o["sig"]
+                    if ts <= o["decision"] or ts not in self.pos.get(sym, {}):
+                        keep_limits.append(o)
+                        continue
+                    bar = self.data[sym].loc[ts]
+                    buy = sig.direction == "BUY"
+                    filled = (float(bar["Low"]) <= float(sig.entry) if buy
+                              else float(bar["High"]) >= float(sig.entry))
+                    if filled:
+                        risk = abs(float(sig.entry) - float(sig.sl))
+                        if risk > 0:
+                            open_trades.append(Trade(
+                                symbol=sym, direction=sig.direction,
+                                strategy=sig.strategy, tier=getattr(sig, "tier", "") or "",
+                                score=sig.score, decision_ts=o["decision"],
+                                entry_ts=ts, entry=float(sig.entry),
+                                sl=sig.sl, tp=sig.tp, risk_units=risk,
+                                plan_entry=float(sig.entry),
+                                expiry_ts=ts + timedelta(hours=self.expiry_hours)))
+                        continue                    # سفارش مصرف شد
+                    if ts >= o["deadline"]:
+                        self.res.unfilled += 1      # لیمیت تا مهلت پر نشد
+                        continue
+                    keep_limits.append(o)
+                pending_limits = keep_limits
 
             # ۲) تعقیب معامله‌های باز روی همین کندل
             still = []
@@ -547,6 +599,14 @@ class Backtest:
                 sent = self._cycle(ts, now, state, open_trades)
                 for sig in sent:
                     if not sig.actionable:
+                        continue
+                    # نسخهٔ ۱.۲ — ستاپ‌های لیمیت تا پرشدن صبر می‌کنند
+                    if (getattr(sig, "order_type", "market") == "limit"
+                            and int(getattr(sig, "valid_minutes", 0) or 0) > 0):
+                        pending_limits.append({
+                            "symbol": sig.symbol, "sig": sig, "decision": ts,
+                            "deadline": ts + step + timedelta(
+                                minutes=int(sig.valid_minutes))})
                         continue
                     nxt = ts + step
                     if nxt in self.pos.get(sig.symbol, {}):
@@ -651,6 +711,8 @@ def main(argv=None) -> int:
     ap.add_argument("--save-trades", action="store_true")
     ap.add_argument("--debug-signals", action="store_true")
     ap.add_argument("--verbose-every", type=int, default=0)
+    ap.add_argument("--expiry-hours", type=float, default=None,
+                    help="بازنویسی journal.expiry_hours برای آزمون‌ها")
     args = ap.parse_args(argv)
 
     if not args.data_dir.exists():
@@ -693,7 +755,8 @@ def main(argv=None) -> int:
     bt = Backtest(cfg, data, start=start, end=end, spread=spread,
                   slippage=args.slippage, label=args.label,
                   verbose_every=args.verbose_every,
-                  debug_signals=args.debug_signals)
+                  debug_signals=args.debug_signals,
+                  expiry_hours=args.expiry_hours)
     print(f"   نمادهای شبیه‌سازی: {', '.join(bt.symbols)}")
     _GLOBAL_BT = bt
     if args.jobs > 1 and "fork" in __import__("multiprocessing").get_all_start_methods():

@@ -38,6 +38,13 @@
   O.ENTRY_AT_MARKET = { breakout: true };
   O.entryAtMarket = function (key) { return !!O.ENTRY_AT_MARKET[key]; };
 
+  // ── نسخهٔ ۱.۲: ستاپ‌هایی که با اردر لیمیت اعلام می‌شوند (نه ورود بازار).
+  // اندازه‌گیری ۲۴ ماهه: ورود بازار روی شکست هزینهٔ تعقیب داشت؛ لیمیت روی
+  // قیمت اعلام‌شده PF را از ۰٫۹۹ به ۱٫۰۱ برد و افت را از −۶۹R به −۴۴R کم کرد.
+  O.LIMIT_ENTRY = { breakout: true };
+  O.DEFAULT_LIMIT_VALID_MINUTES = 120;
+  O.limitEntry = function (key) { return !!O.LIMIT_ENTRY[key]; };
+
   function sNum(cfg, key, dflt) {
     var v = cfg ? cfg[key] : undefined;
     if (v === undefined || v === null) return dflt;

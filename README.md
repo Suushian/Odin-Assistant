@@ -11,7 +11,7 @@
 
 تحلیل تکنیکال · فاندامنتال · اخبار اقتصادی · تأییدیهٔ TradingView · ژورنال عملکرد
 
-[![Version](https://img.shields.io/badge/version-1.1.1-30343b?style=flat-square)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-1.2.0-30343b?style=flat-square)](CHANGELOG.md)
 [![Android](https://img.shields.io/badge/Android-7.0%2B-3DDC84?style=flat-square&logo=android&logoColor=white)](https://github.com/Suushian/Odin-Assistant/releases/latest)
 [![APK Build](https://img.shields.io/github/actions/workflow/status/Suushian/Odin-Assistant/build-android.yml?branch=main&style=flat-square&label=APK%20build)](https://github.com/Suushian/Odin-Assistant/actions/workflows/build-android.yml)
 [![Tests](https://img.shields.io/github/actions/workflow/status/Suushian/Odin-Assistant/build-release.yml?branch=main&style=flat-square&label=tests)](https://github.com/Suushian/Odin-Assistant/actions/workflows/build-release.yml)
@@ -167,6 +167,7 @@ for s in tests/js/smoke_*.js tests/js/test_*.js; do node "$s"; done
 - [معماری پلاگین‌ها](docs/plugin-architecture-fa.md)
 - [راهنمای اندروید](docs/android-fa.md)
 - [بک‌آزمون ۲۴ ماهه روی دادهٔ واقعی](docs/backtest-2026-11-23-fa.md) — حجم هدف محقق شد؛ سوددهی نه (نتایج و محدودیت‌ها)
+- [مطالعهٔ خروج و فیلتر (۱.۲)](docs/exit-study-fa.md) — انقضای ۶ روز و اردر لیمیت شکست: PF از ۰٫۸۶ به ~۱٫۰
 - [راهنمای لایسنس](LICENSE_GUIDE.md)
 - [تغییرات نسخه‌ها](CHANGELOG.md)
 

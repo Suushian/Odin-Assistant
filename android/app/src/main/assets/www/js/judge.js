@@ -537,6 +537,20 @@
       }
     }
 
+    // ── نسخهٔ ۱.۲: نوع سفارش (پورت limit_entry/scoring.py) ──────
+    var scfgAll = ctx.scfg || {};
+    var scfgOne = (scfgAll[j.strategy] && typeof scfgAll[j.strategy] === 'object')
+      ? scfgAll[j.strategy] : {};
+    var want = String(scfgOne.order_type != null ? scfgOne.order_type
+      : (O.limitEntry(j.strategy) ? 'limit' : 'market')).toLowerCase();
+    var orderType = (want === 'limit' && O.limitEntry(j.strategy)) ? 'limit' : 'market';
+    var validMinutes = 0;
+    if (orderType === 'limit') {
+      validMinutes = +(scfgOne.limit_valid_minutes != null ? scfgOne.limit_valid_minutes
+        : (scfgAll.limit_valid_minutes != null ? scfgAll.limit_valid_minutes
+          : O.DEFAULT_LIMIT_VALID_MINUTES)) | 0;
+    }
+
     var pip = a.pip || 0.0001;
     var risk = Math.abs(priceRef - lv.sl);
     j.signal = {
@@ -551,7 +565,9 @@
       evidences: j.evidences, warnings: j.warnings, sl_capped: lv.capped,
       tier: j.tier, strategy: j.strategy, strategy_fa: j.strategy_fa,
       setup_id: chosen ? chosen.setup_id : (a.symbol + '|legacy|' + j.direction),
-      actionable: true, capacity_note: ''
+      actionable: true, capacity_note: '',
+      // نسخهٔ ۱.۲ — نوع سفارش (config هر استراتژی می‌تواند بازنویسی کند)
+      order_type: orderType, valid_minutes: validMinutes
     };
     return j;
   };
@@ -664,7 +680,10 @@
       sent: sent !== false,
       tier: s.tier || '',
       strategy: s.strategy || '',
-      actionable: s.actionable !== false
+      actionable: s.actionable !== false,
+      // نسخهٔ ۱.۲ — اگر لیمیت پر نشود، پیگیر نتیجه UNFILLED ثبت می‌کند
+      order_type: s.order_type || 'market',
+      valid_minutes: +(s.valid_minutes || 0)
     };
   };
 })(typeof ODIN !== 'undefined' ? ODIN : (globalThis.ODIN = {}));
