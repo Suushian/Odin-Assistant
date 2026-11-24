@@ -78,6 +78,14 @@ DEFAULT_SLIPPAGE = 0.2          # پیپ، یک‌طرفه
 # وزن ریسک هر رده در منحنی سرمایه (۰ = فقط پیگیری، فارغ از نتیجه)
 TIER_RISK = {"A": 1.0, "B": 0.5, "C": 0.0, "": 1.0}
 
+# ── v1.6.6 — مدیریت خروج (D8) ────────────────────────────────
+#  چرا: در بک‌تست واقعی، ۹۸۴ معامله از ۱٬۶۸۸ با حد ضرر بسته شد و TP=2R فقط
+#  ۴۸۸ بار خورد؛ با نرخ برد ۳۳٫۷٪ و RR=۲، انتظار دقیقاً صفر بود. تنها راه
+#  مثبت‌کردن انتظار، تغییر *ساختار خروج* است، نه تنظیم ورود.
+#  پیش‌فرض «fixed» = رفتار ۱٫۶٫۵ بایت‌به‌بایت.
+EXIT_FIXED, EXIT_BE, EXIT_TRAIL = "fixed", "be", "trail"
+EXIT_MODES = (EXIT_FIXED, EXIT_BE, EXIT_TRAIL)
+
 
 # ══════════════════════════════════════════════════════════════
 #  خواندن داده + تبدیل وقت بروکر به UTC
@@ -242,6 +250,8 @@ class Trade:
     r: float = 0.0                          # خالص (با اسپرد/لغزش)
     r_gross: float = 0.0                    # ناخالص: از قیمت مرجع سیگنال، بدون هزینه
     r_weighted: float = 0.0
+    best: float = 0.0                       # بهترین قیمت دیده‌شده (مدیریت خروج)
+    sl_moved: bool = False                  # آیا حد ضرر جابه‌جا شد؟
 
     def as_dict(self) -> dict:
         return {
@@ -277,6 +287,7 @@ class Result:
     strategy_pick: Counter = field(default_factory=Counter)
     tiers: Counter = field(default_factory=Counter)
     suppress: Counter = field(default_factory=Counter)
+    managed: int = 0                       # v1.6.6 — چند معامله حد ضرر جابه‌جا شد
     per_day: list = field(default_factory=list)
     config_note: dict = field(default_factory=dict)
 
@@ -322,6 +333,7 @@ class Result:
             "profit_factor": (gross_win / gross_loss) if gross_loss else float("inf"),
             "max_dd_r": mdd,
             "avg_bars": (sum(x.bars for x in t) / len(t)) if t else 0,
+            "managed": self.managed,
             "signals": self.signals, "signals_actionable": self.signals_actionable,
             "unfilled": self.unfilled,
             "signals_per_day": self.signals / max(1, self.days),
@@ -373,11 +385,13 @@ class Backtest:
                  spread: Optional[dict] = None, slippage: float = DEFAULT_SLIPPAGE,
                  label: str = "baseline", verbose_every: int = 0,
                  debug_signals: bool = False,
-                 expiry_hours: float | None = None):
+                 expiry_hours: float | None = None,
+                 exit_mode: str = EXIT_FIXED):
         self.cfg = cfg
         self.label = label
         self.verbose_every = verbose_every
         self.debug_rows = [] if debug_signals else None
+        self.exit_mode = exit_mode if exit_mode in EXIT_MODES else EXIT_FIXED
         self.spread = spread or DEFAULT_SPREAD
         # نسخهٔ ۱.۲ — انقضا از config می‌آید (پیش‌فرض تولید: ۱۴۴ ساعت).
         jcfg = (cfg.get("journal") or {})
@@ -542,6 +556,9 @@ class Backtest:
         else:
             tr.r_gross = tr.r
         tr.r_weighted = tr.r * TIER_RISK.get(tr.tier, 1.0)
+        res = getattr(self, "res", None)
+        if tr.sl_moved and res is not None:
+            res.managed += 1
         return True
 
     def _resolve(self, tr: Trade, ts, bar) -> bool:
@@ -561,9 +578,38 @@ class Backtest:
                 return self._close(tr, ts, tr.sl, "SL")
             if l <= tr.tp:
                 return self._close(tr, ts, tr.tp, "TP")
+        # v1.6.6 — مدیریت خروج. عمداً *بعد* از بررسی TP/SL همین کندل انجام
+        # می‌شود: نمی‌دانیم در همان کندل اول سقف دیده شده یا کف، پس جابه‌جایی
+        # حد ضرر از کندل *بعد* اثر می‌کند (بدبینانه، بدون نگاه به آینده).
+        if self.exit_mode != EXIT_FIXED:
+            self._manage_exit(tr, h, l)
         if ts >= tr.expiry_ts:                     # انقضای ۲۴ ساعته (مثل ژورنال)
             return self._close(tr, ts, o, "EXPIRED")
         return False
+
+    def _manage_exit(self, tr: Trade, high: float, low: float) -> None:
+        """حد ضرر را به سربه‌سر/دنباله‌رو منتقل می‌کند (نسخهٔ ۱٫۶٫۶)."""
+        risk = tr.risk_units
+        if not risk or risk <= 0:
+            return
+        if tr.direction == "BUY":
+            tr.best = max(tr.best or high, high)
+            if self.exit_mode == EXIT_BE:
+                if tr.best >= tr.entry + risk and tr.sl < tr.entry:
+                    tr.sl, tr.sl_moved = tr.entry, True
+            elif tr.best >= tr.entry + risk:
+                new_sl = max(tr.sl, tr.best - risk)
+                if new_sl > tr.sl:
+                    tr.sl, tr.sl_moved = new_sl, True
+        else:
+            tr.best = min(tr.best or low, low)
+            if self.exit_mode == EXIT_BE:
+                if tr.best <= tr.entry - risk and tr.sl > tr.entry:
+                    tr.sl, tr.sl_moved = tr.entry, True
+            elif tr.best <= tr.entry - risk:
+                new_sl = min(tr.sl, tr.best + risk)
+                if new_sl < tr.sl:
+                    tr.sl, tr.sl_moved = new_sl, True
 
     # ── حلقهٔ اصلی ───────────────────────────────────────────
     def run(self) -> Result:
@@ -578,6 +624,7 @@ class Backtest:
             "spread": {k: self.spread.get(k) for k in self.symbols},
             "slippage": self.slippage,
             "expiry_hours": self.expiry_hours,
+            "exit_mode": self.exit_mode,
         })
         state: dict = {}
         open_trades: list[Trade] = []
@@ -789,6 +836,10 @@ def render_markdown(results: list[Result], meta: dict) -> str:
               "- دلایل سرکوب ارسال: " + ("، ".join(f"{k} ({v})" for k, v in s["suppress"].items()) or "—"),
               f"- خروجی: TP={s['tp']} · SL={s['sl']} · گپ‌استاپ={s['gap_sl']} · "
               f"منقضی={s['expired']} · میانگین نگهداری {s['avg_bars']:.0f} کندل", ""]
+        mode = (r.config_note or {}).get("exit_mode", EXIT_FIXED)
+        if mode != EXIT_FIXED:
+            L += [f"- مدیریت خروج: `{mode}` — حد ضرر {s.get('managed', 0)} بار "
+                  f"جابه‌جا شد (اثر از کندل بعد، بدون نگاه به آینده)", ""]
         if s["seat_stolen"]:
             L += [f"⚠️ {s['seat_stolen']} بار صندلی ظرفیت را سیگنالی گرفت که ارسال نشد.", ""]
 
@@ -975,6 +1026,9 @@ def main(argv=None) -> int:
     ap.add_argument("--verbose-every", type=int, default=0)
     ap.add_argument("--expiry-hours", type=float, default=None,
                     help="بازنویسی journal.expiry_hours برای آزمون‌ها")
+    ap.add_argument("--exit-mode", default=EXIT_FIXED,
+                    choices=list(EXIT_MODES),
+                    help="fixed (پیش‌فرض) | be (سربه‌سر در +۱R) | trail (دنباله‌رو ۱R)")
     ap.add_argument("--split", action="store_true",
                     help="بازه را نصف کن: درون‌نمونه + برون‌نمونه (D3)")
     ap.add_argument("--no-autoscale", action="store_true",
@@ -1055,6 +1109,7 @@ def main(argv=None) -> int:
     print(f"🚀 اجرا: {args.label}")
     bt = Backtest(cfg, data, start=start, end=end, spread=spread,
                   slippage=args.slippage, label=args.label,
+                  exit_mode=args.exit_mode,
                   verbose_every=args.verbose_every,
                   debug_signals=args.debug_signals,
                   expiry_hours=args.expiry_hours)
@@ -1084,6 +1139,8 @@ def main(argv=None) -> int:
           f"وزن‌دار: {s['total_r_weighted']:+.1f} | PF: {s['profit_factor']:.2f} | "
           f"حداکثر افت: {s['max_dd_r']:+.1f}R")
     print(f"  خروجی: TP={s['tp']} SL={s['sl']} گپ‌استاپ={s['gap_sl']} منقضی={s['expired']}")
+    if args.exit_mode != EXIT_FIXED:
+        print(f"  مدیریت خروج ({args.exit_mode}): حد ضرر {s['managed']} بار جابه‌جا شد")
     for name, v in s["per_strategy"].items():
         print(f"    • {name:<16} {v['trades']:>4} معامله | برد {_pct(v['win_rate'])} | "
               f"میانگین R {v['avg_r']:+.3f} | مجموع {v['total_r']:+.1f}")
