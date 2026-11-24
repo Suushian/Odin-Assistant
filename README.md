@@ -11,7 +11,7 @@
 
 تحلیل تکنیکال · فاندامنتال · اخبار اقتصادی · تأییدیهٔ TradingView · ژورنال عملکرد
 
-[![Version](https://img.shields.io/badge/version-1.6.6-30343b?style=flat-square)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-1.0.1-30343b?style=flat-square)](CHANGELOG.md)
 [![Android](https://img.shields.io/badge/Android-7.0%2B-3DDC84?style=flat-square&logo=android&logoColor=white)](https://github.com/Suushian/Odin-Assistant/releases/latest)
 [![APK Build](https://img.shields.io/github/actions/workflow/status/Suushian/Odin-Assistant/build-android.yml?branch=main&style=flat-square&label=APK%20build)](https://github.com/Suushian/Odin-Assistant/actions/workflows/build-android.yml)
 [![Tests](https://img.shields.io/github/actions/workflow/status/Suushian/Odin-Assistant/build-release.yml?branch=main&style=flat-square&label=tests)](https://github.com/Suushian/Odin-Assistant/actions/workflows/build-release.yml)
@@ -107,9 +107,11 @@ flowchart LR
 
 1. آخرین APK را از [صفحهٔ Releases](https://github.com/Suushian/Odin-Assistant/releases/latest) دریافت کنید.
 2. روی Android 7.0 یا جدیدتر نصب کنید.
-3. در صورت نیاز، مجوز نصب از منابع ناشناس را در تنظیمات سیستم فعال کنید.
-4. برای رصد پس‌زمینه، اعلان‌ها را مجاز کنید. اگر سرویس متوقف شد، محدودیت باتری و تنظیمات اختصاصی سازندهٔ گوشی را بررسی کنید.
-5. برای فعال‌سازی یا پرسش دربارهٔ لایسنس، [کانال رسمی](https://t.me/Khode_Sushian) را ببینید.
+3. اگر بیلد دیباگ ۱٫۴–۱٫۶ را نصب کرده بودید، اول آن را حذف کنید (شمارهٔ نسخهٔ
+   داخلی‌شان بالاتر بود و اندروید اجازهٔ نصب نسخهٔ پایین‌تر را نمی‌دهد).
+4. در صورت نیاز، مجوز نصب از منابع ناشناس را در تنظیمات سیستم فعال کنید.
+5. برای رصد پس‌زمینه، اعلان‌ها را مجاز کنید. اگر سرویس متوقف شد، محدودیت باتری و تنظیمات اختصاصی سازندهٔ گوشی را بررسی کنید.
+6. برای فعال‌سازی یا پرسش دربارهٔ لایسنس، [کانال رسمی](https://t.me/Khode_Sushian) را ببینید.
 
 جزئیات فعال‌سازی و محدودیت‌ها در [راهنمای لایسنس](LICENSE_GUIDE.md) آمده است.
 
@@ -142,16 +144,41 @@ for s in tests/js/smoke_*.js tests/js/test_*.js; do node "$s"; done
 
 تست‌های parity زنده و سرویس پس‌زمینه ممکن است به اینترنت یا دستگاه واقعی نیاز داشته باشند و در همهٔ اجراهای CI پوشش داده نمی‌شوند.
 
-## تغییرات اخیر
+## تازه در نسخهٔ ۱٫۰٫۱
 
-- هویت بصری به نشان **«پالسِ منفی»** تغییر کرد (اسکوئرکلِ روشن با خطِ ضربانِ بریده‌شده)؛ هندسهٔ منبع در `assets/brand_mark.py` و پیش‌نمایش برداری در `docs/odin-launcher-icon.svg` است.
+نسخهٔ عمومی از ۱٫۰٫۰ ادامه می‌یابد؛ بیلدهای ۱٫۴٫۰ → ۱٫۶٫۶ در تاریخچه،
+بیلدهای داخلی/دیباگ همین تغییرات بودند.
 
-بر اساس نسخهٔ موجود در `main` و تغییرات ثبت‌شده در تاریخچه:
+- **کیفیت سیگنال، اندازه‌گیری‌شده:** دروازهٔ استراتژی (`judge.strategy_gate`) و
+  دروازهٔ نماد (`judge.symbol_gate`) با دلیل صریح رد، سه برش تشخیصی بک‌تست
+  (امتیاز / ساعت / روز هفته)، جاروی آستانه، آزمون برون‌نمونه (`--split`) و
+  کالیبراسیون خودکار (`--min-score auto`). همه پیش‌فرض **خاموش**.
+- **سه حالت خروج** برای سنجش (`--exit-mode fixed|be|trail`).
+- **اصلاح مهم داده:** تشخیص خودکار خروجی «point»ی متاتریدر که قبلاً هزینه‌ها را
+  صفر می‌کرد و بک‌تست را خوش‌بینانه نشان می‌داد.
+- **ابزار یک‌فرمانی** `quality-check.bat` برای گرفتن گزارش کیفیت سیگنال.
+- **هویت بصری «Aurora Glass 2.1»:** کارت‌های عمیق‌تر، اعداد بزرگ‌تر، تب فعال
+  قرصی‌شکل، شیشهٔ لطیف فقط در لایه‌های رویی.
 
-- متن‌های راهنمای غیرضروری از صفحات رابط اندروید حذف شدند؛ کنترل‌ها و هشدارهای عملیاتی حفظ شده‌اند.
-- گزارش ژورنال برای گروه‌بندی هفتگی و ارزیابی اولین کندل خروج اصلاح شد.
-- گارد انتشار اندروید برای بررسی تگ انتشار سخت‌گیرانه‌تر شده است.
-- نسخهٔ فعلی مستندات: **1.0.0**. تاریخچهٔ دقیق در [CHANGELOG.md](CHANGELOG.md) قرار دارد.
+مستندات کامل این نسخه: [یادداشت انتشار ۱٫۰٫۱](docs/release-notes-v1.0.1-fa.md) ·
+[تاریخچهٔ نسخه‌ها](CHANGELOG.md)
+
+### سنجش کیفیت سیگنال در سه دقیقه
+
+```bat
+quality-check.bat
+```
+
+دادهٔ M15 را پیدا می‌کند (پیش‌فرض `%USERPROFILE%\odin-m15`)، بک‌تست پایه و
+جاروی آستانه را می‌گیرد و آخر کار خلاصهٔ فارسی چاپ می‌کند: کدام استراتژی، نماد
+و بازهٔ امتیاز سودده است و کدام نه. مسیر دیگر داده:
+
+```bat
+quality-check.bat "D:\data\odin-m15"
+```
+
+قاعدهٔ فایل‌ها: هر نماد یک CSV با ستون‌های `time` (یا `date`+`time`) و
+`open,high,low,close`؛ دادهٔ خام متاتریدر هم پذیرفته می‌شود (مقیاس خودکار).
 
 ## محدودیت‌های شناخته‌شده
 
@@ -167,6 +194,9 @@ for s in tests/js/smoke_*.js tests/js/test_*.js; do node "$s"; done
 - [معماری پلاگین‌ها](docs/plugin-architecture-fa.md)
 - [راهنمای اندروید](docs/android-fa.md)
 - [بک‌آزمون ۲۴ ماهه روی دادهٔ واقعی](docs/backtest-2026-11-23-fa.md) — حجم هدف محقق شد؛ سوددهی نه (نتایج و محدودیت‌ها)
+- [کیفیت سیگنال (۱٫۰٫۱)](docs/signal-quality-fa.md) — دروازه‌ها، برش‌های تشخیصی، جاروی آستانه
+- [هشت ایراد بک‌تست واقعی](docs/defects-v1.6.1-fa.md) — با شاهد عددی و وضعیت رفع
+- [یادداشت انتشار ۱٫۰٫۱](docs/release-notes-v1.0.1-fa.md)
 - [مطالعهٔ خروج و فیلتر (۱.۲)](docs/exit-study-fa.md) — انقضای ۶ روز و اردر لیمیت شکست: PF از ۰٫۸۶ به ~۱٫۰
 - [راهنمای لایسنس](LICENSE_GUIDE.md)
 - [تغییرات نسخه‌ها](CHANGELOG.md)
