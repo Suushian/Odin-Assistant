@@ -236,6 +236,21 @@ judge:
     trend_pullback:   {enabled: true, min_score: 5}
     breakout:         {enabled: true, min_score: 5}
     range_reversion:  {enabled: true, min_score: 5}
+  # دروازهٔ نماد (D2) — خاموش‌کردن یک نماد یا سخت‌تر کردن آستانهٔ آن.
+  # شاهد: بک‌تست ۲۰۱۹–۲۰۲۰ → GBPUSD ۱۹۴ معامله، −۰٫۲۱۸R، مجموع −۴۲R در
+  # برابر EURUSD +۰٫۱۱۵R. پیش‌فرض خاموش ⇒ رفتار امروز دست‌نخورده.
+  symbol_gate:
+    enabled: false
+    EURUSD: {enabled: true, min_score: 5}
+    GBPUSD: {enabled: true, min_score: 5}
+    EURJPY: {enabled: true, min_score: 5}
+    EURGBP: {enabled: true, min_score: 5}
+    USDJPY: {enabled: true, min_score: 5}
+    USDCAD: {enabled: true, min_score: 5}
+    AUDUSD: {enabled: true, min_score: 5}
+    USDCHF: {enabled: true, min_score: 5}
+    NZDUSD: {enabled: true, min_score: 5}
+    XAUUSD: {enabled: true, min_score: 5}
 
   # ── سقف پوزیشن باز (نسخهٔ ۱.۱) ───────────────────────────────
   # «سیگنال بیشتر» نباید به «پوزیشن بیشتر» تبدیل شود. سیگنال‌های بیشتری

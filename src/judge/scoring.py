@@ -170,6 +170,33 @@ def strategy_gate(jcfg: dict, key: str) -> dict:
 
 
 
+def symbol_gate(jcfg: dict, symbol: str) -> dict:
+    """دروازهٔ نماد — خاموش‌کردن یک نماد یا سخت‌تر کردن آستانهٔ آن (D2).
+
+    چرا؟ در بک‌تست واقعی ۲۰۱۹–۲۰۲۰ پراکندگی نمادها از اثر استراتژی‌ها
+    بزرگ‌تر بود: GBPUSD با ۱۹۴ معامله −۰٫۲۱۸R و مجموع −۴۲R، در حالی که
+    EURUSD +۰٫۱۱۵R. کنترل ستاپ کافی نبود؛ نماد هم باید قابل تنظیم باشد.
+
+    Returns: {on: bool, allowed: bool, min_score: int, reason_fa: str}
+    """
+    g = (jcfg or {}).get("symbol_gate")
+    out = {"on": False, "allowed": True, "min_score": 0, "reason_fa": ""}
+    if not isinstance(g, dict) or not g.get("enabled"):
+        return out
+    out["on"] = True
+    row = g.get(symbol) if symbol else None
+    row = row if isinstance(row, dict) else {}
+    if row.get("enabled") is False:
+        out["allowed"] = False
+        out["reason_fa"] = "این نماد در تنظیمات خاموش شده است"
+        return out
+    try:
+        out["min_score"] = max(0, int(row.get("min_score", 0) or 0))
+    except (TypeError, ValueError):
+        out["min_score"] = 0
+    return out
+
+
 # ══════════════════════════════════════════════════════════════
 #  ساختارهای داده
 # ══════════════════════════════════════════════════════════════
@@ -906,6 +933,18 @@ def judge_symbol(a: SymbolAnalysis, sym_cfg: dict, md: Optional[MarketData],
             return j
         if gate["min_score"] > min_score:
             min_score = gate["min_score"]
+
+    # v1.6.4 — دروازهٔ نماد (D2): همان منطق، این بار برای خودِ نماد.
+    # بعد از استراتژی بررسی می‌شود تا اگر ستاپ خاموش بود، همان دلیل ثبت شود.
+    sgate = symbol_gate(jcfg, getattr(j, "symbol", "") or "")
+    if sgate["on"] and getattr(j, "symbol", ""):
+        if not sgate["allowed"]:
+            j.reject_reason = "SYMBOL_OFF"
+            j.reject_detail = (f"نماد «{j.fa_name or j.symbol}» در تنظیمات خاموش شده است — "
+                               f"حتی با امتیاز {fa_num(j.score)} سیگنال صادر نمی‌شود")
+            return j
+        if sgate["min_score"] > min_score:
+            min_score = sgate["min_score"]
 
     if j.score < min_score:
         c_min = int(tcfg.get("c_min_score", min_score))

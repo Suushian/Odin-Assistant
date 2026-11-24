@@ -112,6 +112,20 @@ def advice(stats: dict, *, min_trades: int = 30) -> list[str]:
                    f"({best[1]['avg_r']:+.3f}) → اول همین را تقویت کن.")
     if all(v["avg_r"] < 0 for v in rows.values()):
         out.append("همهٔ گروه‌ها منفی‌اند → مسئله درستاپ نیست؛ سطح ورود/خروج یا هزینه است.")
+
+    syms = {k: v for k, v in (stats.get("per_symbol") or {}).items()
+            if v["trades"] >= min_trades}
+    if len(syms) >= 3:
+        s_worst = min(syms.items(), key=lambda kv: kv[1]["avg_r"])
+        s_best = max(syms.items(), key=lambda kv: kv[1]["avg_r"])
+        span = s_best[1]["avg_r"] - s_worst[1]["avg_r"]
+        if s_worst[1]["avg_r"] < 0:
+            out.append(f"نماد «{s_worst[0]}» میانگین R منفی دارد "
+                       f"({s_worst[1]['avg_r']:+.3f} · مجموع {s_worst[1]['total_r']:+.1f}R) "
+                       f"→ کاندیدِ خاموش‌کردن در symbol_gate.")
+        if span >= 0.15:
+            out.append(f"پراکندگی نمادها {span:.2f}R است (از {s_worst[0]} تا {s_best[0]}) "
+                       f"— بزرگ‌تر از اثر استراتژی‌ها → اول نماد را اصلاح کن، بعد ستاپ.")
     return out
 
 

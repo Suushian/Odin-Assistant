@@ -368,11 +368,69 @@ function testStrategyGate() {
 
 
 // ══════════════════════════════════════════════════════════════
+//  v1.6.4 — دروازهٔ نماد (D2) — آینهٔ tests/test_signal_quality.py
+// ══════════════════════════════════════════════════════════════
+function testSymbolGate() {
+  const SG = (inner) => makeCtx({ symbol_gate: Object.assign({ enabled: true }, inner || {}) }, WED);
+
+  // ۱) پیش‌فرض خاموش
+  const off = O.symbolGate({ symbol_gate: { enabled: false } }, 'GBPUSD');
+  A(off.on === false && off.allowed === true && off.min_score === 0,
+    'دروازهٔ نماد خاموش → بی‌اثر');
+  A(O.symbolGate({}, 'GBPUSD').on === false, 'نبودِ کلید config = خاموش');
+
+  // ۲) سه حالت
+  const g = { symbol_gate: { enabled: true, GBPUSD: { enabled: false },
+    XAUUSD: { min_score: 9 }, EURJPY: { min_score: '7' } } };
+  A(O.symbolGate(g, 'GBPUSD').allowed === false, 'نماد خاموش → allowed=false');
+  A(O.symbolGate(g, 'XAUUSD').min_score === 9, 'min_score عددی');
+  A(O.symbolGate(g, 'EURJPY').min_score === 7, 'min_score رشته‌ای');
+  A(O.symbolGate(g, 'EURUSD').allowed === true, 'نماد دیگر دست‌نخورده');
+  A(O.symbolGate({ symbol_gate: { enabled: true, EURUSD: { min_score: 'x' } } },
+    'EURUSD').min_score === 0, 'min_score نامعتبر → بی‌اثر');
+
+  // ۳) مسیر داوری — همان سیگنال پایه
+  const a = () => makeAnalysis({ setups: [{ key: 'range_reversion', quality: 3, direction: 'BUY' }] });
+  let j = O.judgeSymbol(a(), {}, null, makeCtx({}, WED));
+  A(!!j.signal, 'دروازهٔ خاموش: سیگنال صادر می‌شود');
+  const score = j.score;
+  const sym = j.symbol;
+
+  j = O.judgeSymbol(a(), {}, null, SG({ [sym]: { enabled: false } }));
+  A(!j.signal && j.reject_reason === 'SYMBOL_OFF', 'نماد خاموش → SYMBOL_OFF');
+  A(j.reject_detail.indexOf(O.faNum(score)) >= 0, 'متن رد، امتیاز را دارد');
+  A(j.reject_detail.length > 20, 'متن رد کامل است (بریده نیست)');
+  A(O.judgmentStatusFa(j).indexOf('⛔') === 0, 'برچسب وضعیت برای نماد خاموش');
+
+  j = O.judgeSymbol(a(), {}, null,
+    makeCtx({ tiers: { enabled: false }, symbol_gate: { enabled: true, [sym]: { min_score: 12 } } }, WED));
+  A(!j.signal && j.reject_reason === 'LOW_SCORE', 'آستانهٔ ۱۲ نماد → LOW_SCORE');
+  A(j.reject_detail.indexOf(O.faNum(12)) >= 0, 'متن LOW_SCORE آستانهٔ مؤثر نماد را دارد');
+
+  j = O.judgeSymbol(a(), {}, null, SG({ [sym]: { min_score: 5 } }));
+  A(!!j.signal, 'آستانهٔ ۵ = عمومی → سیگنال صادر می‌شود');
+
+  // ۴) هر دو دروازه با هم: ستاپ خاموش زودتر گزارش می‌شود
+  j = O.judgeSymbol(a(), {}, null,
+    makeCtx({ strategy_gate: { enabled: true, range_reversion: { enabled: false } },
+              symbol_gate: { enabled: true, [sym]: { enabled: false } } }, WED));
+  A(j.reject_reason === 'STRATEGY_OFF', 'وقتی هر دو خاموش‌اند، دلیل ستاپ اولویت دارد');
+
+  // ۵) قیف
+  A(O.SIGNAL_REASON_ORDER.indexOf('SYMBOL_OFF') >= 0, 'SYMBOL_OFF در ترتیب قیف هست');
+  A(!!O.SIGNAL_REASON_FA.SYMBOL_OFF, 'برچسب فارسی SYMBOL_OFF تعریف شده');
+  A(O.SIGNAL_REASON_ORDER.indexOf('SYMBOL_OFF') > O.SIGNAL_REASON_ORDER.indexOf('STRATEGY_OFF'),
+    'ترتیب: ستاپ قبل از نماد');
+}
+
+
+// ══════════════════════════════════════════════════════════════
 testSetupDetection();
 testBestSetup();
 testTiers();
 testStrategyInJudge();
 testStrategyGate();
+  testSymbolGate();
 testFunnel();
 testSpamAndCapacity();
 testConfigWiring();
