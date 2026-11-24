@@ -33,7 +33,9 @@
     strategies: {
       trend_pullback: { enabled: true },
       range_reversion: { enabled: true, band_atr: 1.0, rsi_buy: 32, rsi_sell: 68 },
-      breakout: { enabled: true, lookback_h1: 24, buffer_atr: 0.25, adx_min: 20 }
+      breakout: { enabled: true, lookback_h1: 24, buffer_atr: 0.25, adx_min: 20,
+        order_type: 'limit', limit_valid_minutes: 120 },
+      // نسخهٔ ۱.۲ — اعتبار پیش‌فرض اردر لیمیت (اگر در config نبود)
     },
 
     history: {
@@ -101,7 +103,7 @@
       }
     },
 
-    journal: { enabled: true, expiry_hours: 24, conservative_both_touch: true },
+    journal: { enabled: true, expiry_hours: 72, conservative_both_touch: true },
 
     ui: { user_name: 'سوشیان', animations: true },
 

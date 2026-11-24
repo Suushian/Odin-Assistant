@@ -257,6 +257,67 @@ check(len(st2.by_week) == 2, f"دو هفته برای مقایسه ({sorted(st2.
 txt2 = render_stats(st2, [], NOW)
 check("هفتهٔ قبل" in txt2 and "روند هفته‌به‌هفته" in txt2, "مقایسهٔ هفته‌به‌هفته رندر شد")
 
+# ══════════════════════════════════════════════════════════════
+print()
+print("۹) اردر لیمیت (۱.۲) — پرنشده حذف، پرشده از زمان پرشدن")
+tmp2 = tempfile.TemporaryDirectory()
+jpath2 = pathlib.Path(tmp2.name) / "signals.jsonl"
+
+
+def limit_rec(sid, entry, ts, valid=120):
+    rec = sig_rec(sid, "EURUSD", "BUY", entry, entry - 0.0020, entry + 0.0040, ts)
+    rec.update({"order_type": "limit", "valid_minutes": valid})
+    return rec
+
+
+# الف) قیمت هرگز به لیمیت (۱٫۰۸۰۰) نمی‌رسد → UNFILLED و بیرون از آمار
+jl = Journal(jpath2)
+jl.append(limit_rec("L1", 1.0800, T0))
+# کندل‌ها: همه بالای ۱٫۰۸۰۵ → لیمیت خرید پر نمی‌شود
+md_l = md_for("EURUSD", T0 + timedelta(minutes=15),
+              [(1.0830, 1.0820, 1.0825)] * 12)
+res = resolve_open_signals(jl, {"EURUSD": md_l}, now=T0 + timedelta(hours=3), cfg={})
+ent = [e for e in jl.load() if e.id == "L1"][0]
+check(len(res) == 1 and ent.outcome == "UNFILLED",
+      f"لیمیت پرنشده → UNFILLED (نه برد/باخت): {ent.outcome}")
+check((ent.r or 0) == 0, "R اردر پرنشده صفر ثبت می‌شود")
+st_l = compute_stats(jl.load(), T0 + timedelta(hours=3))
+check(st_l.overall.closed == 0 and st_l.overall.hit_rate is None,
+      f"UNFILLED از مخرج دقت بیرون است (closed={st_l.overall.closed})")
+check(st_l.overall.unfilled == 1, "شمارندهٔ پرنشده‌ها ثبت شد")
+
+# ب) قیمت به لیمیت می‌رسد → معامله واقعی؛ TP بعد از پرشدن می‌خورد
+jl2 = Journal(pathlib.Path(tmp2.name) / "signals2.jsonl")
+jl2.append(limit_rec("L2", 1.0800, T0))
+md_f = md_for("EURUSD", T0 + timedelta(minutes=15),
+              [(1.0802, 1.0790, 1.0800),        # این کندل لیمیت ۱٫۰۸۰۰ را لمس می‌کند
+               (1.0845, 1.0830, 1.0840)])       # بعد هدف ۱٫۰۸۴۰ می‌خورد
+res2 = resolve_open_signals(jl2, {"EURUSD": md_f}, now=T0 + timedelta(hours=3), cfg={})
+ent2 = [e for e in jl2.load() if e.id == "L2"][0]
+check(len(res2) == 1 and ent2.outcome == TP,
+      f"لیمیت پرشده و هدف خورد: {ent2.outcome}")
+check(abs((ent2.r or 0) - 2.0) < 1e-9, f"R = ۲ (هدف ۲R): {ent2.r}")
+
+# ج) هنوز در بازهٔ اعتبار است و پر نشده → باز می‌ماند (نه UNFILLED نه منقضی)
+jl3 = Journal(pathlib.Path(tmp2.name) / "signals3.jsonl")
+jl3.append(limit_rec("L3", 1.0800, T0, valid=240))
+md_n = md_for("EURUSD", T0 + timedelta(minutes=15), [(1.0830, 1.0820, 1.0825)] * 4)
+res3 = resolve_open_signals(jl3, {"EURUSD": md_n},
+                            now=T0 + timedelta(hours=1), cfg={})
+ent3 = [e for e in jl3.load() if e.id == "L3"][0]
+check(res3 == [] and ent3.outcome is None, "در بازهٔ اعتبار پرنشده → همچنان باز")
+
+# د) سیگنال بازار (بدون لیمیت) دست‌نخورده: همان رفتار قبلی
+jl4 = Journal(pathlib.Path(tmp2.name) / "signals4.jsonl")
+jl4.append(sig_rec("M1", "EURUSD", "BUY", 1.0800, 1.0780, 1.0840, T0))
+md_m = md_for("EURUSD", T0 + timedelta(minutes=15),
+              [(1.0845, 1.0830, 1.0840)])
+res4 = resolve_open_signals(jl4, {"EURUSD": md_m}, now=T0 + timedelta(hours=1), cfg={})
+ent4 = [e for e in jl4.load() if e.id == "M1"][0]
+check(len(res4) == 1 and ent4.outcome == TP, "سیگنال بازار مثل قبل بلافاصله سنجیده می‌شود")
+
+tmp2.cleanup()
+
 tmp.cleanup()
 print()
 print("=" * 78)

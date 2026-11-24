@@ -99,14 +99,30 @@ def render_signal(s: Signal, include_footer: bool = True) -> str:
         lines.append("")
         lines.append(f"🚦 {note}")
 
+    # ── نسخهٔ ۱.۲: اردر لیمیت برای ستاپ شکست ───────────────────
+    is_limit = getattr(s, "order_type", "market") == "limit"
+    entry_line = (f"⏳ ورود لیمیت: {fmt_price(s.entry, s.pip)}"
+                  f"   (اعتبار {fa_num(max(1, int(getattr(s, 'valid_minutes', 0) or 0) // 60))} ساعت)"
+                  if is_limit else
+                  f"📍 ورود:     {fmt_price(s.entry, s.pip)}")
+
     lines += [
         "",
-        f"📍 ورود:     {fmt_price(s.entry, s.pip)}",
+        entry_line,
         f"🛑 حد ضرر:  {fmt_price(s.sl, s.pip)}"
         f"   ({fa_pips(abs(s.entry - s.sl), s.pip, s.is_gold)} فاصله)",
         f"🎯 هدف:      {fmt_price(s.tp, s.pip)}"
         f"   ({fa_pips(abs(s.tp - s.entry), s.pip, s.is_gold)} فاصله)",
         f"⚖️ نسبت سود به ریسک: ۱:{fa_ratio(s.rr)}",
+    ]
+    if is_limit:
+        lines += [
+            "",
+            "⏳ اردر لیمیت بگذار، نه ورود بازار: منتظر بمان قیمت به لبهٔ شکست "
+            "برگردد. اگر تا پایان اعتبار پر نشد، سفارش را **لغو کن** — تعقیب "
+            "قیمت، بردِ این ستاپ را می‌خورد.",
+        ]
+    lines += [
         "",
         "💰 ریسک پیشنهادی: حداکثر ۱٪ از سرمایه در این معامله",
         f"🌊 نوسان متوسط ساعتی (ATR): {fa_pips(s.atr, s.pip, s.is_gold)}",

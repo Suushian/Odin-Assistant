@@ -20,7 +20,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 from typing import Callable, Optional
 
-from .store import EXPIRED, SL, TP, Entry, Journal
+from .store import EXPIRED, SL, TP, UNFILLED, Entry, Journal
 
 LogFn = Callable[[str], None]
 
@@ -67,6 +67,33 @@ def _scan_bars(entry: Entry, bars, conservative: bool, now: datetime):
     return None
 
 
+def _limit_fill_ts(entry: Entry, md, fill_deadline: datetime,
+                   now: datetime) -> Optional[datetime]:
+    """زمان پرشدن اردر لیمیت (یا None اگر تا مهلت پر نشده).
+
+    قاعدهٔ محافظه‌کارانه: خرید وقتی «پر» می‌شود که قیمت پایین‌تر از لیمیت رفته
+    باشد (Low ≤ entry)، فروش وقتی بالا رفته باشد (High ≥ entry). رسیدن دقیق به
+    قیمت هم پرشدن حساب می‌شود (لمس قیمت). کندلی که هنوز کامل نشده استفاده
+    نمی‌شود.
+    """
+    m15 = getattr(md, "m15", None)
+    if m15 is None or not len(m15):
+        return None
+    limit_until = min(fill_deadline, now)
+    for idx, row in m15.iterrows():
+        ts = (idx.to_pydatetime() if hasattr(idx, "to_pydatetime")
+              else datetime.fromisoformat(str(idx)))
+        if ts.tzinfo is None:
+            ts = ts.replace(tzinfo=timezone.utc)
+        if ts <= entry.ts or ts + timedelta(minutes=15) > limit_until:
+            continue
+        hit = (float(row["Low"]) <= entry.entry if entry.direction == "BUY"
+               else float(row["High"]) >= entry.entry)
+        if hit:
+            return ts
+    return None
+
+
 def resolve_open_signals(journal: Journal, datasets: dict,
                          now: Optional[datetime] = None,
                          cfg: Optional[dict] = None,
@@ -83,13 +110,33 @@ def resolve_open_signals(journal: Journal, datasets: dict,
     if not jcfg.get("enabled", True):
         return []
     conservative = bool(jcfg.get("conservative_both_touch", True))
-    expiry_h = float(jcfg.get("expiry_hours", 48))
+    expiry_h = float(jcfg.get("expiry_hours", 72))
 
     resolved: list[Entry] = []
     for entry in journal.open_entries():
         md = datasets.get(entry.symbol)
+        # ── نسخهٔ ۱.۲: اردر لیمیت ─────────────────────────────
+        # تا وقتی قیمت به لیمیت نرسیده، «معامله‌ای وجود ندارد»: نه TP، نه SL،
+        # نه انقضا. اگر تا پایان اعتبار پر نشد → UNFILLED (از آمار دقت بیرون).
+        start_ts = entry.ts
+        valid_min = int(getattr(entry, "valid_minutes", 0) or 0)
+        if (getattr(entry, "order_type", "market") == "limit" and valid_min > 0):
+            fill_deadline = entry.ts + timedelta(minutes=valid_min)
+            filled_at = _limit_fill_ts(entry, md, fill_deadline, now) if md is not None else None
+            if filled_at is None:
+                if now >= fill_deadline:
+                    note = (f"قیمت تا {valid_min} دقیقه به لیمیت "
+                            f"{entry.entry:.5g} نرسید — معامله انجام نشد")
+                    journal.add_outcome(entry.id, UNFILLED, None, 0.0, note, ts=now)
+                    entry.outcome, entry.r, entry.note = UNFILLED, 0.0, note
+                    entry.outcome_ts = now
+                    resolved.append(entry)
+                    on_log(f"📔 ژورنال: {entry.symbol} {entry.direction} → "
+                           f"سفارش لیمیت پر نشد")
+                continue                      # یا هنوز منتظر، یا همین حالا بسته شد
+            start_ts = filled_at
         # Outcome scanning and expiry pricing must stop at the signal's expiry deadline.
-        expiry_deadline = entry.ts + timedelta(hours=expiry_h)
+        expiry_deadline = start_ts + timedelta(hours=expiry_h)
         scan_until = min(now, expiry_deadline)
         hit = None
         last_close = None
@@ -105,7 +152,7 @@ def resolve_open_signals(journal: Journal, datasets: dict,
                     ts = ts.replace(tzinfo=timezone.utc)
                 # M15 timestamps mark candle open; never use OHLC from a candle
                 # that had not fully closed by evaluation/expiry time.
-                if ts <= entry.ts or ts + timedelta(minutes=15) > scan_until:
+                if ts <= start_ts or ts + timedelta(minutes=15) > scan_until:
                     continue
                 bars.append((ts, float(row["High"]), float(row["Low"])))
                 if last_close_ts is None or ts >= last_close_ts:
@@ -114,7 +161,7 @@ def resolve_open_signals(journal: Journal, datasets: dict,
             hit = _scan_bars(entry, bars, conservative, scan_until)
 
         r_override = None
-        if hit is None and (now - entry.ts) >= timedelta(hours=expiry_h):
+        if hit is None and (now - start_ts) >= timedelta(hours=expiry_h):
             # منقضی: R واقعی از آخرین قیمت موجود
             close = None
             if last_close is not None:

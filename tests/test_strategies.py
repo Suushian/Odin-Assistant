@@ -204,7 +204,8 @@ print("=" * 74)
 print("۴) داور با ستاپ: استثنای وتو، جهت از ستاپ، حد ضرر روی لبهٔ شکست")
 print("=" * 74)
 
-from src.analysis.strategies import Setup, entry_at_market  # noqa: E402
+from src.analysis.strategies import (DEFAULT_LIMIT_VALID_MINUTES, Setup,  # noqa: E402
+                                     entry_at_market, limit_entry)
 
 # ستاپ رنج روی نمادی که ADX پایین دارد → وتوی «بازار رنج» نباید شلیک شود
 range_analysis = gen.make_analysis(adx=14.0, h1_agrees=False, verdict="RANGE", rsi=28.0,
@@ -246,6 +247,28 @@ pb2.setups = [Setup("trend_pullback", "EURUSD", "BUY", 2, 1.1000, 0.9990, ["پو
 j = judge_symbol(pb2, {}, None, gen.make_ctx(tiers=TIERS_ON))
 A(j.signal is not None and abs(j.signal.entry - 1.1000) < 1e-9,
   "ورود سیگنال پولبک همان کلوز H1 است (سازگاری کامل)")
+
+# ── نسخهٔ ۱.۲ — نوع سفارش: شکست با اردر لیمیت، بقیه بازار
+A(limit_entry("breakout") is True, "شکست: اردر لیمیت")
+A(limit_entry("trend_pullback") is False and limit_entry("range_reversion") is False,
+  "پولبک و رنج: ورود بازار")
+
+j = judge_symbol(bo2, {}, None, gen.make_ctx(tiers=TIERS_ON))
+A(j.signal.order_type == "limit" and j.signal.valid_minutes == DEFAULT_LIMIT_VALID_MINUTES,
+  f"سیگنال شکست لیمیت با اعتبار پیش‌فرض است: {j.signal.order_type}/"
+  f"{j.signal.valid_minutes}")
+A(j.signal.to_journal()["order_type"] == "limit"
+  and j.signal.to_journal()["valid_minutes"] == 120,
+  "ژورنال نوع سفارش و اعتبار را نگه می‌دارد")
+
+j = judge_symbol(pb2, {}, None, gen.make_ctx(tiers=TIERS_ON))
+A(j.signal.order_type == "market" and j.signal.valid_minutes == 0,
+  "سیگنال پولبک: ورود بازار و اعتبار صفر")
+
+_ctx45 = gen.make_ctx(tiers=TIERS_ON)
+_ctx45.scfg = {"limit_valid_minutes": 45}
+j = judge_symbol(bo2, {}, None, _ctx45)
+A(j.signal.valid_minutes == 45, "اعتبار لیمیت از config خوانده می‌شود")
 
 # ستاپ خاموش در config → داور به verdict قدیمی برمی‌گردد
 j = judge_symbol(gen.make_analysis(), {}, None,

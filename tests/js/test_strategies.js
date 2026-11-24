@@ -202,6 +202,18 @@ function testStrategyInJudge() {
   const jpm = O.judgeSymbol(pm, {}, null, makeCtx(TIERS_ON, WED));
   A(!!jpm.signal && Math.abs(jpm.signal.entry - 1.1000) < 1e-9, 'ورود پولبک همان کلوز H1');
 
+  // نسخهٔ ۱.۲ — نوع سفارش: شکست لیمیت، بقیه بازار
+  A(O.limitEntry('breakout') === true, 'شکست: اردر لیمیت');
+  A(O.limitEntry('trend_pullback') === false, 'پولبک: ورود بازار');
+  const jl = O.judgeSymbol(bm, {}, null, makeCtx(TIERS_ON, WED));
+  A(!!jl.signal && jl.signal.order_type === 'limit' &&
+    jl.signal.valid_minutes === O.DEFAULT_LIMIT_VALID_MINUTES,
+    'سیگنال شکست لیمیت با اعتبار پیش‌فرض');
+  A(O.signalToJournal(jl.signal).order_type === 'limit', 'ژورنال نوع سفارش را نگه می‌دارد');
+  const jp = O.judgeSymbol(pm, {}, null, makeCtx(TIERS_ON, WED));
+  A(!!jp.signal && jp.signal.order_type === 'market' && jp.signal.valid_minutes === 0,
+    'سیگنال پولبک: ورود بازار');
+
   // ستاپ خاموش در ctx → مسیر قدیمی verdict
   const c = makeAnalysis({ setups: [{ key: 'trend_pullback', symbol: 'EURUSD', direction: 'BUY',
     quality: 3, entry: 1.149, stop_ref: 1.1486, reasons_fa: [], label_fa: 'پولبک در روند',
@@ -294,7 +306,7 @@ function testConfigWiring() {
     cfg.strategies.range_reversion.enabled === true &&
     cfg.strategies.breakout.enabled === true, 'هر سه استراتژی روشن‌اند');
   A(cfg.judge.resend_cooldown_minutes === 90, 'cooldown ۹۰ دقیقه');
-  A(cfg.journal.expiry_hours === 24, 'انقضای ژورنال ۲۴ ساعت (چرخش پوزیشن‌ها)');
+  A(cfg.journal.expiry_hours === 72, 'انقضای ژورنال ۳ روز (نتیجهٔ مطالعهٔ خروج)');
 }
 
 // ══════════════════════════════════════════════════════════════

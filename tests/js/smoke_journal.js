@@ -48,6 +48,49 @@ assert.strictEqual(resolved.length, 1);
 assert.strictEqual(stored.outcome, O.SL);
 assert.strictEqual(stored.note, '');
 
+// ── نسخهٔ ۱.۲: اردر لیمیت در پیگیر نتیجه (پاریته با tracker.py) ──────────
+{
+  // الف) لیمیت پر نمی‌شود → UNFILLED و بیرون از آمار
+  const limEntry = {
+    id: 'limit-1', ts: Date.parse('2026-10-13T10:00:00Z'),
+    symbol: 'EURUSD', direction: 'BUY', entry: 1.3400, sl: 1.3380, tp: 1.3440,
+    rr: 2, risk_pips: 20, pip: 0.0001, outcome: null,
+    order_type: 'limit', valid_minutes: 120
+  };
+  const farCandles = [
+    { t: limEntry.ts + 15 * 60000, h: 1.3450, l: 1.3420, c: 1.3430 },
+    { t: limEntry.ts + 30 * 60000, h: 1.3460, l: 1.3425, c: 1.3450 }
+  ];
+  let out1 = null;
+  O.resolveOpenSignals({ openEntries: () => [limEntry],
+    addOutcome: (_i, o, c, r, n) => { out1 = { o, r, n }; } },
+    { EURUSD: { m15: farCandles } }, limEntry.ts + 3 * 3600e3,
+    { journal: { enabled: true } });
+  assert.strictEqual(out1.o, O.UNFILLED, 'لیمیت پرنشده = UNFILLED');
+  assert.strictEqual(out1.r, 0, 'R پرنشده صفر است');
+
+  // ب) لیمیت پر می‌شود و بعد هدف می‌خورد → TP با R=۲
+  const limEntry2 = Object.assign({}, limEntry, { id: 'limit-2', outcome: null });
+  const fillCandles = [
+    { t: limEntry2.ts + 15 * 60000, h: 1.3410, l: 1.3390, c: 1.3395 }, // لیمیت لمس شد
+    { t: limEntry2.ts + 30 * 60000, h: 1.3445, l: 1.3400, c: 1.3440 }  // هدف خورد
+  ];
+  let out2 = null;
+  O.resolveOpenSignals({ openEntries: () => [limEntry2],
+    addOutcome: (_i, o, c, r, n) => { out2 = { o, r, n }; } },
+    { EURUSD: { m15: fillCandles } }, limEntry2.ts + 2 * 3600e3,
+    { journal: { enabled: true } });
+  assert.strictEqual(out2.o, O.TP, 'لیمیت پرشده و هدف خورد');
+  assert.strictEqual(out2.r, 2, 'R = ۲');
+
+  // ج) آمار: پرنشده در مخرج دقت نمی‌آید
+  const stL = O.computeStats([{ ...limEntry, outcome: O.UNFILLED, r: 0,
+    outcome_ts: now, evidences: [] }], now);
+  assert.strictEqual(stL.overall.closed, 0, 'UNFILLED از closed بیرون است');
+  assert.strictEqual(stL.overall.unfilled, 1, 'شمارندهٔ پرنشده‌ها');
+  console.log('    ✓ limit order: UNFILLED / fill / stats exclusion');
+}
+
 // storage.append (پل نیتیو اتمیک) باید همان نتیجهٔ set را بدهد و سقف نرم کار کند.
 {
   const mem = {};

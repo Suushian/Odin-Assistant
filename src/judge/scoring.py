@@ -48,7 +48,8 @@ from datetime import datetime, timezone
 from typing import Callable, Optional
 
 from ..analysis import indicators as ind
-from ..analysis.strategies import STRATEGY_FA, best_setup, entry_at_market
+from ..analysis.strategies import (DEFAULT_LIMIT_VALID_MINUTES, STRATEGY_FA,
+                                   best_setup, entry_at_market, limit_entry)
 from ..analysis.technical import SymbolAnalysis
 from ..data.base import MarketData
 from ..fundamental.calendar import CalendarSnapshot, upcoming_events, veto_for_symbol
@@ -193,6 +194,9 @@ class Signal:
     setup_id: str = ""        # symbol|strategy|direction — کلید ضداسپم
     actionable: bool = True   # ظرفیت پوزیشن باز اجازهٔ اقدام می‌دهد؟
     capacity_note: str = ""   # توضیح فارسی وقتی ظرفیت پر است
+    # ── نسخهٔ ۱.۲: نوع سفارش ──────────────────────────────────
+    order_type: str = "market"     # market | limit
+    valid_minutes: int = 0         # اعتبار اردر لیمیت (دقیقه)؛ ۰ = بی‌معنا
 
     @property
     def tier_fa(self) -> str:
@@ -235,6 +239,10 @@ class Signal:
             "tier": self.tier,
             "strategy": self.strategy,
             "actionable": bool(self.actionable),
+            # نسخهٔ ۱.۲ — نوع سفارش در ژورنال می‌ماند تا پیگیر نتیجه بداند
+            # اگر قیمت به لیمیت نرسید، معامله‌ای انجام نشده (UNFILLED).
+            "order_type": self.order_type,
+            "valid_minutes": self.valid_minutes,
         }
 
 
@@ -901,6 +909,20 @@ def judge_symbol(a: SymbolAnalysis, sym_cfg: dict, md: Optional[MarketData],
             j.warnings.append("وتوی نرم فعال است (" + "؛ ".join(v.title_fa for v in soft)
                               + ") — این سیگنال ردهٔ B است: نیم‌ریسک و نیازمند تایید")
 
+    # ── نسخهٔ ۱.۲: نوع سفارش (بازار یا لیمیت با اعتبار) ─────────
+    # پیش‌فرض از قاعدهٔ LIMIT_ENTRY می‌آید، ولی config هر استراتژی می‌تواند
+    # بازنویسی کند (`strategies.<key>.order_type`).
+    _scfg_all = ctx.scfg or {}
+    _scfg_one = _scfg_all.get(j.strategy) if isinstance(_scfg_all, dict) else None
+    _scfg_one = _scfg_one if isinstance(_scfg_one, dict) else {}
+    _want = str(_scfg_one.get("order_type",
+                              "limit" if limit_entry(j.strategy) else "market")).lower()
+    _order_type = "limit" if (_want == "limit" and limit_entry(j.strategy)) else "market"
+    _valid_minutes = (int(_scfg_one.get("limit_valid_minutes",
+                                        _scfg_all.get("limit_valid_minutes",
+                                                      DEFAULT_LIMIT_VALID_MINUTES)))
+                      if _order_type == "limit" else 0)
+
     pip = a.pip or 0.0001
     j.signal = Signal(
         symbol=a.symbol, fa_name=a.fa_name, direction=j.direction,
@@ -915,6 +937,8 @@ def judge_symbol(a: SymbolAnalysis, sym_cfg: dict, md: Optional[MarketData],
         tier=j.tier, strategy=j.strategy, strategy_fa=j.strategy_fa,
         setup_id=((chosen.setup_id if chosen is not None
                    else f"{a.symbol}|legacy|{j.direction}")),
+        order_type=_order_type,
+        valid_minutes=_valid_minutes,
     )
     return j
 

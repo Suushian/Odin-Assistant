@@ -26,6 +26,7 @@ class Bucket:
     closed: int = 0
     wins: int = 0
     losses: int = 0
+    unfilled: int = 0            # اردر لیمیت پرنشده — از دقت بیرون
     expired: int = 0
     r_sum: float = 0.0
 
@@ -48,6 +49,12 @@ class Bucket:
             self.wins += 1
         elif e.is_loss:
             self.losses += 1
+        elif getattr(e, "outcome", "") == "UNFILLED":
+            # اردر لیمیت پر نشد → معامله‌ای رخ نداده؛ از مخرج دقت و میانگین R
+            # بیرون می‌ماند تا کارنامه باد نکند.
+            self.closed -= 1
+            self.unfilled += 1
+            return
         else:
             self.expired += 1
         self.r_sum += (e.r or 0.0)

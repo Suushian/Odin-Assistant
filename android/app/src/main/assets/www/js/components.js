@@ -401,7 +401,10 @@
     }
     if (opts.tiles !== false) {
       var tiles = [
-        { cap: 'ورود', val: price(s.entry), tone: '', sub: opts.sub ? 'قیمت فعلی' : '' },
+        { cap: s.order_type === 'limit' ? 'ورود (لیمیت)' : 'ورود', val: price(s.entry),
+          tone: '', sub: opts.sub ? (s.order_type === 'limit'
+            ? 'اعتبار ' + O.faNum(Math.max(1, Math.round((+s.valid_minutes || 0) / 60))) + ' ساعت'
+            : 'قیمت فعلی') : '' },
         { cap: 'حد ضرر', val: price(s.sl), tone: 'red', sub: opts.sub ? dist(s.entry, s.sl) : '' },
         { cap: 'هدف', val: price(s.tp), tone: 'green', sub: opts.sub ? dist(s.tp, s.entry) : '' }
       ];

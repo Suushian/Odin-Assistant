@@ -112,6 +112,11 @@ jobs:
       # قطعی — به دادهٔ بازار وابسته نیست و ~۴ ثانیه طول می‌کشد.
       - name: Backtest harness pins (آفلاین، بدون دادهٔ بازار)
         run: python tests/test_backtest_fast.py
+      # مطالعهٔ خروج (tools/exit_study.py): سربه‌سر، ترییلینگ، خروج جزئی،
+      # انقضا، ورود لیمیت و سقف پوزیشن — تا تصمیم «قانون خروج» با کد پین‌شده
+      # گرفته شود، نه با حدس.
+      - name: Exit-study pins (آفلاین)
+        run: python tests/test_exit_study.py
 
       # فاز ۳b معماری پلاگین: run_cycle روی PipelineRunner — ترتیب قطعیِ
       # ۱۱ مرحله + رویدادهای stage.* + early-exit = stop در journal_pre.
