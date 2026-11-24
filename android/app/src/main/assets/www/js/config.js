@@ -88,6 +88,20 @@
         breakout: { enabled: true, min_score: 5 },
         range_reversion: { enabled: true, min_score: 5 }
       },
+      // v1.6.4 — دروازهٔ نماد (D2): خاموش‌کردن یک نماد یا آستانهٔ اختصاصی.
+      symbol_gate: {
+        enabled: false,
+        EURUSD: { enabled: true, min_score: 5 },
+        GBPUSD: { enabled: true, min_score: 5 },
+        EURJPY: { enabled: true, min_score: 5 },
+        EURGBP: { enabled: true, min_score: 5 },
+        USDJPY: { enabled: true, min_score: 5 },
+        USDCAD: { enabled: true, min_score: 5 },
+        AUDUSD: { enabled: true, min_score: 5 },
+        USDCHF: { enabled: true, min_score: 5 },
+        NZDUSD: { enabled: true, min_score: 5 },
+        XAUUSD: { enabled: true, min_score: 5 }
+      },
       // سقف پوزیشن باز — سیگنال بیشتر، پوزیشن بیشتر نه
       portfolio: {
         max_open_positions: 2, max_signals_per_day: 8,

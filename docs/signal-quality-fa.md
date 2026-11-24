@@ -77,6 +77,17 @@ python tools/backtest.py --data-dir ~/odin-m15 --sweep-min-score 5,6,7,8
 
 ---
 
+## ۲٫۵ دروازهٔ نماد (v1.6.4)
+
+اگر یک نماد به‌تنهایی ضرر می‌دهد، لازم نیست کل ستاپ را ببندی:
+
+```yaml
+judge:
+  symbol_gate:
+    enabled: true
+    GBPUSD: {enabled: false}
+```
+
 ## ۳. چطور استفاده کنم؟ (سه گام)
 
 **ساده‌ترین راه — یک فرمان، همه‌چیز:**

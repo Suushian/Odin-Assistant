@@ -52,7 +52,7 @@ sys.modules["gen_judge_golden_sq"] = gen
 _g.loader.exec_module(gen)
 
 from src.analysis.strategies import Setup                     # noqa: E402
-from src.judge.scoring import judge_symbol, strategy_gate      # noqa: E402
+from src.judge.scoring import judge_symbol, strategy_gate, symbol_gate   # noqa: E402
 
 
 def _analysis(key: str = "range_reversion"):
@@ -190,6 +190,11 @@ def test_quality_check_tool() -> None:
             "range_reversion": {"trades": 55, "win_rate": 0.27, "avg_r": -0.12, "total_r": -6.6},
             "breakout": {"trades": 5, "win_rate": 0.0, "avg_r": -0.9, "total_r": -4.5},
         },
+        "per_symbol": {
+            "EURUSD": {"trades": 60, "win_rate": 0.42, "avg_r": 0.115, "total_r": 6.9},
+            "GBPUSD": {"trades": 58, "win_rate": 0.24, "avg_r": -0.218, "total_r": -12.6},
+            "XAUUSD": {"trades": 40, "win_rate": 0.30, "avg_r": -0.066, "total_r": -2.6},
+        },
         "per_score": {"5": {"trades": 70, "win_rate": 0.31, "avg_r": -0.09, "total_r": -6.3},
                       "7": {"trades": 50, "win_rate": 0.41, "avg_r": 0.09, "total_r": 4.5}},
     }
@@ -206,6 +211,10 @@ def test_quality_check_tool() -> None:
     A("trend_pullback" in tips, "پیشنهاد، تنها گروهِ سودده را هم نام می‌برد")
     A("breakout" not in tips, "پیشنهاد روی نمونهٔ ناکافی تصمیم نمی‌گیرد")
 
+    tips2 = "\n".join(qc.advice(stats, min_trades=30))
+    A("GBPUSD" in tips2 and "symbol_gate" in tips2, "پیشنهاد، نماد زیان‌ده را با symbol_gate نام می‌برد")
+    A("پراکندگی نمادها" in tips2, "پراکندگی نمادها گزارش می‌شود")
+
     A("همهٔ گروه‌ها منفی" in "\n".join(qc.advice(
         {"per_strategy": {"a": {"trades": 40, "win_rate": 0.2, "avg_r": -0.1, "total_r": -4},
                           "b": {"trades": 40, "win_rate": 0.3, "avg_r": -0.05, "total_r": -2}}})),
@@ -221,6 +230,66 @@ def test_quality_check_tool() -> None:
         got = set(qc.data_files(pathlib.Path(tmp)))
         A(got == {"EURUSD", "XAUUSD"}, f"فقط CSVهای M15 شمرده می‌شوند (دریافتی: {got})")
 
+
+# ── ۶) دروازهٔ نماد (D2) ─────────────────────────────────────────────
+def test_symbol_gate() -> None:
+    print("\n── ۶) symbol_gate: خاموش‌کردن یک نماد یا آستانهٔ آن ─────────")
+
+    off = symbol_gate({"symbol_gate": {"enabled": False}}, "GBPUSD")
+    A(off["on"] is False and off["allowed"] is True and off["min_score"] == 0,
+      "پیش‌فرض: دروازهٔ نماد خاموش")
+    A(symbol_gate({}, "GBPUSD")["on"] is False, "نبودِ کلید config = خاموش")
+
+    g = {"symbol_gate": {"enabled": True, "GBPUSD": {"enabled": False},
+                         "XAUUSD": {"min_score": 9}, "EURJPY": {"min_score": "7"}}}
+    A(symbol_gate(g, "GBPUSD")["allowed"] is False, "نماد خاموش → allowed=False")
+    A(symbol_gate(g, "XAUUSD")["min_score"] == 9, "min_score عددی")
+    A(symbol_gate(g, "EURJPY")["min_score"] == 7, "min_score رشته‌ای")
+    A(symbol_gate(g, "EURUSD")["allowed"] is True, "نماد دیگر دست‌نخورده")
+    A(symbol_gate({"symbol_gate": {"enabled": True, "EURUSD": {"min_score": "x"}}},
+                  "EURUSD")["min_score"] == 0, "min_score نامعتبر → بی‌اثر")
+    A(symbol_gate(g, "")["on"] is True and symbol_gate(g, "")["allowed"] is True,
+      "نماد خالی → بدون رد (نه استثنا)")
+
+    # مسیر داوری
+    base = _judge("range_reversion")
+    A(base.signal is not None, "دروازهٔ خاموش: سیگنال صادر می‌شود")
+    sym = base.symbol
+
+    j = _judge("range_reversion", symbol_gate={"enabled": True, sym: {"enabled": False}})
+    A(j.signal is None and j.reject_reason == "SYMBOL_OFF", "نماد خاموش → SYMBOL_OFF")
+    A(f"«{j.fa_name}»" in j.reject_detail, "متن رد، نام فارسی نماد را دارد")
+    A("خاموش" in j.reject_detail and len(j.reject_detail) > 25, "متن رد کامل است")
+
+    j = _judge("range_reversion", symbol_gate={"enabled": True, sym: {"min_score": 11}})
+    A(j.signal is None and j.reject_reason == "LOW_SCORE",
+      "آستانهٔ ۱۱ برای نماد → LOW_SCORE (نه SYMBOL_OFF)")
+    A("۱۱" in j.reject_detail, "متن LOW_SCORE آستانهٔ مؤثر نماد را دارد")
+
+    j = _judge("range_reversion", symbol_gate={"enabled": True, sym: {"min_score": 5}})
+    A(j.signal is not None, "آستانهٔ ۵ = عمومی → سیگنال صادر می‌شود")
+
+    # هر دو دروازه: دلیل ستاپ اولویت دارد (چون اول بررسی می‌شود)
+    j = _judge("range_reversion",
+               strategy_gate={"enabled": True, "range_reversion": {"enabled": False}},
+               symbol_gate={"enabled": True, sym: {"enabled": False}})
+    A(j.reject_reason == "STRATEGY_OFF", "وقتی هر دو خاموش‌اند، ستاپ اولویت دارد")
+
+    # بالاترین آستانهٔ دو دروازه اعمال می‌شود
+    j = _judge("range_reversion",
+               strategy_gate={"enabled": True, "range_reversion": {"min_score": 6}},
+               symbol_gate={"enabled": True, sym: {"min_score": 11}})
+    A(j.reject_reason == "LOW_SCORE" and "۱۱" in j.reject_detail,
+      "آستانهٔ نماد (۱۱) بر آستانهٔ ستاپ (۶) غالب می‌شود")
+
+    # config واقعی: کلیدها با نمادهای پیکربندی هم‌خوان‌اند
+    from src.config import load_config
+    cfg = load_config()
+    sg = (cfg.get("judge") or {}).get("symbol_gate") or {}
+    A(sg.get("enabled") is False, "config.yaml: دروازهٔ نماد پیش‌فرض خاموش است")
+    names = [s["name"] for s in cfg["symbols"]]
+    A(all(n in sg for n in names), "config.yaml: هر ۱۰ نماد در symbol_gate آمده")
+
 def main() -> int:
     print("🔎 تست کیفیت سیگنال (v1.6.0)")
     test_gate_helper()
@@ -228,6 +297,7 @@ def main() -> int:
     test_stats_breakdowns()
     test_sweep_helpers()
     test_quality_check_tool()
+    test_symbol_gate()
     print("\n" + "=" * 60)
     if FAILS:
         print(f"❌ SIGNAL-QUALITY TESTS FAILED — {len(FAILS)} از {COUNT} بررسی")
