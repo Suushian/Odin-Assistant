@@ -186,13 +186,29 @@ def render(v: dict, path: str):
     txt(d, (W - 18 - 12, 85), st, f_st, rgb(GREEN_TEXT))
 
     # ── کارت جوهری ──────────────────────────────────────────────────
-    rrect(d, ink_box, v["r_card"], fill=rgb(INK_CARD), outline=(255, 255, 255, 18))
+    r_ink = v.get("r_ink", v["r_card"])
+    rrect(d, ink_box, r_ink, fill=rgb(INK_CARD), outline=(255, 255, 255, 18))
+    if v.get("hero_glow"):
+        # همان شفقِ CSS: دو گرادیان شعاعیِ ایندایگو/سیان با آلفای <۱۰٪
+        gl = Image.new("RGBA", img.size, (0, 0, 0, 0))
+        gdd = ImageDraw.Draw(gl)
+        gdd.ellipse([X(W - 210), X(ink_box[1] - 70), X(W + 10), X(ink_box[1] + 120)],
+                    fill=rgb("#7A6CF0") + (84,))
+        gdd.ellipse([X(W - 260), X(ink_box[1] + 60), X(W - 40), X(ink_box[3] + 40)],
+                    fill=rgb("#46C8E8") + (58,))
+        gl = gl.filter(ImageFilter.GaussianBlur(X(34)))
+        m = Image.new("L", img.size, 0)
+        ImageDraw.Draw(m).rounded_rectangle([X(ink_box[0]), X(ink_box[1]), X(ink_box[2]), X(ink_box[3])],
+                                            radius=X(r_ink), fill=255)
+        img.paste(Image.alpha_composite(img, Image.composite(gl, Image.new("RGBA", img.size, (0,0,0,0)), m)),
+                  (0, 0))
+        d = ImageDraw.Draw(img)
     top = ink_box[1]
     txt(d, (W - pad - 16, top + 16), fa("خلاصهٔ امروز"), font(14, "Bold"), WHITE)
     txt(d, (W - pad - 16, top + 38), fa("۵ سیگنال صادر شد · ۲ پوزیشن باز"),
         font(v["cap"] - 0.5), on_ink)
-    txt(d, (W - pad - 22, top + 60), "5", font(30, "Bold"), WHITE)
-    txt(d, (W - pad - 52, top + 86), fa("سیگنال"), font(v["cap"]), on_ink)
+    txt(d, (W - pad - 22, top + 58), "5", font(v.get("ink_num", 30), "Bold"), WHITE)
+    txt(d, (W - pad - 60, top + 92), fa("سیگنال"), font(v["cap"]), on_ink)
 
     tiles_y = ink_box[3] - 16 - 54
     tw = (W - 2 * pad - 32 - 16) / 3
@@ -205,7 +221,7 @@ def render(v: dict, path: str):
     # ── سربرگ بخش + چیپ شمارش ───────────────────────────────────────
     sec_y = 312
     title = fa("سیگنال‌های فعال")
-    f_sec = font(15, "Bold")
+    f_sec = font(v.get("sec_size", 15), "Bold")
     txt(d, (W - pad, sec_y), title, f_sec, rgb(TEXT))
     right = W - pad - width(d, title, f_sec) - 18
     f_cnt = font(11, "Bold")
@@ -263,13 +279,23 @@ def render(v: dict, path: str):
 
     # ── نوار تب ─────────────────────────────────────────────────────
     rrect(d, tab_box, v["r_tab"], fill=v["tab_fill"], outline=(255, 255, 255, 255))
-    labels = [("خانه", "home"), ("سیگنال", "signal"), ("تقویم", "calendar"), ("ژورنال", "journal")]
+    # RTL: خانه سمت راست است، ژورنال سمت چپ — پس ترتیب رسم برعکس می‌شود
+    labels = [("ژورنال", "journal"), ("تقویم", "calendar"), ("سیگنال", "signal"), ("خانه", "home")]
     ix1, ix2 = tab_box[0] + 6, tab_box[2] - 6
     tw3 = (ix2 - ix1) / 4
     for i, (lab, ico) in enumerate(labels):
         tx1 = ix1 + i * tw3
-        active = i == 0
+        active = i == len(labels) - 1
         dy = -1 if (active and v["tab_lift"]) else 0
+        if active and v.get("tab_horizontal"):
+            wide = 104
+            px1 = tx1 + tw3 - wide - 2      # چسبیده به لبهٔ راست (RTL)
+            rrect(d, (px1, tab_box[1] + 7 + dy, tx1 + tw3 - 2, tab_box[3] - 7 + dy),
+                  22, fill=rgb(INK_CARD))
+            mid = (tab_box[1] + tab_box[3]) / 2 + dy
+            icon(d, ico, px1 + wide - 26, mid, WHITE, True)
+            txt(d, (px1 + 14, mid - 8), fa(lab), font(11, "Bold"), WHITE, anchor="la")
+            continue
         if active:
             rrect(d, (tx1 + 2, tab_box[1] + 6 + dy, tx1 + tw3 - 2, tab_box[3] - 6 + dy),
                   20, fill=rgb(INK_CARD))
@@ -287,13 +313,23 @@ BEFORE = dict(cap=10.5, text3="#94949C", circle=40, r_card=22, r_sig=20, r_tab=2
               on_ink_cap=0.55, tab_lift=False, shadow_style="before",
               card_fill=(255, 255, 255, 235), card_edge=(255, 255, 255, 230),
               tab_fill=(255, 255, 255, 229), section_rule=False)
+AFTER15 = dict(cap=11, text3="#6A6A74", circle=44, r_card=22, r_ink=26, r_sig=24, r_tab=28,
+               on_ink_cap=0.62, tab_lift=True, shadow_style="after", hero_glow=True,
+               ink_num=34, sec_size=16, tab_horizontal=True,
+               card_fill=(255, 255, 255, 255), card_edge=(16, 16, 19, 11),
+               tab_fill=(255, 255, 255, 240), section_rule=True)
+
 AFTER = dict(cap=11, text3="#6A6A74", circle=44, r_card=22, r_sig=20, r_tab=26,
              on_ink_cap=0.62, tab_lift=True, shadow_style="after",
              card_fill=(255, 255, 255, 255), card_edge=(16, 16, 19, 11),
              tab_fill=(255, 255, 255, 240), section_rule=True)
 
 
+
+
+
 if __name__ == "__main__":
     os.makedirs(OUT_DIR, exist_ok=True)
     render(BEFORE, os.path.join(OUT_DIR, "ui-1.3.1-home.png"))
     render(AFTER, os.path.join(OUT_DIR, "ui-1.4.0-home.png"))
+    render(AFTER15, os.path.join(OUT_DIR, "ui-1.5.0-home.png"))
