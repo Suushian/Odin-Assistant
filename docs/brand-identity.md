@@ -1,33 +1,39 @@
 # ODIN Assistant — Brand identity
 
-## Primary mark
+## نشان اصلی: «پالسِ منفی»
 
-The primary brand mark is **Ø**: a circular ring crossed by a diagonal spear stroke.
-Use the same proportions and direction across desktop, Android launcher, notification,
-splash, About, and documentation artwork.
+نشان برند یک **اسکوئرکلِ روشن** است که یک **خطِ ضربانِ سیگنال** از دلش بریده
+شده (نگاتیو). معنی: برنامه چیزی نیست که کنارِ بازار بایستد؛ خودِ سیگنال است.
+همین هندسه در همهٔ سطوح — آیکون دسکتاپ، لانچر اندروید، آیکون تطبیقی، نوار
+وضعیت، اسپلش، صفحهٔ «درباره ما» و مستندات — یکسان است.
 
-## Color system
+## منبع حقیقت
 
-- Brand field: deep ink (#101013, with a subtle dark vertical gradient only in app icons).
-- Mark: near-white (#F2F5F9).
-- Brand tint: neutral light gray (#EDEDF0).
-- Green, red, and amber remain semantic UI colors for trading direction, veto/status,
-  and ranking. They are not logo colors.
-- Aurora indigo/cyan/pink remain low-opacity ambient background effects; they are not
-  part of the primary logo or brand accent.
+- `assets/brand_mark.py` تنها منبع هندسه است: `SQUIRCLE`، `PULSE_HOLE`، `PULSE_LINE`
+  و تابع‌های `mark_svg()` / `raster()`.
+- `assets/make_icon.py` از همان منبع، `assets/icon.png` و `assets/icon.ico`
+  و پنج `mipmap-*/ic_launcher.png` اندروید را می‌سازد.
+- `docs/odin-launcher-icon.svg` نسخهٔ برداریِ مرجع است.
+- اندروید: `drawable/odin_launcher_icon.xml`، `odin_launcher_foreground.xml`
+  (در ناحیهٔ ایمن ۶۶dp) و `ic_stat_odin.xml` (فقط خطِ پالس، تک‌رنگ).
+- اسپلش و «درباره ما» در وب‌ویو، همان مسیر را با `scale(0.4444)` می‌کشند؛
+  آیکون دسکتاپ در `src/ui/icons.py` با `scale(0.2222)` و به‌صورت توپر.
 
-## Asset ownership
+## سیستم رنگ
 
-- assets/make_icon.py generates desktop assets/icon.png and assets/icon.ico.
-- docs/odin-launcher-icon.svg is the scalable reference artwork.
-- Android launcher and status-bar icons are native vector drawables.
-- Android splash and About use inline SVG with the same mark geometry.
-- Desktop splash uses the logo glyph in src/ui/icons.py.
+- فیلد نشان: گرادیان `#1C2430` → `#0A0E15` (نسخهٔ تخت اندروید: `#0F1620`).
+- جوهر نشان: گرادیان `#FFFFFF` → `#DCE8F8`؛ نسخهٔ تخت: `#F4F8FD`.
+- توکن‌های رابط (`--brand` / `--brand-tint`) همان `#101013` / `#EDEDF0` می‌مانند؛
+  سبز، سرخ و کهربایی همچنان رنگ‌های معناییِ رابط‌اند، نه رنگ‌های لوگو.
 
-## Change control
+## قاعدهٔ تغییر
 
-When the mark geometry or brand tokens change, update every asset above and run:
+اگر هندسه یا توکن‌ها عوض شد، همهٔ سطوح بالا را از `assets/brand_mark.py`
+به‌روز کن، سپس:
 
+    python assets/make_icon.py
     node tests/js/smoke_brand_identity.js
     node tests/js/smoke_theme_parity.js
-    python assets/make_icon.py
+
+`smoke_brand_identity.js` تضمین می‌کند هر هشت سطح، دقیقاً همان رشته‌های مسیرِ
+منبع را داشته باشند و هیچ بازمانده‌ای از نشان قدیمی (Ø) باقی نماند.
