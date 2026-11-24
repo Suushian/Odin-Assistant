@@ -38,6 +38,7 @@
 from __future__ import annotations
 
 import argparse
+import math
 import json
 import os
 import sys
@@ -147,9 +148,55 @@ def load_m15(path: Path) -> Optional[pd.DataFrame]:
     return df[df["High"] >= df["Low"]]
 
 
-def read_data(data_dir: Path, tz_mode: str) -> dict[str, pd.DataFrame]:
-    """همهٔ فایل‌های M15 پوشه را می‌خواند: {نماد: DataFrame(UTC)}."""
+# ── مقیاس قیمت ────────────────────────────────────────────────
+# خروجی MT4/MT5 قیمت را در «point» می‌دهد (۱٫۱۲۰۶۶ → ۱۱۲۰۶۶). اگر این را
+# تشخیص ندهیم، R (که نسبی است) سالم به نظر می‌رسد ولی اسپرد/لغزش — که در واحد
+# قیمت واقعی حساب می‌شوند — عملاً صفر می‌شوند و نتیجه به‌غلط خوب می‌شود.
+PRICE_TARGET = {          # پیپ → قیمت معمول همان کلاس نماد
+    0.0001: 1.0,          # جفت‌های ۵ رقمی (یورو/دلار، پوند/دلار، ...)
+    0.01: 100.0,          # جفت‌های ین
+    1.0: 1500.0,          # طلا (پیپ = ۱ دلار)
+}
+
+
+def scale_fix(df: pd.DataFrame, pip: float) -> tuple[pd.DataFrame, int]:
+    """اگر قیمت‌ها در «point» باشند (خروجی MT4/MT5)، قیمت واقعی را برمی‌گرداند.
+
+    منطق: میانهٔ قیمت را با «قیمت معمولِ همان کلاس پیپ» مقایسه می‌کنیم و
+    اختلاف را به توان ۱۰ تبدیل می‌کنیم. فقط تقسیم می‌کنیم (هرگز ضرب نمی‌کنیم)
+    تا دادهٔ سالم دست‌نخورده بماند.
+
+    خروجی: (داده، k) — k = تعداد صفرهای حذف‌شده؛ ۰ یعنی تغییری نکرد.
+    """
+    if df is None or df.empty or not pip:
+        return df, 0
+    target = PRICE_TARGET.get(round(float(pip), 6))
+    if target is None:                        # کلاس پیپ ناشناخته → دست نزن
+        return df, 0
+    med = float(df["Close"].median())
+    if not med or med <= 0:
+        return df, 0
+    k = int(round(math.log10(med / target)))
+    if k <= 0:                                # ۰ یا منفی → داده سالم است
+        return df, 0
+    k = min(k, 6)
+    out = df.copy()
+    out[OHLC] = out[OHLC] / (10.0 ** k)
+    new_med = float(out["Close"].median())
+    if not (target / 30.0 <= new_med <= target * 30.0):
+        print(f"   [!] مقیاس قیمت پس از تقسیم هم نامعقول است "
+              f"(میانه={new_med:.4g}، انتظار≈{target:g}) — داده را بررسی کن")
+    return out, k
+
+
+def read_data(data_dir: Path, tz_mode: str, pips: Optional[dict] = None,
+              autoscale: bool = True) -> dict[str, pd.DataFrame]:
+    """همهٔ فایل‌های M15 پوشه را می‌خواند: {نماد: DataFrame(UTC)}.
+
+    pips: {نماد: اندازهٔ پیپ} برای تشخیص دادهٔ «point»ی متاتریدر.
+    """
     out: dict[str, pd.DataFrame] = {}
+    pips = pips or {}
     for path in sorted(data_dir.glob("*.csv")):
         stem = path.stem.upper()
         if stem.endswith("_M5") or stem.endswith("_H1") or stem.endswith("_H4"):
@@ -158,10 +205,15 @@ def read_data(data_dir: Path, tz_mode: str) -> dict[str, pd.DataFrame]:
         df = load_m15(path)
         if df is None or len(df) < 500:
             continue
+        k = 0
+        if autoscale:
+            df, k = scale_fix(df, float(pips.get(symbol, 0) or 0))
         df.index = to_utc(df.index, tz_mode)
         df = df.sort_index()
         out[symbol] = df
-        print(f"   ✓ {symbol:<8} {len(df):>6} کندل  {df.index[0]:%Y-%m-%d} → {df.index[-1]:%Y-%m-%d}")
+        note = f"  ⚠️ مقیاس ×۱۰^{k} اصلاح شد" if k else ""
+        print(f"   ✓ {symbol:<8} {len(df):>6} کندل  "
+              f"{df.index[0]:%Y-%m-%d} → {df.index[-1]:%Y-%m-%d}{note}")
     return out
 
 
@@ -787,19 +839,24 @@ def main(argv=None) -> int:
     ap.add_argument("--verbose-every", type=int, default=0)
     ap.add_argument("--expiry-hours", type=float, default=None,
                     help="بازنویسی journal.expiry_hours برای آزمون‌ها")
+    ap.add_argument("--no-autoscale", action="store_true",
+                    help="تشخیص/اصلاح خودکار دادهٔ pointی متاتریدر را خاموش کن")
     args = ap.parse_args(argv)
 
     if not args.data_dir.exists():
         print(f"❌ پوشهٔ داده پیدا نشد: {args.data_dir}")
         return 2
 
+    cfg = load_config()
+    pips = {s["name"]: s.get("pip", 0) or 0 for s in cfg.get("symbols", [])}
+
     print("📥 خواندن داده…")
-    data = read_data(args.data_dir, args.tz)
+    data = read_data(args.data_dir, args.tz, pips=pips,
+                     autoscale=not args.no_autoscale)
     if not data:
         print("❌ هیچ فایل معتبری خوانده نشد")
         return 2
 
-    cfg = load_config()
     if args.legacy:
         cfg["strategies"] = {"trend_pullback": True,
                              "range_reversion": False, "breakout": False}
