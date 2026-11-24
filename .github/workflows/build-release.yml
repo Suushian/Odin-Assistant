@@ -107,6 +107,12 @@ jobs:
       - name: Multi-strategy + tiers + funnel pins (آفلاین)
         run: python tests/test_strategies.py
 
+      # ابزار بک‌تست (tools/backtest.py): پین‌های «بدون نگاه به آینده»، اولویت
+      # حد ضرر بر هدف در یک کندل، گپ/انقضا و سقف ۲ پوزیشن باز. داده ساختگیِ
+      # قطعی — به دادهٔ بازار وابسته نیست و ~۴ ثانیه طول می‌کشد.
+      - name: Backtest harness pins (آفلاین، بدون دادهٔ بازار)
+        run: python tests/test_backtest_fast.py
+
       # فاز ۳b معماری پلاگین: run_cycle روی PipelineRunner — ترتیب قطعیِ
       # ۱۱ مرحله + رویدادهای stage.* + early-exit = stop در journal_pre.
       # (طلاییِ رفتاریِ خودِ چرخه در step بالا سبز می‌ماند — بدون تغییر.)

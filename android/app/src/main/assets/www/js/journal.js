@@ -308,6 +308,19 @@
     return { total: total, by_symbol: bySymbol };
   };
 
+  // نسخهٔ ۱.۱.۱ — صندلی پوزیشن باز فقط با ارسال واقعی مصرف می‌شود.
+  // پیش از این، سیگنالِ سرکوب‌شده با cooldown هم صندلی می‌گرفت و سیگنالِ
+  // سالمِ بعدی بی‌دلیل «فقط پیگیری» می‌شد (در بک‌تست ۲ ساله ۱۰۹۰ بار).
+  O.applyCapacity = function (sig, go, free, enforce, limit) {
+    if (!enforce) return free;
+    if (!go) { sig.actionable = false; sig.capacity_note = ''; return free; }
+    if (free > 0) { sig.actionable = true; sig.capacity_note = ''; return free - 1; }
+    sig.actionable = false;
+    sig.capacity_note = 'سقف ' + O.faNum(limit) +
+      ' پوزیشن باز پر است — این سیگنال فقط برای پیگیری است، ورود نکن';
+    return free;
+  };
+
   O.dailyCapBlock = function (sig, today, pcfg) {
     pcfg = pcfg || {};
     var limit = pcfg.max_signals_per_day | 0;

@@ -184,6 +184,24 @@ function testStrategyInJudge() {
   A(jb.signal ? (jb.signal.sl >= 1.1040 && jb.signal.sl < 1.1050) : true,
     'حد ضرر شکست زیر لبهٔ 1.1050');
 
+  // نسخهٔ ۱.۱.۱ — قیمت مرجع ورود: شکست با کلوز M15، بقیه با کلوز H1
+  A(O.entryAtMarket('breakout') === true, 'شکست: قیمت مرجع لحظه‌ای');
+  A(O.entryAtMarket('trend_pullback') === false && O.entryAtMarket('range_reversion') === false,
+    'پولبک و رنج: همان کلوز H1');
+  const bm = makeAnalysis({ verdict: 'WAIT', adx: 28, rsi: 62, price: 1.1060,
+    support: 1.1000, resistance: 1.1060, entry_ref: 1.1075,
+    setups: [{ key: 'breakout', symbol: 'EURUSD', direction: 'BUY', quality: 3,
+      entry: 1.1075, stop_ref: 1.1050, reasons_fa: [], label_fa: 'شکست تازهٔ دامنه',
+      setup_id: 'EURUSD|breakout|BUY' }] });
+  const jm = O.judgeSymbol(bm, {}, null, makeCtx(TIERS_ON, WED));
+  A(!!jm.signal && Math.abs(jm.signal.entry - 1.1075) < 1e-9, 'ورود شکست از کلوز M15');
+  const pm = makeAnalysis({ price: 1.1000, entry_ref: 1.1010,
+    setups: [{ key: 'trend_pullback', symbol: 'EURUSD', direction: 'BUY', quality: 3,
+      entry: 1.1000, stop_ref: 0.9990, reasons_fa: [], label_fa: 'پولبک در روند',
+      setup_id: 'EURUSD|trend_pullback|BUY' }] });
+  const jpm = O.judgeSymbol(pm, {}, null, makeCtx(TIERS_ON, WED));
+  A(!!jpm.signal && Math.abs(jpm.signal.entry - 1.1000) < 1e-9, 'ورود پولبک همان کلوز H1');
+
   // ستاپ خاموش در ctx → مسیر قدیمی verdict
   const c = makeAnalysis({ setups: [{ key: 'trend_pullback', symbol: 'EURUSD', direction: 'BUY',
     quality: 3, entry: 1.149, stop_ref: 1.1486, reasons_fa: [], label_fa: 'پولبک در روند',
@@ -246,6 +264,20 @@ function testSpamAndCapacity() {
   A(O.dailyCapBlock({ symbol: 'GBPUSD' }, { total: 8, by_symbol: {} },
     { max_signals_per_day: 8 }).indexOf('سقف') >= 0, 'سقف کل روز اعمال می‌شود');
   A(O.dailyCapBlock({ symbol: 'GBPUSD' }, today, {}) === '', 'سقف صفر/نبود = بدون محدودیت');
+
+  // صندلی ظرفیت: فقط سیگنالِ ارسال‌شده صندلی می‌گیرد (باگِ کشف‌شده در بک‌تست)
+  let cs = { actionable: true, capacity_note: '' };
+  A(O.applyCapacity(cs, true, 2, true, 2) === 1 && cs.actionable === true,
+    'سیگنالِ ارسال‌شده صندلی می‌گیرد');
+  cs = { actionable: true, capacity_note: '' };
+  A(O.applyCapacity(cs, false, 2, true, 2) === 2 && cs.actionable === false,
+    'سیگنالِ سرکوب‌شده (cooldown) صندلی نمی‌گیرد');
+  cs = { actionable: true, capacity_note: '' };
+  A(O.applyCapacity(cs, true, 0, true, 2) === 0 && cs.actionable === false &&
+    cs.capacity_note.indexOf('پوزیشن باز پر است') >= 0, 'صندلی تمام‌شده → «فقط پیگیری»');
+  cs = { actionable: true, capacity_note: '' };
+  A(O.applyCapacity(cs, true, 0, false, 0) === 0 && cs.actionable === true,
+    'ظرفیت خاموش → دست‌نخورده');
 }
 
 // ══════════════════════════════════════════════════════════════
