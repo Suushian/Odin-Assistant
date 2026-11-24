@@ -518,7 +518,7 @@ class Backtest:
             row = dbg_by_sig.get(id(sig))
             if row is not None:
                 row["sent"] = bool(go)
-                row["suppress"] = "" if go else str(why)[:64]
+                row["suppress"] = "" if go else str(why)
             if go:
                 state[_signal_state_key(sig)] = {"ts": now.isoformat(), "score": sig.score}
                 sent.append(sig)
@@ -526,7 +526,7 @@ class Backtest:
                 if sig.actionable:
                     self.res.signals_actionable += 1
             else:
-                self.res.suppress[str(why)[:48]] += 1
+                self.res.suppress[_reason_key(why)] += 1
                 if sig.actionable:
                     self.res.seat_stolen += 1     # نباید رخ دهد (۱.۱.۱ به بعد)
         return sent
@@ -689,6 +689,36 @@ class Backtest:
 # ══════════════════════════════════════════════════════════════
 #  گزارش
 # ══════════════════════════════════════════════════════════════
+def missing_symbols(cfg: dict, data: dict) -> list:
+    """نمادهایی که در config هستند ولی فایل داده ندارند (D7)."""
+    wanted = [s.get("name") for s in (cfg.get("symbols") or []) if s.get("name")]
+    return [n for n in wanted if n not in data]
+
+
+def _window_note(start: Optional[datetime], end: Optional[datetime],
+                 data: dict) -> str:
+    """بازهٔ واقعاً شبیه‌سازی‌شده (D5) — نه بازهٔ کل فایل‌های داده."""
+    d0 = min(d.index[0] for d in data.values())
+    d1 = max(d.index[-1] for d in data.values())
+    a = max(d0, start) if start else d0
+    b = min(d1, end) if end else d1
+    return f"{a:%Y-%m-%d} → {b:%Y-%m-%d}"
+
+
+def _reason_key(why: object, max_len: int = 60) -> str:
+    """کلید پایدار برای شمردن دلایل رد — بدون بریدن وسط کلمه (D6).
+
+    دلایل موتور دو بخش دارند: قاعدهٔ ثابت + توضیح متغیر، با « — » جدا می‌شوند.
+    برای گروه‌بندی فقط بخش ثابت را نگه می‌داریم و اگر بازهم بلند بود، در
+    مرزِ کلمه کوتاه می‌کنیم و «…» می‌گذاریم (قبلاً `[:48]` وسط کلمه می‌برید).
+    """
+    txt = str(why or "").split(" — ")[0].strip()
+    if len(txt) <= max_len:
+        return txt
+    cut = txt[:max_len].rsplit(" ", 1)[0].rstrip("،,؛;")
+    return f"{cut}…"
+
+
 def _pct(x: float) -> str:
     return f"{x * 100:.1f}%"
 
@@ -702,7 +732,11 @@ def _table(rows: list[tuple], head: list[str]) -> list[str]:
 def render_markdown(results: list[Result], meta: dict) -> str:
     L = [f"# بک‌تست موتور سیگنال — {meta['date']}", ""]
     L += [f"- **داده:** {meta['data_note']}",
-          f"- **بازه:** {meta['period']}",
+          f"- **بازهٔ شبیه‌سازی:** {meta.get('window') or meta['period']}",
+          f"- **بازهٔ کامل داده:** {meta['period']}",
+          *([f"- ⚠️ **نمادهای غایب:** {', '.join(meta['missing'])} "
+             f"(در config هستند، داده ندارند — نتیجه فقط روی بقیه است)"]
+            if meta.get("missing") else []),
           f"- **چرخه:** هر {meta['cycle']} دقیقه، ورود روی بازِ کندل ۱۵ دقیقه‌ای بعد",
           f"- **هزینه:** اسپرد/۲ + {meta['slippage']} پیپ لغزش در هر طرف",
           "- **شبیه‌سازی‌نشده:** تقویم/خبر (مدرک +۲ همیشه داده می‌شود → خوش‌بینانه) و "
@@ -857,6 +891,12 @@ def main(argv=None) -> int:
         print("❌ هیچ فایل معتبری خوانده نشد")
         return 2
 
+    # D7 — نمادی که در config هست ولی فایل داده ندارد، بی‌صدا حذف نشود.
+    missing = missing_symbols(cfg, data)
+    if missing:
+        print(f"   [!] {len(missing)} نماد در config هست ولی داده ندارد: "
+              f"{', '.join(missing)} — نتیجه فقط روی {len(data)} نماد است")
+
     if args.legacy:
         cfg["strategies"] = {"trend_pullback": True,
                              "range_reversion": False, "breakout": False}
@@ -891,6 +931,7 @@ def main(argv=None) -> int:
             "date": datetime.now().strftime("%Y-%m-%d"),
             "period": f"{min(d.index[0] for d in data.values()):%Y-%m-%d} → "
                       f"{max(d.index[-1] for d in data.values()):%Y-%m-%d}",
+            "window": _window_note(start, end, data),
             "slippage": args.slippage,
         }
         for v, r in pairs:
@@ -949,8 +990,10 @@ def main(argv=None) -> int:
     meta = {
         "date": datetime.now().strftime("%Y-%m-%d"),
         "data_note": f"{len(data)} فایل، {sum(len(d) for d in data.values()):,} کندل M15",
+        "missing": missing,
         "period": f"{min(d.index[0] for d in data.values()):%Y-%m-%d} → "
                   f"{max(d.index[-1] for d in data.values()):%Y-%m-%d}",
+        "window": _window_note(start, end, data),
         "cycle": Backtest.CYCLE_MINUTES, "slippage": args.slippage,
     }
     stem = "".join(ch if ch.isalnum() or ch in "-_" else "-" for ch in args.label)[:48]
