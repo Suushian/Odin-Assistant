@@ -1,65 +1,39 @@
 # -*- coding: utf-8 -*-
-"""Generate the ODIN Assistant desktop icon from the canonical Ø brand mark.
+"""تولید آیکون‌های ODIN Assistant از نشانِ «پالسِ منفی».
 
-Run: python assets/make_icon.py
-The same proportions are used by docs/odin-launcher-icon.svg and Android
-vector resources: dark rounded-square field, white ring, diagonal spear stroke.
+اجرا: python assets/make_icon.py
+خروجی: assets/icon.ico (۹ اندازه)، assets/icon.png (۵۱۲) و پنج mipmap لانچر اندروید.
+هندسهٔ مشترک در assets/brand_mark.py است.
 """
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 
-from PIL import Image, ImageDraw
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+from PIL import Image  # noqa: E402
+
+from brand_mark import raster  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
-S = 1024
-RADIUS = 228
-TOP, BOT = (28, 35, 45), (10, 13, 18)
-INK = (242, 245, 249, 255)
-
-
-def _gradient() -> Image.Image:
-    col = Image.new("RGB", (1, S))
-    for y in range(S):
-        k = y / (S - 1)
-        col.putpixel((0, y), tuple(round(a + (b - a) * k)
-                                   for a, b in zip(TOP, BOT)))
-    return col.resize((S, S))
-
-
-def build_master() -> Image.Image:
-    img = Image.new("RGBA", (S, S), (0, 0, 0, 0))
-    mask = Image.new("L", (S, S), 0)
-    ImageDraw.Draw(mask).rounded_rectangle(
-        [0, 0, S - 1, S - 1], radius=RADIUS, fill=255)
-    img.paste(_gradient(), (0, 0), mask)
-
-    d = ImageDraw.Draw(img)
-    d.rounded_rectangle([4, 4, S - 5, S - 5], radius=RADIUS - 4,
-                        outline=(255, 255, 255, 34), width=4)
-
-    cx = cy = S // 2
-    ring_r, width = 237, 78
-    d.ellipse([cx - ring_r, cy - ring_r, cx + ring_r, cy + ring_r],
-              outline=INK, width=width)
-    extent = ring_r + 152
-    start = (cx - extent * 0.7071, cy + extent * 0.7071)
-    end = (cx + extent * 0.7071, cy - extent * 0.7071)
-    d.line([start, end], fill=INK, width=width)
-    for x, y in (start, end):
-        d.ellipse([x - width / 2, y - width / 2,
-                   x + width / 2, y + width / 2], fill=INK)
-    return img
+ROOT = HERE.parent
+MIPMAPS = {"mdpi": 48, "hdpi": 72, "xhdpi": 96, "xxhdpi": 144, "xxxhdpi": 192}
 
 
 def main() -> None:
-    master = build_master()
+    master = raster(1024)
     sizes = [(16, 16), (20, 20), (24, 24), (32, 32), (40, 40),
              (48, 48), (64, 64), (128, 128), (256, 256)]
     master.save(HERE / "icon.ico", format="ICO", sizes=sizes)
     master.resize((512, 512), Image.Resampling.LANCZOS).save(
         HERE / "icon.png", optimize=True)
-    print(f"[make_icon] icon.ico ({len(sizes)} sizes) + icon.png (512)")
+    res = ROOT / "android" / "app" / "src" / "main" / "res"
+    for name, px in MIPMAPS.items():
+        master.resize((px, px), Image.Resampling.LANCZOS).save(
+            res / ("mipmap-" + name) / "ic_launcher.png", optimize=True)
+    print("[make_icon] icon.ico (%d sizes) + icon.png (512) + %d mipmaps"
+          % (len(sizes), len(MIPMAPS)))
 
 
 if __name__ == "__main__":

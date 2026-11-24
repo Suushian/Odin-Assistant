@@ -907,8 +907,8 @@
 
     // کارت اصلی: لوگو + نام برنامه + سازنده
     html += '<div class="card ink" style="text-align:center;padding:22px 16px">' +
-      '<svg viewBox="0 0 48 48" width="56" height="56" fill="none" stroke="#F2F5F9" stroke-width="3.2" stroke-linecap="round" aria-hidden="true">' +
-      '<circle cx="24" cy="24" r="11"/><path d="M11 37 37 11"/></svg>' +
+      '<svg viewBox="0 0 48 48" width="56" height="56" aria-hidden="true">' +
+      '<g transform="scale(0.4444)"><path d="M39.0 16.0H69.0A23 23 0 0 1 92.0 39.0V69.0A23 23 0 0 1 69.0 92.0H39.0A23 23 0 0 1 16.0 69.0V39.0A23 23 0 0 1 39.0 16.0Z M39.0 65.5 L40.0 65.4 L41.0 65.1 L41.9 64.7 L42.7 64.1 L43.4 63.3 L43.9 62.5 L44.3 61.5 L44.6 60.3 L48.7 76.3 L49.0 77.4 L49.6 78.3 L50.4 79.1 L51.3 79.8 L52.3 80.2 L53.4 80.5 L54.5 80.5 L55.6 80.3 L56.6 79.8 L57.5 79.2 L58.3 78.4 L58.9 77.5 L59.3 76.5 L63.0 63.1 L63.1 63.3 L63.8 64.1 L64.6 64.7 L65.5 65.1 L66.5 65.4 L67.5 65.5 L84.0 65.5 L85.1 65.4 L86.1 65.1 L87.1 64.6 L87.9 63.9 L88.6 63.1 L89.1 62.1 L89.4 61.1 L89.5 60.0 L89.4 58.9 L89.1 57.9 L88.6 56.9 L87.9 56.1 L87.1 55.4 L86.1 54.9 L85.1 54.6 L84.0 54.5 L70.9 54.5 L66.4 45.5 L65.8 44.6 L65.1 43.8 L64.2 43.2 L63.2 42.8 L62.1 42.5 L61.0 42.5 L59.9 42.7 L58.9 43.2 L58.0 43.8 L57.2 44.6 L56.6 45.5 L56.2 46.5 L54.3 53.4 L50.3 37.7 L50.0 36.6 L49.4 35.7 L48.6 34.9 L47.7 34.2 L46.7 33.8 L45.6 33.5 L44.5 33.5 L43.5 33.7 L42.4 34.1 L41.5 34.8 L40.7 35.5 L40.1 36.5 L39.7 37.5 L34.9 54.5 L24.0 54.5 L22.9 54.6 L21.9 54.9 L20.9 55.4 L20.1 56.1 L19.4 56.9 L18.9 57.9 L18.6 58.9 L18.5 60.0 L18.6 61.1 L18.9 62.1 L19.4 63.1 L20.1 63.9 L20.9 64.6 L21.9 65.1 L22.9 65.4 L24.0 65.5 L39.0 65.5 Z" fill="#F4F8FD" fill-rule="evenodd"/></g></svg>' +
       '<div style="font-size:17px;font-weight:800;color:#fff;margin-top:10px" dir="ltr">ODIN ASSISTANT</div>' +
       '<div class="ink-cap" style="margin-top:3px;color:rgba(255,255,255,.78)" dir="ltr">Publisher: Sushian</div>' +
       '<div class="ink-cap" style="margin-top:4px"><span dir="ltr">ODIN ASSISTANT</span> — نسخهٔ اندروید ' + O.faNum(ver) + '</div>' +

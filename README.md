@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="docs/odin-launcher-icon.svg" alt="آیکون آبی حباب گفت‌وگوی ODIN Assistant" width="128" />
+<img src="docs/odin-launcher-icon.svg" alt="نشان پالسِ منفی ODIN Assistant" width="128" />
 
 # ODIN Assistant
 
@@ -11,7 +11,7 @@
 
 تحلیل تکنیکال · فاندامنتال · اخبار اقتصادی · تأییدیهٔ TradingView · ژورنال عملکرد
 
-[![Version](https://img.shields.io/badge/version-1.2.0-30343b?style=flat-square)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-1.3.0-30343b?style=flat-square)](CHANGELOG.md)
 [![Android](https://img.shields.io/badge/Android-7.0%2B-3DDC84?style=flat-square&logo=android&logoColor=white)](https://github.com/Suushian/Odin-Assistant/releases/latest)
 [![APK Build](https://img.shields.io/github/actions/workflow/status/Suushian/Odin-Assistant/build-android.yml?branch=main&style=flat-square&label=APK%20build)](https://github.com/Suushian/Odin-Assistant/actions/workflows/build-android.yml)
 [![Tests](https://img.shields.io/github/actions/workflow/status/Suushian/Odin-Assistant/build-release.yml?branch=main&style=flat-square&label=tests)](https://github.com/Suushian/Odin-Assistant/actions/workflows/build-release.yml)
@@ -144,7 +144,7 @@ for s in tests/js/smoke_*.js tests/js/test_*.js; do node "$s"; done
 
 ## تغییرات اخیر
 
-- هویت بصری لانچر به حباب گفت‌وگوی آبی با دو خط سفید و پس‌زمینهٔ تیره تغییر کرده است؛ منبع برداری و پیش‌نمایش SVG در `docs/odin-launcher-icon.svg` نگهداری می‌شود.
+- هویت بصری به نشان **«پالسِ منفی»** تغییر کرد (اسکوئرکلِ روشن با خطِ ضربانِ بریده‌شده)؛ هندسهٔ منبع در `assets/brand_mark.py` و پیش‌نمایش برداری در `docs/odin-launcher-icon.svg` است.
 
 بر اساس نسخهٔ موجود در `main` و تغییرات ثبت‌شده در تاریخچه:
 
