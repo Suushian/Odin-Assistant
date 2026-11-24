@@ -66,3 +66,10 @@ reports/
 local.properties
 captures/
 *.hprof
+
+# کش ابزارها و فایل‌های موقت
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+*.tmp
+*.bak

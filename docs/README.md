@@ -58,6 +58,11 @@
 | [`ui-design-fa.md`](ui-design-fa.md) | 🖥️ طراحی رابط: تم روشن شیشه‌ای، توکن‌های رنگ، سلسله‌مراتب بصری |
 | [`ui-review-v1.4.0-fa.md`](ui-review-v1.4.0-fa.md) | 🔍 بازبینی UI/UX و ارتقای «Aurora Glass 2.1»: تحلیل، شواهد، اسکرین‌شات قبل/بعد، قدم‌های بعدی |
 | [`signal-quality-fa.md`](signal-quality-fa.md) | 🎯 کیفیت سیگنال (v1.6.0): دروازهٔ استراتژی، برش‌های تشخیصی بک‌تست، جاروی آستانهٔ امتیاز |
+| [`audit-report-fa.md`](audit-report-fa.md) | 🔍 ممیزی فنی کامل (نسخهٔ اول): ۳۸ یافتهٔ F-1..F-38 با شدت و وضعیت |
+| [`audit-report-2026-11-23-fa.md`](audit-report-2026-11-23-fa.md) | 🧪 ممیزی ۲۰۲۶-۱۱-۲۳: بازبینی یافته‌ها + آزمون‌های تازه |
+| [`security-review-fa.md`](security-review-fa.md) | 🔐 بازبینی امنیتی: کلیدها، لایسنس، CSP، و مسیرهای حساس |
+| [`project-readiness-review-fa.md`](project-readiness-review-fa.md) | 📋 آمادگی پروژه: چه چیزی آماده است و چه چیزی نه |
+| [`release-device-checklist-fa.md`](release-device-checklist-fa.md) | 📱 چک‌لیست انتشار روی دستگاه واقعی |
 | [`defects-v1.6.1-fa.md`](defects-v1.6.1-fa.md) | 🐞 ایرادهای بک‌تست واقعی (v1.6.1): ۸ ایراد با شاهد عددی + ترتیب رفع |
 
 > ⚠️ `src/ui/theme.py` با اینکه بخشی از لایهٔ منجمدِ ویندوز است، **حذف نمی‌شود**:
@@ -110,3 +115,11 @@
    «آموزشی» است؛ سلب مسئولیت، اعلام حق نشر و هشدار ضدتقلب با assertion قفل شده‌اند.
 6. **تست تازه را با mutation testing بیازمایید.** نگهبانی که جهش را نگیرد
    توخالی است — در این پروژه سه بار اتفاق افتاده و هر سه بار ثبت شده است.
+
+## آرشیو
+
+| فایل | توضیح |
+|---|---|
+| [`archive/ODIN-Architecture-v0.28.0-fa.docx`](archive/ODIN-Architecture-v0.28.0-fa.docx) | معماری نسخهٔ ۰٫۲۸ (تاریخی) |
+| [`archive/ODIN-Architecture.pdf`](archive/ODIN-Architecture.pdf) | همان معماری، PDF |
+| [`archive/project-report-v0.24.0-fa.md`](archive/project-report-v0.24.0-fa.md) | گزارش پروژه ۰٫۲۴ |
